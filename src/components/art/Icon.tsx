@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Circle, G, Line, Path, Polygon, Polyline, Rect } from 'react-native-svg';
+import Svg, { Circle, Ellipse, G, Line, Path, Polygon, Polyline, Rect } from 'react-native-svg';
 import { colors } from '../../theme';
 
 export type IconName =
@@ -12,6 +12,7 @@ export type IconName =
   | 'fleet'
   | 'prestige'
   | 'goals'
+  | 'lab'
   // ui
   | 'settings'
   | 'sound'
@@ -300,6 +301,17 @@ function glyph(name: IconName, c: string, a: string): React.ReactElement {
           <Path d="M17 5 H20 V7 A3 3 0 0 1 17 10" fill="none" stroke="#FACC15" strokeWidth={1.6} />
           <Rect x={10.5} y={13} width={3} height={4} fill="#FACC15" />
           <Rect x={7} y={17} width={10} height={3} rx={1} fill="#FACC15" />
+        </G>
+      );
+    case 'lab':
+      return (
+        <G>
+          <Circle cx={12} cy={12} r={2.4} fill={a} />
+          <G fill="none" stroke={c} strokeWidth={1.8}>
+            <Ellipse cx={12} cy={12} rx={9} ry={4} />
+            <Ellipse cx={12} cy={12} rx={9} ry={4} transform="rotate(60 12 12)" />
+            <Ellipse cx={12} cy={12} rx={9} ry={4} transform="rotate(120 12 12)" />
+          </G>
         </G>
       );
     case 'settings':

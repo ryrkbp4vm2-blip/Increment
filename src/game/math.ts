@@ -30,11 +30,11 @@ export function maxAffordable(def: GeneratorDef, owned: number, funds: number): 
 
 type MultState = Pick<
   PersistedState,
-  'upgrades' | 'artifacts' | 'asteroidIndex' | 'dmUpgrades' | 'achievements'
+  'upgrades' | 'artifacts' | 'asteroidIndex' | 'dmUpgrades' | 'achievements' | 'research'
 >;
 
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
-  let mult = effectivePowers(state.artifacts, state.dmUpgrades).genMult[genId] ?? 1;
+  let mult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).genMult[genId] ?? 1;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'genMult' && effect.genId === genId) mult *= effect.x;
@@ -43,7 +43,7 @@ export function generatorMultiplier(genId: GeneratorId, state: MultState): numbe
 }
 
 export function globalMultiplier(state: MultState): number {
-  const powers = effectivePowers(state.artifacts, state.dmUpgrades);
+  const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
   let mult =
     powers.globalMult * asteroidRichness(state.asteroidIndex) * achievementBonus(state.achievements);
   for (const id of Object.keys(state.upgrades)) {
@@ -84,7 +84,7 @@ export function tapValue(
   state: MultState & Pick<PersistedState, 'generators'>,
   currentCps: number = cps(state),
 ): number {
-  let tapMult = effectivePowers(state.artifacts, state.dmUpgrades).tapMult;
+  let tapMult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).tapMult;
   let cpsPercent = 0;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;

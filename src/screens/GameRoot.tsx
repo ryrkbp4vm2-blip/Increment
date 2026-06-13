@@ -12,6 +12,7 @@ import { FleetScreen } from './FleetScreen';
 import { GoalsScreen } from './GoalsScreen';
 import { MineScreen } from './MineScreen';
 import { PrestigeScreen } from './PrestigeScreen';
+import { ResearchScreen } from './ResearchScreen';
 import { ShopScreen } from './ShopScreen';
 
 interface Props {
@@ -37,6 +38,7 @@ export function GameRoot({ initialOfflineReport }: Props) {
         {tab === 'mine' && <MineScreen />}
         {tab === 'shop' && <ShopScreen />}
         {tab === 'fleet' && <FleetScreen />}
+        {tab === 'lab' && <ResearchScreen />}
         {tab === 'goals' && <GoalsScreen />}
         {tab === 'prestige' && <PrestigeScreen />}
       </View>

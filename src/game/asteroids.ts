@@ -41,6 +41,11 @@ export function shatterBonus(index: number): number {
   return Math.ceil(asteroidHp(index) * SHATTER_BONUS_FRACTION);
 }
 
+/** Research Points awarded for shattering the asteroid at `index`. */
+export function rpFromShatter(index: number): number {
+  return 1 + Math.floor(index / 2);
+}
+
 export interface ShatterResult {
   asteroidIndex: number;
   asteroidDamage: number;

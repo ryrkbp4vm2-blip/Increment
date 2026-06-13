@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { computeMetrics, newlyCompleted } from '../game/achievements';
-import { applyDamage } from '../game/asteroids';
+import { applyDamage, rpFromShatter } from '../game/asteroids';
+import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
 import { CometReward, frenzyFactor } from '../game/events';
@@ -35,6 +36,7 @@ export interface GameActions {
   launchExpedition(defId: string, nowMs: number): void;
   claimExpedition(nowMs: number): ExpeditionResult | null;
   buyDarkMatterUpgrade(id: string): void;
+  buyResearch(id: string): void;
   doPrestige(): void;
   tickAchievements(): void;
   consumeAchievements(): string[];
@@ -70,6 +72,9 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     asteroidsShattered: 0,
     cometsCaught: 0,
     expeditionsCompleted: 0,
+    researchPoints: 0,
+    totalResearch: 0,
+    research: {},
   };
 }
 
@@ -105,6 +110,13 @@ function earn(state: GameState, amount: number): Partial<GameState> {
   };
   if (result.shattered > 0) {
     delta.asteroidsShattered = state.asteroidsShattered + result.shattered;
+    // Research Points are minted by each asteroid we break, scaled by depth.
+    const rpMult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).rpGainMult;
+    let rp = 0;
+    for (let i = state.asteroidIndex; i < result.asteroidIndex; i++) rp += rpFromShatter(i);
+    rp = Math.ceil(rp * rpMult);
+    delta.researchPoints = state.researchPoints + rp;
+    delta.totalResearch = state.totalResearch + rp;
     const next = { ...state, ...delta } as GameState;
     delta.cachedCps = cps(next);
     delta.cachedTapValue = tapValue(next, delta.cachedCps);
@@ -181,7 +193,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const def = EXPEDITIONS_BY_ID[defId];
     if (!def || state.expedition) return;
-    const powers = effectivePowers(state.artifacts, state.dmUpgrades);
+    const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
     const fuel = expeditionFuel(def, state.cachedCps, powers);
     if (state.minerals < fuel) return;
     set({
@@ -223,6 +235,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(withCaches({ ...state, darkMatter: state.darkMatter - cost, dmUpgrades }, state.lastTickAt));
   },
 
+  buyResearch(id) {
+    const state = get();
+    const node = RESEARCH_BY_ID[id];
+    if (!node || state.research[id]) return;
+    if (state.researchPoints < node.cost || !isResearchUnlocked(node, state.research)) return;
+    const research = { ...state.research, [id]: true as const };
+    set(
+      withCaches(
+        { ...state, researchPoints: state.researchPoints - node.cost, research },
+        state.lastTickAt,
+      ),
+    );
+  },
+
   doPrestige() {
     const state = get();
     if (pendingDarkMatter(state.lifetimeThisRun) < 1) return;
@@ -245,6 +271,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           asteroidsShattered: state.asteroidsShattered,
           cometsCaught: state.cometsCaught,
           expeditionsCompleted: state.expeditionsCompleted,
+          researchPoints: state.researchPoints,
+          totalResearch: state.totalResearch,
+          research: state.research,
           // Head start from the Dark Matter shop.
           minerals: powers.startMinerals,
           asteroidIndex: powers.startAsteroidIndex,

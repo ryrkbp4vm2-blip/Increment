@@ -29,8 +29,8 @@ export function Comet({ onCollect }: Props) {
 
   const schedule = useCallback(
     (range: [number, number]) => {
-      const { artifacts, dmUpgrades } = useGameStore.getState();
-      const spawnMult = effectivePowers(artifacts, dmUpgrades).cometSpawnMult;
+      const { artifacts, dmUpgrades, research } = useGameStore.getState();
+      const spawnMult = effectivePowers(artifacts, dmUpgrades, research).cometSpawnMult;
       const spawnTimer = setTimeout(() => {
         setPosition({
           x: 20 + Math.random() * (width - 100),
@@ -78,7 +78,7 @@ export function Comet({ onCollect }: Props) {
       // Haptics unavailable (e.g. web); ignore.
     }
     const state = useGameStore.getState();
-    const powers = effectivePowers(state.artifacts, state.dmUpgrades);
+    const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
     onCollect(
       rollCometReward(state.cachedCps, {
         cometMult: powers.cometRewardMult,

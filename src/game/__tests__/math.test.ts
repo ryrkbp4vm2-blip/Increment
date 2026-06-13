@@ -61,6 +61,7 @@ const baseState = {
   artifacts: {} as Record<string, true>,
   dmUpgrades: {} as Record<string, number>,
   achievements: {} as Record<string, true>,
+  research: {} as Record<string, true>,
   asteroidIndex: 0,
 };
 

@@ -28,6 +28,7 @@ export function FleetScreen() {
   const expedition = useGameStore((s) => s.expedition);
   const artifacts = useGameStore((s) => s.artifacts);
   const dmUpgrades = useGameStore((s) => s.dmUpgrades);
+  const research = useGameStore((s) => s.research);
   const minerals = useGameStore((s) => s.minerals);
   const cachedCps = useGameStore((s) => s.cachedCps);
   const launchExpedition = useGameStore((s) => s.launchExpedition);
@@ -45,7 +46,7 @@ export function FleetScreen() {
     };
   }, []);
 
-  const powers = effectivePowers(artifacts, dmUpgrades);
+  const powers = effectivePowers(artifacts, dmUpgrades, research);
   const activeDef = expedition ? EXPEDITIONS_BY_ID[expedition.defId] : null;
   const done = expedition !== null && now >= expedition.endsAt;
   const ownedCount = Object.keys(artifacts).length;

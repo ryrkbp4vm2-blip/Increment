@@ -124,6 +124,22 @@ describe('migrate hardening', () => {
     expect(save.state.cometsCaught).toBe(0);
   });
 
+  it('round-trips research and drops unknown nodes', () => {
+    const state = makeState({
+      researchPoints: 42,
+      totalResearch: 80,
+      research: { ex1: true, lo1: true },
+    });
+    const save = migrate(serialize(state, 1))!;
+    expect(save.state.researchPoints).toBe(42);
+    expect(save.state.totalResearch).toBe(80);
+    expect(save.state.research).toEqual({ ex1: true, lo1: true });
+
+    const dirty = migrate('{"version":1,"savedAt":50,"state":{"research":{"fake":true,"ex1":true}}}')!;
+    expect(dirty.state.research).toEqual({ ex1: true });
+    expect(dirty.state.researchPoints).toBe(0);
+  });
+
   it('sanitizes invalid values', () => {
     const save = migrate(
       '{"version":1,"savedAt":50,"state":{"minerals":-5,"totalTaps":3.7,"generators":{"drone":"lots"},"upgrades":{"fake_upgrade":true,"tap1":true}}}',

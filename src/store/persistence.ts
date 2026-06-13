@@ -4,6 +4,7 @@ import { ARTIFACTS_BY_ID } from '../game/artifacts';
 import { UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID } from '../game/darkmatter';
 import { EXPEDITIONS_BY_ID } from '../game/expeditions';
+import { RESEARCH_BY_ID } from '../game/research';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
 
@@ -34,6 +35,9 @@ export function toPersisted(state: GameState): PersistedState {
     asteroidsShattered: state.asteroidsShattered,
     cometsCaught: state.cometsCaught,
     expeditionsCompleted: state.expeditionsCompleted,
+    researchPoints: state.researchPoints,
+    totalResearch: state.totalResearch,
+    research: state.research,
   };
 }
 
@@ -101,6 +105,12 @@ export function migrate(raw: string | null): SaveFile | null {
       if (ACHIEVEMENTS_BY_ID[id]) achievements[id] = true;
     }
   }
+  const research: Record<string, true> = {};
+  if (typeof raw_.research === 'object' && raw_.research !== null) {
+    for (const id of Object.keys(raw_.research)) {
+      if (RESEARCH_BY_ID[id]) research[id] = true;
+    }
+  }
   const darkMatter = Math.max(0, finiteNumber(raw_.darkMatter, 0));
   let expedition: PersistedState['expedition'] = null;
   const rawExp = raw_.expedition;
@@ -140,6 +150,9 @@ export function migrate(raw: string | null): SaveFile | null {
     asteroidsShattered: Math.max(0, Math.floor(finiteNumber(raw_.asteroidsShattered, 0))),
     cometsCaught: Math.max(0, Math.floor(finiteNumber(raw_.cometsCaught, 0))),
     expeditionsCompleted: Math.max(0, Math.floor(finiteNumber(raw_.expeditionsCompleted, 0))),
+    researchPoints: Math.max(0, finiteNumber(raw_.researchPoints, 0)),
+    totalResearch: Math.max(0, finiteNumber(raw_.totalResearch, 0)),
+    research,
   };
   return {
     version: SAVE_VERSION,

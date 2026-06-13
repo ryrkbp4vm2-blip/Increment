@@ -77,6 +77,10 @@ export interface PersistedState {
   asteroidsShattered: number;
   cometsCaught: number;
   expeditionsCompleted: number;
+  /** Research currency and unlocked tech-tree nodes (survive prestige). */
+  researchPoints: number;
+  totalResearch: number;
+  research: Record<string, true>;
 }
 
 export interface GameState extends PersistedState {

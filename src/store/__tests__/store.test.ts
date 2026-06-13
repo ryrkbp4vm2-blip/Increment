@@ -233,6 +233,46 @@ describe('gameStore', () => {
     expect(useGameStore.getState().newAchievements).toEqual([]);
   });
 
+  it('mints Research Points when asteroids shatter', () => {
+    reset({ minerals: 0 });
+    // 450 windfall shatters asteroid 0 (400 HP); rpFromShatter(0) = 1
+    useGameStore.getState().collectComet({ kind: 'windfall', amount: 450 }, 1000);
+    expect(useGameStore.getState().researchPoints).toBe(1);
+    expect(useGameStore.getState().totalResearch).toBe(1);
+  });
+
+  it('buyResearch enforces RP, prerequisites and uniqueness, and boosts production', () => {
+    reset({ researchPoints: 100, generators: { ...initialPersistedState().generators, drone: 10 } });
+    const before = useGameStore.getState().cachedCps;
+
+    // ex2 needs ex1 first.
+    useGameStore.getState().buyResearch('ex2');
+    expect(useGameStore.getState().research.ex2).toBeUndefined();
+
+    useGameStore.getState().buyResearch('ex1'); // cost 3, +25% production
+    let s = useGameStore.getState();
+    expect(s.research.ex1).toBe(true);
+    expect(s.researchPoints).toBe(97);
+    expect(s.cachedCps).toBeCloseTo(before * 1.25);
+
+    // Now ex2 unlocks.
+    useGameStore.getState().buyResearch('ex2');
+    expect(useGameStore.getState().research.ex2).toBe(true);
+
+    // No double purchase.
+    const rpAfter = useGameStore.getState().researchPoints;
+    useGameStore.getState().buyResearch('ex1');
+    expect(useGameStore.getState().researchPoints).toBe(rpAfter);
+  });
+
+  it('research survives prestige', () => {
+    reset({ lifetimeThisRun: 1e10, researchPoints: 20, research: { ex1: true } });
+    useGameStore.getState().doPrestige();
+    const s = useGameStore.getState();
+    expect(s.research.ex1).toBe(true);
+    expect(s.researchPoints).toBe(20);
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();
