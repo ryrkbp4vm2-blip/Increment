@@ -55,6 +55,55 @@ export function serialize(state: GameState, savedAt: number): string {
   return JSON.stringify(save);
 }
 
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i];
+    const b = i + 1 < bytes.length ? bytes[i + 1] : 0;
+    const c = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    out += B64[a >> 2];
+    out += B64[((a & 3) << 4) | (b >> 4)];
+    out += i + 1 < bytes.length ? B64[((b & 15) << 2) | (c >> 6)] : '=';
+    out += i + 2 < bytes.length ? B64[c & 63] : '=';
+  }
+  return out;
+}
+
+function base64ToBytes(str: string): Uint8Array {
+  const clean = str.replace(/[^A-Za-z0-9+/]/g, '');
+  const len = Math.floor((clean.length * 3) / 4);
+  const bytes = new Uint8Array(len);
+  let p = 0;
+  for (let i = 0; i < clean.length; i += 4) {
+    const a = B64.indexOf(clean[i]);
+    const b = B64.indexOf(clean[i + 1]);
+    const c = B64.indexOf(clean[i + 2]);
+    const d = B64.indexOf(clean[i + 3]);
+    if (p < len) bytes[p++] = (a << 2) | (b >> 4);
+    if (p < len) bytes[p++] = ((b & 15) << 4) | (c >> 2);
+    if (p < len) bytes[p++] = ((c & 3) << 6) | d;
+  }
+  return bytes;
+}
+
+/** A portable, copy-pasteable backup code for the current save. */
+export function exportSave(state: GameState): string {
+  const json = serialize(state, Date.now());
+  return bytesToBase64(new TextEncoder().encode(json));
+}
+
+/** Parse a backup code back into a save, or null if it's invalid. */
+export function importSave(code: string): SaveFile | null {
+  try {
+    const json = new TextDecoder().decode(base64ToBytes(code.trim()));
+    return migrate(json);
+  } catch {
+    return null;
+  }
+}
+
 function finiteNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }

@@ -31,6 +31,31 @@ describe('serialize/migrate round trip', () => {
   });
 });
 
+describe('exportSave / importSave', () => {
+  it('round-trips a save through a backup code', () => {
+    const state = makeState({
+      minerals: 4.2e9,
+      darkMatter: 17,
+      totalDarkMatter: 17,
+      dmUpgrades: { stellar_density: 6 },
+      research: { ex1: true, lo1: true },
+      challengesCompleted: { famine: true },
+      singularityPerks: { auto_driller: true },
+    });
+    const code = require('../persistence').exportSave(state);
+    expect(typeof code).toBe('string');
+    expect(code.length).toBeGreaterThan(0);
+    const restored = require('../persistence').importSave(code);
+    expect(restored).not.toBeNull();
+    expect(restored.state).toEqual(toPersisted(state));
+  });
+
+  it('returns null for a corrupt code', () => {
+    expect(require('../persistence').importSave('not a real code!!')).toBeNull();
+    expect(require('../persistence').importSave('')).toBeNull();
+  });
+});
+
 describe('migrate hardening', () => {
   it('returns null for null, corrupt and non-object input', () => {
     expect(migrate(null)).toBeNull();
