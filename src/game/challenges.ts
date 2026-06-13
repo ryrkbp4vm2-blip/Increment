@@ -17,6 +17,7 @@ export interface ChallengeDef {
   tapMult: number;
   disableGenerators: boolean;
   disableComets: boolean;
+  disableUpgrades: boolean;
   rewardLabel: string;
   reward: ChallengeReward;
 }
@@ -31,6 +32,7 @@ export const CHALLENGES: ChallengeDef[] = [
     tapMult: 1,
     disableGenerators: true,
     disableComets: false,
+    disableUpgrades: false,
     rewardLabel: 'Tap power ×4 forever',
     reward: { tapMult: 4 },
   },
@@ -43,6 +45,7 @@ export const CHALLENGES: ChallengeDef[] = [
     tapMult: 0.2,
     disableGenerators: false,
     disableComets: false,
+    disableUpgrades: false,
     rewardLabel: 'All production ×2 forever',
     reward: { globalMult: 2 },
   },
@@ -55,6 +58,7 @@ export const CHALLENGES: ChallengeDef[] = [
     tapMult: 1,
     disableGenerators: false,
     disableComets: true,
+    disableUpgrades: false,
     rewardLabel: 'All production ×1.75 forever',
     reward: { globalMult: 1.75 },
   },
@@ -67,8 +71,35 @@ export const CHALLENGES: ChallengeDef[] = [
     tapMult: 0,
     disableGenerators: false,
     disableComets: false,
+    disableUpgrades: false,
     rewardLabel: 'All production ×1.75 forever',
     reward: { globalMult: 1.75 },
+  },
+  {
+    id: 'purity',
+    name: 'Purity',
+    description: 'Mineral upgrades are forbidden — raw generators only.',
+    goal: 5e7,
+    productionMult: 1,
+    tapMult: 1,
+    disableGenerators: false,
+    disableComets: false,
+    disableUpgrades: true,
+    rewardLabel: 'All production ×1.5 forever',
+    reward: { globalMult: 1.5 },
+  },
+  {
+    id: 'hardcore',
+    name: 'Hardcore',
+    description: 'Production at 10% and no comets. For masochists.',
+    goal: 1e8,
+    productionMult: 0.1,
+    tapMult: 0.1,
+    disableGenerators: false,
+    disableComets: true,
+    disableUpgrades: false,
+    rewardLabel: 'All production ×2.5 forever',
+    reward: { globalMult: 2.5 },
   },
 ];
 
@@ -81,6 +112,7 @@ export interface ChallengeModifiers {
   tapMult: number;
   disableGenerators: boolean;
   disableComets: boolean;
+  disableUpgrades: boolean;
 }
 
 const NEUTRAL: ChallengeModifiers = {
@@ -88,6 +120,7 @@ const NEUTRAL: ChallengeModifiers = {
   tapMult: 1,
   disableGenerators: false,
   disableComets: false,
+  disableUpgrades: false,
 };
 
 /** Active-run modifiers from the challenge currently being attempted. */
@@ -100,6 +133,7 @@ export function challengeModifiers(activeChallenge: string | null): ChallengeMod
     tapMult: def.tapMult,
     disableGenerators: def.disableGenerators,
     disableComets: def.disableComets,
+    disableUpgrades: def.disableUpgrades,
   };
 }
 

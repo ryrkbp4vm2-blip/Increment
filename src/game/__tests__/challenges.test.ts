@@ -12,6 +12,7 @@ describe('challengeModifiers', () => {
       tapMult: 1,
       disableGenerators: false,
       disableComets: false,
+      disableUpgrades: false,
     });
     expect(challengeModifiers('nope').productionMult).toBe(1);
   });
@@ -21,6 +22,8 @@ describe('challengeModifiers', () => {
     expect(challengeModifiers('famine').productionMult).toBe(0.2);
     expect(challengeModifiers('solitude').disableComets).toBe(true);
     expect(challengeModifiers('idle_doctrine').tapMult).toBe(0);
+    expect(challengeModifiers('purity').disableUpgrades).toBe(true);
+    expect(challengeModifiers('hardcore').productionMult).toBe(0.1);
   });
 });
 

@@ -226,6 +226,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyUpgrade(id) {
     const state = get();
+    if (challengeModifiers(state.activeChallenge).disableUpgrades) return;
     const def = UPGRADES_BY_ID[id];
     if (!def || state.upgrades[id]) return;
     if (state.minerals < def.cost || !isUnlockMet(def.unlock, state)) return;
