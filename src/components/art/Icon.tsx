@@ -11,6 +11,13 @@ export type IconName =
   | 'empire'
   | 'fleet'
   | 'prestige'
+  | 'goals'
+  // ui
+  | 'settings'
+  | 'sound'
+  | 'muted'
+  | 'check'
+  | 'lock'
   // generators
   | 'drone'
   | 'excavator'
@@ -283,6 +290,50 @@ function glyph(name: IconName, c: string, a: string): React.ReactElement {
       return (
         <G fill="none" stroke={c} strokeWidth={1.6} opacity={0.6}>
           <Polygon points="12,3 18,7.5 15.5,19 8.5,19 6,7.5" />
+        </G>
+      );
+    case 'goals':
+      return (
+        <G>
+          <Path d="M7 4 H17 V9 A5 5 0 0 1 7 9 Z" fill="#FACC15" />
+          <Path d="M7 5 H4 V7 A3 3 0 0 0 7 10" fill="none" stroke="#FACC15" strokeWidth={1.6} />
+          <Path d="M17 5 H20 V7 A3 3 0 0 1 17 10" fill="none" stroke="#FACC15" strokeWidth={1.6} />
+          <Rect x={10.5} y={13} width={3} height={4} fill="#FACC15" />
+          <Rect x={7} y={17} width={10} height={3} rx={1} fill="#FACC15" />
+        </G>
+      );
+    case 'settings':
+      return (
+        <G fill="none" stroke={c} strokeWidth={2}>
+          <Circle cx={12} cy={12} r={3.2} />
+          <Path d="M12 3 V6 M12 18 V21 M3 12 H6 M18 12 H21 M5.6 5.6 L7.7 7.7 M16.3 16.3 L18.4 18.4 M18.4 5.6 L16.3 7.7 M7.7 16.3 L5.6 18.4" strokeLinecap="round" />
+        </G>
+      );
+    case 'sound':
+      return (
+        <G>
+          <Polygon points="4,9 8,9 12,5 12,19 8,15 4,15" fill={c} />
+          <Path d="M15 9 A4 4 0 0 1 15 15" fill="none" stroke={a} strokeWidth={2} strokeLinecap="round" />
+          <Path d="M17 6 A8 8 0 0 1 17 18" fill="none" stroke={a} strokeWidth={2} strokeLinecap="round" />
+        </G>
+      );
+    case 'muted':
+      return (
+        <G>
+          <Polygon points="4,9 8,9 12,5 12,19 8,15 4,15" fill={c} />
+          <Line x1={15} y1={9} x2={21} y2={15} stroke={colors.danger} strokeWidth={2} strokeLinecap="round" />
+          <Line x1={21} y1={9} x2={15} y2={15} stroke={colors.danger} strokeWidth={2} strokeLinecap="round" />
+        </G>
+      );
+    case 'check':
+      return (
+        <Polyline points="5,13 10,18 19,6" fill="none" stroke={a} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+      );
+    case 'lock':
+      return (
+        <G>
+          <Rect x={6} y={11} width={12} height={9} rx={1.5} fill={c} />
+          <Path d="M8 11 V8 A4 4 0 0 1 16 8 V11" fill="none" stroke={c} strokeWidth={2} />
         </G>
       );
     case 'shard':

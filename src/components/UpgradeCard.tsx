@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { UpgradeDef } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
+import { playSound } from '../audio/sound';
 import { Amount } from './art/Amount';
 
 interface Props {
@@ -15,7 +16,10 @@ export function UpgradeCard({ def }: Props) {
 
   return (
     <Pressable
-      onPress={() => buyUpgrade(def.id)}
+      onPress={() => {
+        buyUpgrade(def.id);
+        playSound('buy');
+      }}
       disabled={!affordable}
       style={({ pressed }) => [
         styles.card,

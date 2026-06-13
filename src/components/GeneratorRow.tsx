@@ -5,6 +5,7 @@ import { generatorProduction, maxAffordable } from '../game/math';
 import { purchaseCost, useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatRate } from '../utils/format';
+import { playSound } from '../audio/sound';
 import { Amount } from './art/Amount';
 import { Icon, IconName } from './art/Icon';
 
@@ -42,7 +43,10 @@ export function GeneratorRow({ def, qty }: Props) {
         </Text>
       </View>
       <Pressable
-        onPress={() => buyGenerator(def.id, qty)}
+        onPress={() => {
+          buyGenerator(def.id, qty);
+          playSound('buy');
+        }}
         disabled={!affordable}
         style={({ pressed }) => [
           styles.buyButton,

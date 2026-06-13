@@ -18,8 +18,8 @@ export const REVEAL_FRACTION = 0.5;
 export const MILESTONE_EVERY = 25;
 
 /** Golden comet event timing/rewards. */
-export const COMET_FIRST_SPAWN_MS: [number, number] = [25_000, 45_000];
-export const COMET_SPAWN_MS: [number, number] = [60_000, 120_000];
+export const COMET_FIRST_SPAWN_MS: [number, number] = [12_000, 25_000];
+export const COMET_SPAWN_MS: [number, number] = [55_000, 110_000];
 export const COMET_VISIBLE_MS = 9_000;
 export const COMET_FRENZY_MULT = 7;
 export const COMET_FRENZY_DURATION_MS = 30_000;
@@ -198,6 +198,22 @@ const globalUpgrades: UpgradeDef[] = [
     cost: 1e10,
     unlock: { kind: 'lifetime', amount: 5e9 },
     effect: { kind: 'globalMult', x: 2 },
+  },
+  {
+    id: 'global3',
+    name: 'Quantum Markets',
+    description: 'All production x3',
+    cost: 1e13,
+    unlock: { kind: 'lifetime', amount: 1e12 },
+    effect: { kind: 'globalMult', x: 3 },
+  },
+  {
+    id: 'global4',
+    name: 'Galactic Monopoly',
+    description: 'All production x4',
+    cost: 1e16,
+    unlock: { kind: 'lifetime', amount: 1e15 },
+    effect: { kind: 'globalMult', x: 4 },
   },
 ];
 

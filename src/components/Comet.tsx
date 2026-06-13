@@ -8,6 +8,7 @@ import {
 } from '../game/balance';
 import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
 import { effectivePowers } from '../game/powers';
+import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { CometArt } from './art/CometArt';
@@ -70,6 +71,7 @@ export function Comet({ onCollect }: Props) {
     timers.current.forEach(clearTimeout);
     timers.current = [];
     schedule(COMET_SPAWN_MS);
+    playSound('comet');
     try {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {

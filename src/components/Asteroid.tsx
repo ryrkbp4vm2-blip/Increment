@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -61,6 +62,7 @@ export function Asteroid() {
       scale.setValue(1.5);
       Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 12, bounciness: 14 }).start();
       for (let i = 0; i < 6; i++) spawnParticle('burst', '');
+      playSound('shatter');
       try {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
@@ -73,6 +75,7 @@ export function Asteroid() {
 
   const handlePress = useCallback(() => {
     const earned = tap();
+    playSound('tap');
     try {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {

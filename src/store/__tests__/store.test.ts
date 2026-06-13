@@ -1,5 +1,6 @@
 import { costOfNext } from '../../game/math';
 import { GENERATORS_BY_ID } from '../../game/balance';
+import { achievementBonus } from '../../game/achievements';
 import { initialPersistedState, useGameStore } from '../gameStore';
 
 function reset(overrides: Partial<ReturnType<typeof initialPersistedState>> = {}) {
@@ -165,8 +166,9 @@ describe('gameStore', () => {
     expect(s.asteroidDamage).toBe(0);
     expect(s.dmUpgrades.stellar_density).toBe(2);
     expect(s.artifacts.pulsar_shard).toBe(true);
-    // shop (+40%*2 = x1.8) and artifact (x1.1) bonuses apply immediately
-    expect(s.cachedTapValue).toBeCloseTo(1.8 * 1.1);
+    // shop (+40%*2 = x1.8), artifact (x1.1) and carried-over achievement
+    // bonuses all apply immediately.
+    expect(s.cachedTapValue).toBeCloseTo(1.8 * 1.1 * achievementBonus(s.achievements));
   });
 
   it('prestige head-start upgrades grant starting minerals and belt depth', () => {
@@ -192,5 +194,52 @@ describe('gameStore', () => {
     useGameStore.getState().doPrestige();
     expect(useGameStore.getState().minerals).toBe(100);
     expect(useGameStore.getState().prestigeCount).toBe(0);
+  });
+
+  it('tracks comet, expedition and shatter counters for achievements', () => {
+    reset({ minerals: 5000 });
+    useGameStore.getState().collectComet({ kind: 'windfall', amount: 100 }, 1000);
+    expect(useGameStore.getState().cometsCaught).toBe(1);
+    useGameStore.getState().collectComet({ kind: 'frenzy', mult: 7, durationMs: 1000 }, 1000);
+    expect(useGameStore.getState().cometsCaught).toBe(2);
+
+    reset({ minerals: 0 });
+    // a 450 windfall shatters asteroid 0 (400 HP)
+    useGameStore.getState().collectComet({ kind: 'windfall', amount: 450 }, 1000);
+    expect(useGameStore.getState().asteroidsShattered).toBe(1);
+  });
+
+  it('hydrate silently completes already-met achievements without toasts', () => {
+    reset({ totalTaps: 100, lifetimeAllTime: 1e3 });
+    const s = useGameStore.getState();
+    expect(s.achievements.t_100).toBe(true);
+    expect(s.achievements.m_1k).toBe(true);
+    expect(s.newAchievements).toEqual([]);
+  });
+
+  it('tickAchievements unlocks new goals, queues toasts and boosts production', () => {
+    reset({ generators: { ...initialPersistedState().generators, drone: 10 } });
+    const before = useGameStore.getState().cachedCps;
+    // Tap to 100 to qualify for t_100.
+    for (let i = 0; i < 100; i++) useGameStore.getState().tap();
+    useGameStore.getState().tickAchievements();
+    const s = useGameStore.getState();
+    expect(s.achievements.t_100).toBe(true);
+    expect(s.newAchievements).toContain('t_100');
+    // +2% production bonus is now active.
+    expect(s.cachedCps).toBeCloseTo(before * 1.02);
+    // consume clears the queue
+    expect(useGameStore.getState().consumeAchievements()).toContain('t_100');
+    expect(useGameStore.getState().newAchievements).toEqual([]);
+  });
+
+  it('resetGame wipes all progress back to a fresh state', () => {
+    reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
+    useGameStore.getState().resetGame();
+    const s = useGameStore.getState();
+    expect(s.minerals).toBe(0);
+    expect(s.darkMatter).toBe(0);
+    expect(s.prestigeCount).toBe(0);
+    expect(s.achievements).toEqual({});
   });
 });

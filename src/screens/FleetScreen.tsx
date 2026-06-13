@@ -13,6 +13,7 @@ import {
   expeditionLoot,
 } from '../game/expeditions';
 import { effectivePowers } from '../game/powers';
+import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatDuration, formatNumber } from '../utils/format';
@@ -52,6 +53,7 @@ export function FleetScreen() {
   const handleClaim = () => {
     const result = claimExpedition(Date.now());
     if (!result) return;
+    playSound('buy');
     const artifact = result.artifactId ? ARTIFACTS_BY_ID[result.artifactId] : null;
     setResultBanner(
       artifact
@@ -118,7 +120,10 @@ export function FleetScreen() {
             loot={expeditionLoot(def, cachedCps, powers)}
             durationMs={expeditionDuration(def, powers)}
             affordable={minerals >= expeditionFuel(def, cachedCps, powers)}
-            onLaunch={() => launchExpedition(def.id, Date.now())}
+            onLaunch={() => {
+              launchExpedition(def.id, Date.now());
+              playSound('buy');
+            }}
           />
         ))
       )}

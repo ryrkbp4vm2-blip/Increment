@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { frenzyFactor } from '../game/events';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -7,7 +7,11 @@ import { formatNumber, formatRate } from '../utils/format';
 import { CometArt } from './art/CometArt';
 import { Icon } from './art/Icon';
 
-export function StatsHeader() {
+interface Props {
+  onOpenSettings: () => void;
+}
+
+export function StatsHeader({ onOpenSettings }: Props) {
   const minerals = useGameStore((s) => s.minerals);
   const cps = useGameStore((s) => s.cachedCps);
   const darkMatter = useGameStore((s) => s.darkMatter);
@@ -22,6 +26,9 @@ export function StatsHeader() {
 
   return (
     <View style={styles.header}>
+      <Pressable style={styles.settingsButton} onPress={onOpenSettings} hitSlop={12}>
+        <Icon name="settings" size={20} color={colors.textMuted} accent={colors.textMuted} />
+      </Pressable>
       <View style={styles.center}>
         <View style={styles.mineralRow}>
           <Icon name="mineral" size={26} />
@@ -59,6 +66,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.panel,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  settingsButton: {
+    position: 'absolute',
+    left: spacing.lg,
+    top: spacing.md + 4,
+    zIndex: 5,
   },
   center: {
     alignItems: 'center',

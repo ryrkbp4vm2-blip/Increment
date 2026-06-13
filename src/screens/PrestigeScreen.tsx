@@ -12,6 +12,7 @@ import {
 } from '../game/darkmatter';
 import { effectivePowers } from '../game/powers';
 import { darkMatterGain, nextDarkMatterAt, pendingDarkMatter } from '../game/prestige';
+import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -75,6 +76,7 @@ export function PrestigeScreen() {
               color={colors.darkMatter}
               onPress={() => {
                 doPrestige();
+                playSound('prestige');
                 setConfirming(false);
               }}
               style={styles.confirmButton}
@@ -133,6 +135,10 @@ function DarkMatterRow({
   const cost = darkMatterUpgradeCost(def, level);
   const affordable = !maxed && balance >= cost;
 
+  const onBuyWithSound = () => {
+    onBuy();
+    playSound('buy');
+  };
   return (
     <View style={styles.dmRow}>
       <View style={styles.dmIconBox}>
@@ -146,7 +152,7 @@ function DarkMatterRow({
         {level > 0 && <Text style={styles.dmCurrent}>Now: {dmTotalEffect(def, level)}</Text>}
       </View>
       <Pressable
-        onPress={onBuy}
+        onPress={onBuyWithSound}
         disabled={!affordable}
         style={[styles.dmBuy, maxed && styles.dmMaxed, !affordable && !maxed && styles.dmBuyDisabled]}
       >

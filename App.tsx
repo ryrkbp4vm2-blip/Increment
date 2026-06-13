@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
+import { initSound } from './src/audio/sound';
 import { OFFLINE_MIN_MS } from './src/game/balance';
 import { effectivePowers } from './src/game/powers';
 import { cps } from './src/game/math';
@@ -17,6 +18,7 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+    void initSound();
     (async () => {
       const save = await loadSave();
       if (cancelled) return;

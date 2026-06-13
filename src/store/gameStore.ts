@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { computeMetrics, newlyCompleted } from '../game/achievements';
 import { applyDamage } from '../game/asteroids';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -35,6 +36,9 @@ export interface GameActions {
   claimExpedition(nowMs: number): ExpeditionResult | null;
   buyDarkMatterUpgrade(id: string): void;
   doPrestige(): void;
+  tickAchievements(): void;
+  consumeAchievements(): string[];
+  resetGame(): void;
 }
 
 export type GameStore = GameState & GameActions;
@@ -62,10 +66,19 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     asteroidDamage: 0,
     artifacts: {},
     expedition: null,
+    achievements: {},
+    asteroidsShattered: 0,
+    cometsCaught: 0,
+    expeditionsCompleted: 0,
   };
 }
 
-function withCaches(persisted: PersistedState, lastTickAt: number): GameState {
+// Returns everything except the transient `newAchievements` queue, which is
+// preserved across these partial updates by zustand's shallow merge.
+function withCaches(
+  persisted: PersistedState,
+  lastTickAt: number,
+): Omit<GameState, 'newAchievements'> {
   const cachedCps = cps(persisted);
   return {
     ...persisted,
@@ -91,6 +104,7 @@ function earn(state: GameState, amount: number): Partial<GameState> {
     asteroidDamage: result.asteroidDamage,
   };
   if (result.shattered > 0) {
+    delta.asteroidsShattered = state.asteroidsShattered + result.shattered;
     const next = { ...state, ...delta } as GameState;
     delta.cachedCps = cps(next);
     delta.cachedTapValue = tapValue(next, delta.cachedCps);
@@ -100,9 +114,16 @@ function earn(state: GameState, amount: number): Partial<GameState> {
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
+  newAchievements: [],
 
   hydrate(persisted, nowMs) {
-    set(withCaches(persisted, nowMs));
+    // Silently grant any achievements an existing save already qualifies for,
+    // so loading doesn't spam toasts but the bonus still applies.
+    const achievements = { ...persisted.achievements };
+    for (const id of newlyCompleted(persisted.achievements, computeMetrics(persisted))) {
+      achievements[id] = true;
+    }
+    set({ ...withCaches({ ...persisted, achievements }, nowMs), newAchievements: [] });
   },
 
   tap() {
@@ -148,10 +169,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   collectComet(reward, nowMs) {
     const state = get();
+    const cometsCaught = state.cometsCaught + 1;
     if (reward.kind === 'frenzy') {
-      set({ frenzyUntil: nowMs + reward.durationMs, frenzyMult: reward.mult });
+      set({ frenzyUntil: nowMs + reward.durationMs, frenzyMult: reward.mult, cometsCaught });
     } else {
-      set(earn(state, reward.amount));
+      set({ ...earn(state, reward.amount), cometsCaught });
     }
   },
 
@@ -184,6 +206,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ...withCaches({ ...state, artifacts, expedition: null }, state.lastTickAt),
       ...earn({ ...state, artifacts } as GameState, result.loot),
       expedition: null,
+      expeditionsCompleted: state.expeditionsCompleted + 1,
     });
     return result;
   },
@@ -218,6 +241,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
           expedition: state.expedition,
+          achievements: state.achievements,
+          asteroidsShattered: state.asteroidsShattered,
+          cometsCaught: state.cometsCaught,
+          expeditionsCompleted: state.expeditionsCompleted,
           // Head start from the Dark Matter shop.
           minerals: powers.startMinerals,
           asteroidIndex: powers.startAsteroidIndex,
@@ -225,6 +252,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
         state.lastTickAt,
       ),
     );
+  },
+
+  tickAchievements() {
+    const state = get();
+    const newly = newlyCompleted(state.achievements, computeMetrics(state));
+    if (newly.length === 0) return;
+    const achievements = { ...state.achievements };
+    for (const id of newly) achievements[id] = true;
+    // Recompute caches: the completion bonus changes production.
+    set({
+      ...withCaches({ ...state, achievements }, state.lastTickAt),
+      newAchievements: [...state.newAchievements, ...newly],
+    });
+  },
+
+  consumeAchievements() {
+    const queued = get().newAchievements;
+    if (queued.length > 0) set({ newAchievements: [] });
+    return queued;
+  },
+
+  resetGame() {
+    const now = Date.now();
+    set({ ...withCaches(initialPersistedState(now), now), newAchievements: [] });
   },
 }));
 

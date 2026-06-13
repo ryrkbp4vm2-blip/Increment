@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ACHIEVEMENTS_BY_ID } from '../game/achievements';
 import { ARTIFACTS_BY_ID } from '../game/artifacts';
 import { UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID } from '../game/darkmatter';
@@ -29,6 +30,10 @@ export function toPersisted(state: GameState): PersistedState {
     asteroidDamage: state.asteroidDamage,
     artifacts: state.artifacts,
     expedition: state.expedition,
+    achievements: state.achievements,
+    asteroidsShattered: state.asteroidsShattered,
+    cometsCaught: state.cometsCaught,
+    expeditionsCompleted: state.expeditionsCompleted,
   };
 }
 
@@ -90,6 +95,12 @@ export function migrate(raw: string | null): SaveFile | null {
       if (level > 0) dmUpgrades[id] = Math.min(level, def.maxLevel);
     }
   }
+  const achievements: Record<string, true> = {};
+  if (typeof raw_.achievements === 'object' && raw_.achievements !== null) {
+    for (const id of Object.keys(raw_.achievements)) {
+      if (ACHIEVEMENTS_BY_ID[id]) achievements[id] = true;
+    }
+  }
   const darkMatter = Math.max(0, finiteNumber(raw_.darkMatter, 0));
   let expedition: PersistedState['expedition'] = null;
   const rawExp = raw_.expedition;
@@ -125,6 +136,10 @@ export function migrate(raw: string | null): SaveFile | null {
     asteroidDamage: Math.max(0, finiteNumber(raw_.asteroidDamage, 0)),
     artifacts,
     expedition,
+    achievements,
+    asteroidsShattered: Math.max(0, Math.floor(finiteNumber(raw_.asteroidsShattered, 0))),
+    cometsCaught: Math.max(0, Math.floor(finiteNumber(raw_.cometsCaught, 0))),
+    expeditionsCompleted: Math.max(0, Math.floor(finiteNumber(raw_.expeditionsCompleted, 0))),
   };
   return {
     version: SAVE_VERSION,
@@ -139,6 +154,14 @@ export async function loadSave(): Promise<SaveFile | null> {
   } catch (error) {
     console.warn('Failed to load save, starting fresh', error);
     return null;
+  }
+}
+
+export async function clearSave(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(SAVE_KEY);
+  } catch (error) {
+    console.warn('Failed to clear save', error);
   }
 }
 

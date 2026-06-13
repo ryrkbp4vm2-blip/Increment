@@ -3,12 +3,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing } from '../theme';
 import { Icon, IconName } from './art/Icon';
 
-export type Tab = 'mine' | 'shop' | 'fleet' | 'prestige';
+export type Tab = 'mine' | 'shop' | 'fleet' | 'goals' | 'prestige';
 
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'mine', label: 'Mine', icon: 'mine' },
   { id: 'shop', label: 'Empire', icon: 'empire' },
   { id: 'fleet', label: 'Fleet', icon: 'fleet' },
+  { id: 'goals', label: 'Goals', icon: 'goals' },
   { id: 'prestige', label: 'Prestige', icon: 'prestige' },
 ];
 
@@ -26,7 +27,7 @@ export function TabBar({ active, onChange }: Props) {
           <Pressable key={tab.id} style={styles.tab} onPress={() => onChange(tab.id)}>
             <Icon
               name={tab.icon}
-              size={24}
+              size={22}
               color={isActive ? colors.accent : colors.textMuted}
               accent={isActive ? colors.accent : colors.textMuted}
             />
@@ -53,7 +54,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   labelActive: {

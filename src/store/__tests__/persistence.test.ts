@@ -8,6 +8,7 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     lastTickAt: 456,
     cachedCps: 99,
     cachedTapValue: 5,
+    newAchievements: [],
     ...overrides,
   };
 }
@@ -98,6 +99,29 @@ describe('migrate hardening', () => {
     const save = migrate('{"version":1,"savedAt":50,"state":{"darkMatter":8}}')!;
     expect(save.state.totalDarkMatter).toBe(8);
     expect(save.state.dmUpgrades).toEqual({});
+  });
+
+  it('round-trips achievements and counters', () => {
+    const state = makeState({
+      achievements: { t_100: true, m_1k: true },
+      asteroidsShattered: 12,
+      cometsCaught: 30,
+      expeditionsCompleted: 4,
+    });
+    const save = migrate(serialize(state, 1))!;
+    expect(save.state.achievements).toEqual({ t_100: true, m_1k: true });
+    expect(save.state.asteroidsShattered).toBe(12);
+    expect(save.state.cometsCaught).toBe(30);
+    expect(save.state.expeditionsCompleted).toBe(4);
+  });
+
+  it('drops unknown achievements and defaults missing counters', () => {
+    const save = migrate(
+      '{"version":1,"savedAt":50,"state":{"achievements":{"fake":true,"t_100":true}}}',
+    )!;
+    expect(save.state.achievements).toEqual({ t_100: true });
+    expect(save.state.asteroidsShattered).toBe(0);
+    expect(save.state.cometsCaught).toBe(0);
   });
 
   it('sanitizes invalid values', () => {

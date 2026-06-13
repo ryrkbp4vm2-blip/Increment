@@ -71,12 +71,20 @@ export interface PersistedState {
     endsAt: number;
     loot: number;
   } | null;
+  /** Completed achievement ids (permanent, survive prestige). */
+  achievements: Record<string, true>;
+  /** All-time counters that feed achievements (survive prestige). */
+  asteroidsShattered: number;
+  cometsCaught: number;
+  expeditionsCompleted: number;
 }
 
 export interface GameState extends PersistedState {
   lastTickAt: number;
   cachedCps: number;
   cachedTapValue: number;
+  /** Transient queue of just-unlocked achievement ids for toasts. */
+  newAchievements: string[];
 }
 
 export interface SaveFile {
