@@ -1,3 +1,5 @@
+import { artifactPowers } from './artifacts';
+import { asteroidRichness } from './asteroids';
 import { DARK_MATTER_BONUS, GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
 import { GameState, GeneratorDef, GeneratorId, PersistedState, UnlockCondition } from './types';
 
@@ -25,14 +27,17 @@ export function maxAffordable(def: GeneratorDef, owned: number, funds: number): 
   return count;
 }
 
-type MultState = Pick<PersistedState, 'upgrades' | 'darkMatter'>;
+type MultState = Pick<
+  PersistedState,
+  'upgrades' | 'darkMatter' | 'artifacts' | 'asteroidIndex'
+>;
 
-export function darkMatterMultiplier(darkMatter: number): number {
-  return 1 + DARK_MATTER_BONUS * darkMatter;
+export function darkMatterMultiplier(darkMatter: number, dmBonusMult: number = 1): number {
+  return 1 + DARK_MATTER_BONUS * dmBonusMult * darkMatter;
 }
 
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
-  let mult = 1;
+  let mult = artifactPowers(state.artifacts).genMult[genId] ?? 1;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'genMult' && effect.genId === genId) mult *= effect.x;
@@ -41,7 +46,11 @@ export function generatorMultiplier(genId: GeneratorId, state: MultState): numbe
 }
 
 export function globalMultiplier(state: MultState): number {
-  let mult = darkMatterMultiplier(state.darkMatter);
+  const powers = artifactPowers(state.artifacts);
+  let mult =
+    darkMatterMultiplier(state.darkMatter, powers.dmBonusMult) *
+    powers.globalMult *
+    asteroidRichness(state.asteroidIndex);
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'globalMult') mult *= effect.x;
@@ -80,7 +89,7 @@ export function tapValue(
   state: MultState & Pick<PersistedState, 'generators'>,
   currentCps: number = cps(state),
 ): number {
-  let tapMult = 1;
+  let tapMult = artifactPowers(state.artifacts).tapMult;
   let cpsPercent = 0;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;

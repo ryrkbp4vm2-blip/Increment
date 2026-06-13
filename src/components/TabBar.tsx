@@ -2,11 +2,12 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing } from '../theme';
 
-export type Tab = 'mine' | 'shop' | 'prestige';
+export type Tab = 'mine' | 'shop' | 'fleet' | 'prestige';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'mine', label: 'Mine', icon: '⛏️' },
-  { id: 'shop', label: 'Empire', icon: '🚀' },
+  { id: 'shop', label: 'Empire', icon: '🏭' },
+  { id: 'fleet', label: 'Fleet', icon: '🚀' },
   { id: 'prestige', label: 'Prestige', icon: '🌌' },
 ];
 

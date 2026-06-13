@@ -6,6 +6,7 @@ import { WelcomeBackModal } from '../components/WelcomeBackModal';
 import { OfflineReport, useAppLifecycle } from '../hooks/useAppLifecycle';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { colors } from '../theme';
+import { FleetScreen } from './FleetScreen';
 import { MineScreen } from './MineScreen';
 import { PrestigeScreen } from './PrestigeScreen';
 import { ShopScreen } from './ShopScreen';
@@ -31,6 +32,7 @@ export function GameRoot({ initialOfflineReport }: Props) {
       <View style={styles.content}>
         {tab === 'mine' && <MineScreen />}
         {tab === 'shop' && <ShopScreen />}
+        {tab === 'fleet' && <FleetScreen />}
         {tab === 'prestige' && <PrestigeScreen />}
       </View>
       <TabBar active={tab} onChange={setTab} />

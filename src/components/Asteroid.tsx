@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { asteroidType } from '../game/asteroids';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -16,9 +17,48 @@ const MAX_PARTICLES = 12;
 
 export function Asteroid() {
   const tap = useGameStore((s) => s.tap);
+  const asteroidIndex = useGameStore((s) => s.asteroidIndex);
   const scale = useRef(new Animated.Value(1)).current;
   const [particles, setParticles] = useState<Particle[]>([]);
   const nextId = useRef(0);
+  const prevIndex = useRef(asteroidIndex);
+
+  const spawnParticle = useCallback(
+    (label: string, big = false) => {
+      const particle: Particle = {
+        id: nextId.current++,
+        label,
+        offsetX: (Math.random() - 0.5) * (big ? 180 : 120),
+        progress: new Animated.Value(0),
+      };
+      setParticles((prev) => [...prev.slice(-(MAX_PARTICLES - 1)), particle]);
+      Animated.timing(particle.progress, {
+        toValue: 1,
+        duration: big ? 1200 : 900,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(() => {
+        setParticles((prev) => prev.filter((p) => p.id !== particle.id));
+      });
+    },
+    [],
+  );
+
+  // Shatter burst when the belt advances to a new asteroid.
+  useEffect(() => {
+    if (asteroidIndex > prevIndex.current) {
+      scale.setValue(1.5);
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 12, bounciness: 14 }).start();
+      for (let i = 0; i < 5; i++) spawnParticle('💥', true);
+      try {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        // Haptics unavailable (e.g. web); ignore.
+      }
+    }
+    prevIndex.current = asteroidIndex;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asteroidIndex]);
 
   const handlePress = useCallback(() => {
     const earned = tap();
@@ -31,23 +71,8 @@ export function Asteroid() {
 
     scale.setValue(0.92);
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 12 }).start();
-
-    const particle: Particle = {
-      id: nextId.current++,
-      label: `+${formatNumber(earned)}`,
-      offsetX: (Math.random() - 0.5) * 120,
-      progress: new Animated.Value(0),
-    };
-    setParticles((prev) => [...prev.slice(-(MAX_PARTICLES - 1)), particle]);
-    Animated.timing(particle.progress, {
-      toValue: 1,
-      duration: 900,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start(() => {
-      setParticles((prev) => prev.filter((p) => p.id !== particle.id));
-    });
-  }, [tap, scale]);
+    spawnParticle(`+${formatNumber(earned)}`);
+  }, [tap, scale, spawnParticle]);
 
   return (
     <View style={styles.container}>
@@ -78,7 +103,7 @@ export function Asteroid() {
       ))}
       <Pressable onPress={handlePress} hitSlop={20}>
         <Animated.View style={[styles.asteroid, { transform: [{ scale }] }]}>
-          <Text style={styles.asteroidEmoji}>🪨</Text>
+          <Text style={styles.asteroidEmoji}>{asteroidType(asteroidIndex).emoji}</Text>
         </Animated.View>
       </Pressable>
     </View>

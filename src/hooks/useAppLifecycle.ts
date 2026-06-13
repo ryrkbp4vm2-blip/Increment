@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
+import { artifactPowers } from '../game/artifacts';
 import { OFFLINE_MIN_MS } from '../game/balance';
 import { computeOfflineEarnings } from '../game/offline';
 import { useGameStore } from '../store/gameStore';
@@ -26,7 +27,8 @@ export function useAppLifecycle() {
       if (nowActive) {
         const elapsedMs = Date.now() - state.lastTickAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
-          const earned = computeOfflineEarnings(elapsedMs, state.cachedCps);
+          const capBonus = artifactPowers(state.artifacts).offlineCapBonusMs;
+          const earned = computeOfflineEarnings(elapsedMs, state.cachedCps, capBonus);
           state.applyOffline(earned, Date.now());
           if (earned > 0) setOfflineReport({ earned, elapsedMs });
         }

@@ -8,11 +8,17 @@ it all into **Dark Matter** for permanent production bonuses.
 ## Gameplay
 
 - **⛏️ Mine** — tap the asteroid to earn minerals and kick-start your empire.
+- **💥 Shatter the belt** — every mineral you earn damages the current asteroid. Break it and
+  it shatters (with a bonus payout), and you fly to the next rock — Glacial, Ferrous, Auric,
+  Crystalline, Voidstone — each one permanently richer (+15% production per asteroid this run).
 - **☄️ Golden comets** — every minute or two a comet streaks by; catch it for a ×7
   production frenzy or an instant mineral windfall.
 - **🚀 Empire** — spend minerals on 8 tiers of generators (Mining Drones → Dyson Swarm) that
   produce passively, plus upgrades that multiply tap power and production. Buy ×1, ×10, or Max.
   Every 25 of a generator doubles its output.
+- **🛰️ Fleet expeditions** — send your fleet on timed missions (5 min sweeps to 2 h ghost-ship
+  salvages). They cost fuel, return mineral loot, and can recover one of **12 unique artifacts**
+  with permanent perks. Artifacts survive prestige. Expeditions keep flying while you're away.
 - **🌌 Prestige** — once you've mined 1T minerals in a run, trigger a *Supernova Collapse*:
   reset the run for Dark Matter, each granting **+2% to all production and taps, forever**.
 - **💤 Offline earnings** — your empire keeps mining while the app is closed (up to 8 hours),

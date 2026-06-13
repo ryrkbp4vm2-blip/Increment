@@ -59,6 +59,8 @@ const baseState = {
   generators: { drone: 0, excavator: 0, refinery: 0, hauler: 0, station: 0, harvester: 0, cracker: 0, dyson: 0 },
   upgrades: {} as Record<string, true>,
   darkMatter: 0,
+  artifacts: {} as Record<string, true>,
+  asteroidIndex: 0,
 };
 
 describe('production', () => {
@@ -89,6 +91,30 @@ describe('production', () => {
       darkMatter: 50, // x2 (1 + 0.02*50)
     };
     expect(cps(state)).toBeCloseTo(5 * 1.5 * 2);
+  });
+
+  it('applies belt richness from the asteroid index', () => {
+    const state = {
+      ...baseState,
+      generators: { ...baseState.generators, drone: 10 },
+      asteroidIndex: 5, // 1.15^5
+    };
+    expect(cps(state)).toBeCloseTo(5 * 1.15 ** 5);
+  });
+
+  it('applies artifact bonuses to production and taps', () => {
+    const state = {
+      ...baseState,
+      generators: { ...baseState.generators, drone: 10 },
+      artifacts: {
+        pulsar_shard: true as const, // global x1.1
+        von_neumann_seed: true as const, // drones x3
+        alien_drill: true as const, // tap x3
+      },
+    };
+    expect(cps(state)).toBeCloseTo(5 * 1.1 * 3);
+    // tap: base 1 * tapMult 3 * globalMult 1.1
+    expect(tapValue(state, 0)).toBeCloseTo(3 * 1.1);
   });
 });
 

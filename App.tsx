@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
+import { artifactPowers } from './src/game/artifacts';
 import { OFFLINE_MIN_MS } from './src/game/balance';
 import { cps } from './src/game/math';
 import { computeOfflineEarnings } from './src/game/offline';
@@ -24,7 +25,8 @@ export default function App() {
         useGameStore.getState().hydrate(save.state, now);
         const elapsedMs = now - save.savedAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
-          const earned = computeOfflineEarnings(elapsedMs, cps(save.state));
+          const capBonus = artifactPowers(save.state.artifacts).offlineCapBonusMs;
+          const earned = computeOfflineEarnings(elapsedMs, cps(save.state), capBonus);
           useGameStore.getState().applyOffline(earned, now);
           if (earned > 0) setOfflineReport({ earned, elapsedMs });
         }

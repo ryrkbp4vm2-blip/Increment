@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ARTIFACTS_BY_ID } from '../game/artifacts';
 import { UPGRADES_BY_ID } from '../game/balance';
+import { EXPEDITIONS_BY_ID } from '../game/expeditions';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
 
@@ -20,6 +22,10 @@ export function toPersisted(state: GameState): PersistedState {
     startedAt: state.startedAt,
     frenzyUntil: state.frenzyUntil,
     frenzyMult: state.frenzyMult,
+    asteroidIndex: state.asteroidIndex,
+    asteroidDamage: state.asteroidDamage,
+    artifacts: state.artifacts,
+    expedition: state.expedition,
   };
 }
 
@@ -66,6 +72,27 @@ export function migrate(raw: string | null): SaveFile | null {
       if (UPGRADES_BY_ID[id]) upgrades[id] = true;
     }
   }
+  const artifacts: Record<string, true> = {};
+  if (typeof raw_.artifacts === 'object' && raw_.artifacts !== null) {
+    for (const id of Object.keys(raw_.artifacts)) {
+      if (ARTIFACTS_BY_ID[id]) artifacts[id] = true;
+    }
+  }
+  let expedition: PersistedState['expedition'] = null;
+  const rawExp = raw_.expedition;
+  if (
+    typeof rawExp === 'object' &&
+    rawExp !== null &&
+    typeof rawExp.defId === 'string' &&
+    EXPEDITIONS_BY_ID[rawExp.defId]
+  ) {
+    expedition = {
+      defId: rawExp.defId,
+      startedAt: finiteNumber(rawExp.startedAt, 0),
+      endsAt: finiteNumber(rawExp.endsAt, 0),
+      loot: Math.max(0, finiteNumber(rawExp.loot, 0)),
+    };
+  }
   const state: PersistedState = {
     minerals: Math.max(0, finiteNumber(raw_.minerals, 0)),
     lifetimeThisRun: Math.max(0, finiteNumber(raw_.lifetimeThisRun, 0)),
@@ -78,6 +105,10 @@ export function migrate(raw: string | null): SaveFile | null {
     startedAt: finiteNumber(raw_.startedAt, defaults.startedAt),
     frenzyUntil: Math.max(0, finiteNumber(raw_.frenzyUntil, 0)),
     frenzyMult: Math.max(1, finiteNumber(raw_.frenzyMult, 1)),
+    asteroidIndex: Math.max(0, Math.floor(finiteNumber(raw_.asteroidIndex, 0))),
+    asteroidDamage: Math.max(0, finiteNumber(raw_.asteroidDamage, 0)),
+    artifacts,
+    expedition,
   };
   return {
     version: SAVE_VERSION,

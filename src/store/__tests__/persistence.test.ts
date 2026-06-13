@@ -52,6 +52,28 @@ describe('migrate hardening', () => {
     expect(save!.state.upgrades).toEqual({});
   });
 
+  it('round-trips artifacts and an active expedition', () => {
+    const state = makeState({
+      artifacts: { pulsar_shard: true, cryo_core: true },
+      expedition: { defId: 'survey', startedAt: 100, endsAt: 200, loot: 5000 },
+      asteroidIndex: 7,
+      asteroidDamage: 123.4,
+    });
+    const save = migrate(serialize(state, 1))!;
+    expect(save.state.artifacts).toEqual({ pulsar_shard: true, cryo_core: true });
+    expect(save.state.expedition).toEqual({ defId: 'survey', startedAt: 100, endsAt: 200, loot: 5000 });
+    expect(save.state.asteroidIndex).toBe(7);
+    expect(save.state.asteroidDamage).toBeCloseTo(123.4);
+  });
+
+  it('drops unknown artifacts and malformed expeditions', () => {
+    const save = migrate(
+      '{"version":1,"savedAt":50,"state":{"artifacts":{"fake":true,"alien_drill":true},"expedition":{"defId":"nope","endsAt":1}}}',
+    )!;
+    expect(save.state.artifacts).toEqual({ alien_drill: true });
+    expect(save.state.expedition).toBeNull();
+  });
+
   it('sanitizes invalid values', () => {
     const save = migrate(
       '{"version":1,"savedAt":50,"state":{"minerals":-5,"totalTaps":3.7,"generators":{"drone":"lots"},"upgrades":{"fake_upgrade":true,"tap1":true}}}',

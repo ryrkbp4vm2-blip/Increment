@@ -8,7 +8,7 @@ import { frenzyFactor, rollCometReward, rollSpawnDelay } from '../events';
 
 describe('rollCometReward', () => {
   it('grants a frenzy on low rolls', () => {
-    const reward = rollCometReward(100, () => 0.2);
+    const reward = rollCometReward(100, {}, () => 0.2);
     expect(reward).toEqual({
       kind: 'frenzy',
       mult: COMET_FRENZY_MULT,
@@ -17,13 +17,24 @@ describe('rollCometReward', () => {
   });
 
   it('grants a production-scaled windfall on high rolls', () => {
-    const reward = rollCometReward(100, () => 0.9);
+    const reward = rollCometReward(100, {}, () => 0.9);
     expect(reward).toEqual({ kind: 'windfall', amount: 100 * COMET_WINDFALL_SECONDS });
   });
 
   it('floors the windfall for brand-new players', () => {
-    const reward = rollCometReward(0, () => 0.9);
+    const reward = rollCometReward(0, {}, () => 0.9);
     expect(reward).toEqual({ kind: 'windfall', amount: COMET_WINDFALL_MIN });
+  });
+
+  it('applies artifact modifiers', () => {
+    const windfall = rollCometReward(100, { cometMult: 1.5 }, () => 0.9);
+    expect(windfall).toEqual({ kind: 'windfall', amount: 100 * COMET_WINDFALL_SECONDS * 1.5 });
+    const frenzy = rollCometReward(100, { frenzyExtraMs: 15_000 }, () => 0.2);
+    expect(frenzy).toEqual({
+      kind: 'frenzy',
+      mult: COMET_FRENZY_MULT,
+      durationMs: COMET_FRENZY_DURATION_MS + 15_000,
+    });
   });
 });
 

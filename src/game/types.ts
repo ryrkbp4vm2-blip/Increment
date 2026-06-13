@@ -54,6 +54,18 @@ export interface PersistedState {
   /** Golden-comet frenzy buff: production multiplier active until this time. */
   frenzyUntil: number;
   frenzyMult: number;
+  /** Belt progression: which asteroid we're on and damage dealt to it. */
+  asteroidIndex: number;
+  asteroidDamage: number;
+  /** Permanent artifact collection (survives prestige). */
+  artifacts: Record<string, true>;
+  /** Currently running fleet expedition, if any. */
+  expedition: {
+    defId: string;
+    startedAt: number;
+    endsAt: number;
+    loot: number;
+  } | null;
 }
 
 export interface GameState extends PersistedState {

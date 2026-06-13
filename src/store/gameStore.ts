@@ -1,5 +1,16 @@
 import { create } from 'zustand';
-import { GENERATORS, GENERATORS_BY_ID, UPGRADES_BY_ID } from '../game/balance';
+import { artifactPowers } from '../game/artifacts';
+import { applyDamage } from '../game/asteroids';
+import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
+import { CometReward, frenzyFactor } from '../game/events';
+import {
+  ExpeditionResult,
+  EXPEDITIONS_BY_ID,
+  expeditionDuration,
+  expeditionFuel,
+  expeditionLoot,
+  rollExpeditionResult,
+} from '../game/expeditions';
 import {
   bulkCost,
   costOfNext,
@@ -8,9 +19,7 @@ import {
   maxAffordable,
   tapValue,
 } from '../game/math';
-import { CometReward, frenzyFactor } from '../game/events';
 import { pendingDarkMatter } from '../game/prestige';
-import { advance } from '../game/tick';
 import { BuyQty, GameState, GeneratorId, PersistedState } from '../game/types';
 
 export interface GameActions {
@@ -21,6 +30,8 @@ export interface GameActions {
   applyTick(nowMs: number): void;
   applyOffline(earned: number, nowMs: number): void;
   collectComet(reward: CometReward, nowMs: number): void;
+  launchExpedition(defId: string, nowMs: number): void;
+  claimExpedition(nowMs: number): ExpeditionResult | null;
   doPrestige(): void;
 }
 
@@ -43,6 +54,10 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     startedAt: nowMs,
     frenzyUntil: 0,
     frenzyMult: 1,
+    asteroidIndex: 0,
+    asteroidDamage: 0,
+    artifacts: {},
+    expedition: null,
   };
 }
 
@@ -56,6 +71,29 @@ function withCaches(persisted: PersistedState, lastTickAt: number): GameState {
   };
 }
 
+/**
+ * Credit earned minerals, deal matching damage to the current asteroid, and
+ * pay out any shatter bonuses. Returns the state delta; when an asteroid
+ * shatters the production caches are refreshed (richness changed).
+ */
+function earn(state: GameState, amount: number): Partial<GameState> {
+  const result = applyDamage(state.asteroidIndex, state.asteroidDamage, amount);
+  const total = amount + result.bonus;
+  const delta: Partial<GameState> = {
+    minerals: state.minerals + total,
+    lifetimeThisRun: state.lifetimeThisRun + total,
+    lifetimeAllTime: state.lifetimeAllTime + total,
+    asteroidIndex: result.asteroidIndex,
+    asteroidDamage: result.asteroidDamage,
+  };
+  if (result.shattered > 0) {
+    const next = { ...state, ...delta } as GameState;
+    delta.cachedCps = cps(next);
+    delta.cachedTapValue = tapValue(next, delta.cachedCps);
+  }
+  return delta;
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
 
@@ -66,12 +104,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   tap() {
     const state = get();
     const earned = state.cachedTapValue * frenzyFactor(state, Date.now());
-    set({
-      minerals: state.minerals + earned,
-      lifetimeThisRun: state.lifetimeThisRun + earned,
-      lifetimeAllTime: state.lifetimeAllTime + earned,
-      totalTaps: state.totalTaps + 1,
-    });
+    set({ ...earn(state, earned), totalTaps: state.totalTaps + 1 });
     return earned;
   },
 
@@ -98,17 +131,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   applyTick(nowMs) {
-    set(advance(get(), nowMs));
+    const state = get();
+    const deltaMs = Math.min(Math.max(nowMs - state.lastTickAt, 0), MAX_TICK_DELTA_MS);
+    const earned = state.cachedCps * (deltaMs / 1000) * frenzyFactor(state, nowMs);
+    set({ ...earn(state, earned), lastTickAt: nowMs });
   },
 
   applyOffline(earned, nowMs) {
     const state = get();
-    set({
-      minerals: state.minerals + earned,
-      lifetimeThisRun: state.lifetimeThisRun + earned,
-      lifetimeAllTime: state.lifetimeAllTime + earned,
-      lastTickAt: nowMs,
-    });
+    set({ ...earn(state, earned), lastTickAt: nowMs });
   },
 
   collectComet(reward, nowMs) {
@@ -116,12 +147,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (reward.kind === 'frenzy') {
       set({ frenzyUntil: nowMs + reward.durationMs, frenzyMult: reward.mult });
     } else {
-      set({
-        minerals: state.minerals + reward.amount,
-        lifetimeThisRun: state.lifetimeThisRun + reward.amount,
-        lifetimeAllTime: state.lifetimeAllTime + reward.amount,
-      });
+      set(earn(state, reward.amount));
     }
+  },
+
+  launchExpedition(defId, nowMs) {
+    const state = get();
+    const def = EXPEDITIONS_BY_ID[defId];
+    if (!def || state.expedition) return;
+    const powers = artifactPowers(state.artifacts);
+    const fuel = expeditionFuel(def, state.cachedCps, powers);
+    if (state.minerals < fuel) return;
+    set({
+      minerals: state.minerals - fuel,
+      expedition: {
+        defId,
+        startedAt: nowMs,
+        endsAt: nowMs + expeditionDuration(def, powers),
+        loot: expeditionLoot(def, state.cachedCps, powers),
+      },
+    });
+  },
+
+  claimExpedition(nowMs) {
+    const state = get();
+    if (!state.expedition || nowMs < state.expedition.endsAt) return null;
+    const result = rollExpeditionResult(state.expedition, state.artifacts);
+    const artifacts = result.artifactId
+      ? { ...state.artifacts, [result.artifactId]: true as const }
+      : state.artifacts;
+    set({
+      ...withCaches({ ...state, artifacts, expedition: null }, state.lastTickAt),
+      ...earn({ ...state, artifacts } as GameState, result.loot),
+      expedition: null,
+    });
+    return result;
   },
 
   doPrestige() {
@@ -136,6 +196,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalTaps: state.totalTaps,
           darkMatter: state.darkMatter + gained,
           prestigeCount: state.prestigeCount + 1,
+          artifacts: state.artifacts,
+          expedition: state.expedition,
         },
         state.lastTickAt,
       ),

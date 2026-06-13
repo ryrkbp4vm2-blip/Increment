@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { artifactPowers } from '../game/artifacts';
 import {
   COMET_FIRST_SPAWN_MS,
   COMET_SPAWN_MS,
@@ -71,7 +72,8 @@ export function Comet({ onCollect }: Props) {
     } catch {
       // Haptics unavailable (e.g. web); ignore.
     }
-    onCollect(rollCometReward(useGameStore.getState().cachedCps));
+    const state = useGameStore.getState();
+    onCollect(rollCometReward(state.cachedCps, artifactPowers(state.artifacts)));
   };
 
   return (
