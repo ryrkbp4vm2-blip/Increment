@@ -58,8 +58,8 @@ describe('maxAffordable', () => {
 const baseState = {
   generators: { drone: 0, excavator: 0, refinery: 0, hauler: 0, station: 0, harvester: 0, cracker: 0, dyson: 0 },
   upgrades: {} as Record<string, true>,
-  darkMatter: 0,
   artifacts: {} as Record<string, true>,
+  dmUpgrades: {} as Record<string, number>,
   asteroidIndex: 0,
 };
 
@@ -83,14 +83,14 @@ describe('production', () => {
     expect(generatorProduction(drone, 25, baseState)).toBeCloseTo(25);
   });
 
-  it('applies global and dark matter multipliers to cps', () => {
+  it('applies global upgrades and the Dark Matter shop to cps', () => {
     const state = {
       ...baseState,
       generators: { ...baseState.generators, drone: 10 },
       upgrades: { global1: true as const }, // x1.5
-      darkMatter: 50, // x2 (1 + 0.02*50)
+      dmUpgrades: { stellar_density: 5 }, // +40%*5 = x3
     };
-    expect(cps(state)).toBeCloseTo(5 * 1.5 * 2);
+    expect(cps(state)).toBeCloseTo(5 * 1.5 * 3);
   });
 
   it('applies belt richness from the asteroid index', () => {
@@ -123,9 +123,13 @@ describe('tapValue', () => {
     expect(tapValue(baseState)).toBe(1);
   });
 
-  it('applies tap multipliers and global multiplier', () => {
-    const state = { ...baseState, upgrades: { tap1: true as const, tap2: true as const }, darkMatter: 50 };
-    expect(tapValue(state)).toBeCloseTo(4 * 2);
+  it('applies tap multipliers, the shop and global multiplier', () => {
+    const state = {
+      ...baseState,
+      upgrades: { tap1: true as const, tap2: true as const }, // tap x4
+      dmUpgrades: { kinetic_amplifier: 4 }, // +75%*4 = x4
+    };
+    expect(tapValue(state)).toBeCloseTo(4 * 4);
   });
 
   it('adds a percentage of cps', () => {

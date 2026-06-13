@@ -120,14 +120,31 @@ describe('gameStore', () => {
     }
   });
 
-  it('prestige awards dark matter, resets the run, keeps lifetime stats and artifacts', () => {
+  it('buyDarkMatterUpgrade spends Dark Matter and boosts production', () => {
+    reset({ minerals: 0, darkMatter: 5, generators: { ...initialPersistedState().generators, excavator: 10 } });
+    expect(useGameStore.getState().cachedCps).toBeCloseTo(30);
+    useGameStore.getState().buyDarkMatterUpgrade('stellar_density'); // lvl1 costs 1, +40%
+    let s = useGameStore.getState();
+    expect(s.darkMatter).toBe(4);
+    expect(s.dmUpgrades.stellar_density).toBe(1);
+    expect(s.cachedCps).toBeCloseTo(30 * 1.4);
+
+    // Can't buy what you can't afford.
+    reset({ darkMatter: 0, generators: { ...initialPersistedState().generators, excavator: 10 } });
+    useGameStore.getState().buyDarkMatterUpgrade('stellar_density');
+    expect(useGameStore.getState().dmUpgrades.stellar_density).toBeUndefined();
+  });
+
+  it('prestige awards dark matter, resets the run, keeps shop and artifacts', () => {
     reset({
       minerals: 5e12,
-      lifetimeThisRun: 4e12,
+      lifetimeThisRun: 4e9, // sqrt(4e9/1e9) = 2 DM
       lifetimeAllTime: 6e12,
       generators: { ...initialPersistedState().generators, dyson: 5 },
       upgrades: { tap1: true },
       darkMatter: 3,
+      totalDarkMatter: 3,
+      dmUpgrades: { stellar_density: 2 },
       prestigeCount: 1,
       asteroidIndex: 12,
       asteroidDamage: 999,
@@ -135,23 +152,43 @@ describe('gameStore', () => {
     });
     useGameStore.getState().doPrestige();
     const s = useGameStore.getState();
-    expect(s.darkMatter).toBe(5); // 3 + sqrt(4e12/1e12)
+    expect(s.darkMatter).toBe(5); // 3 + 2
+    expect(s.totalDarkMatter).toBe(5);
     expect(s.prestigeCount).toBe(2);
-    expect(s.minerals).toBe(0);
+    expect(s.minerals).toBe(0); // no head-start upgrades owned
     expect(s.lifetimeThisRun).toBe(0);
     expect(s.lifetimeAllTime).toBe(6e12);
     expect(s.generators.dyson).toBe(0);
     expect(s.upgrades.tap1).toBeUndefined();
-    // the belt resets, artifacts survive
+    // the belt resets; shop and artifacts survive
     expect(s.asteroidIndex).toBe(0);
     expect(s.asteroidDamage).toBe(0);
+    expect(s.dmUpgrades.stellar_density).toBe(2);
     expect(s.artifacts.pulsar_shard).toBe(true);
-    // dark matter multiplier and artifact bonus apply immediately
-    expect(s.cachedTapValue).toBeCloseTo(1.1 * 1.1);
+    // shop (+40%*2 = x1.8) and artifact (x1.1) bonuses apply immediately
+    expect(s.cachedTapValue).toBeCloseTo(1.8 * 1.1);
+  });
+
+  it('prestige head-start upgrades grant starting minerals and belt depth', () => {
+    reset({
+      lifetimeThisRun: 1e10,
+      dmUpgrades: { quantum_reserves: 2, belt_resonance: 3 },
+    });
+    useGameStore.getState().doPrestige();
+    const s = useGameStore.getState();
+    expect(s.minerals).toBe(10_000); // mineralStockpile(1000, 2) = 1000 * 10^1
+    expect(s.asteroidIndex).toBe(3);
+  });
+
+  it('prestige applies the DM-gain multiplier', () => {
+    reset({ lifetimeThisRun: 1e11, dmUpgrades: { dark_compression: 5 } }); // +20%*5 = x2
+    useGameStore.getState().doPrestige();
+    // pending = sqrt(1e11/1e9) = 10, x2 = 20
+    expect(useGameStore.getState().darkMatter).toBe(20);
   });
 
   it('prestige does nothing below the threshold', () => {
-    reset({ minerals: 100, lifetimeThisRun: 1e11 });
+    reset({ minerals: 100, lifetimeThisRun: 1e8 });
     useGameStore.getState().doPrestige();
     expect(useGameStore.getState().minerals).toBe(100);
     expect(useGameStore.getState().prestigeCount).toBe(0);

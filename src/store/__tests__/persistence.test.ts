@@ -17,6 +17,7 @@ describe('serialize/migrate round trip', () => {
     const state = makeState({
       minerals: 1234.5,
       darkMatter: 7,
+      totalDarkMatter: 7,
       generators: { ...initialPersistedState().generators, refinery: 12 },
       upgrades: { tap1: true },
     });
@@ -72,6 +73,31 @@ describe('migrate hardening', () => {
     )!;
     expect(save.state.artifacts).toEqual({ alien_drill: true });
     expect(save.state.expedition).toBeNull();
+  });
+
+  it('round-trips Dark Matter shop levels and total', () => {
+    const state = makeState({
+      darkMatter: 12,
+      totalDarkMatter: 40,
+      dmUpgrades: { stellar_density: 5, kinetic_amplifier: 2 },
+    });
+    const save = migrate(serialize(state, 1))!;
+    expect(save.state.darkMatter).toBe(12);
+    expect(save.state.totalDarkMatter).toBe(40);
+    expect(save.state.dmUpgrades).toEqual({ stellar_density: 5, kinetic_amplifier: 2 });
+  });
+
+  it('clamps shop levels and drops unknown upgrades', () => {
+    const save = migrate(
+      '{"version":1,"savedAt":50,"state":{"dmUpgrades":{"stellar_density":999,"fake_dm":3,"kinetic_amplifier":-2}}}',
+    )!;
+    expect(save.state.dmUpgrades).toEqual({ stellar_density: 20 }); // clamped to maxLevel; negative & unknown dropped
+  });
+
+  it('seeds totalDarkMatter from the balance for old saves', () => {
+    const save = migrate('{"version":1,"savedAt":50,"state":{"darkMatter":8}}')!;
+    expect(save.state.totalDarkMatter).toBe(8);
+    expect(save.state.dmUpgrades).toEqual({});
   });
 
   it('sanitizes invalid values', () => {

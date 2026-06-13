@@ -48,7 +48,12 @@ export interface PersistedState {
   totalTaps: number;
   generators: Record<GeneratorId, number>;
   upgrades: Record<string, true>;
+  /** Spendable Dark Matter balance. */
   darkMatter: number;
+  /** Lifetime Dark Matter ever earned (for stats). */
+  totalDarkMatter: number;
+  /** Purchased Dark Matter shop levels (id -> level). Survives prestige. */
+  dmUpgrades: Record<string, number>;
   prestigeCount: number;
   startedAt: number;
   /** Golden-comet frenzy buff: production multiplier active until this time. */

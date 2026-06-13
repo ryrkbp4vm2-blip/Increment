@@ -1,6 +1,6 @@
-import { artifactPowers } from './artifacts';
 import { asteroidRichness } from './asteroids';
-import { DARK_MATTER_BONUS, GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
+import { GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
+import { effectivePowers } from './powers';
 import { GameState, GeneratorDef, GeneratorId, PersistedState, UnlockCondition } from './types';
 
 export function costOfNext(def: GeneratorDef, owned: number): number {
@@ -29,15 +29,11 @@ export function maxAffordable(def: GeneratorDef, owned: number, funds: number): 
 
 type MultState = Pick<
   PersistedState,
-  'upgrades' | 'darkMatter' | 'artifacts' | 'asteroidIndex'
+  'upgrades' | 'artifacts' | 'asteroidIndex' | 'dmUpgrades'
 >;
 
-export function darkMatterMultiplier(darkMatter: number, dmBonusMult: number = 1): number {
-  return 1 + DARK_MATTER_BONUS * dmBonusMult * darkMatter;
-}
-
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
-  let mult = artifactPowers(state.artifacts).genMult[genId] ?? 1;
+  let mult = effectivePowers(state.artifacts, state.dmUpgrades).genMult[genId] ?? 1;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'genMult' && effect.genId === genId) mult *= effect.x;
@@ -46,11 +42,8 @@ export function generatorMultiplier(genId: GeneratorId, state: MultState): numbe
 }
 
 export function globalMultiplier(state: MultState): number {
-  const powers = artifactPowers(state.artifacts);
-  let mult =
-    darkMatterMultiplier(state.darkMatter, powers.dmBonusMult) *
-    powers.globalMult *
-    asteroidRichness(state.asteroidIndex);
+  const powers = effectivePowers(state.artifacts, state.dmUpgrades);
+  let mult = powers.globalMult * asteroidRichness(state.asteroidIndex);
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'globalMult') mult *= effect.x;
@@ -89,7 +82,7 @@ export function tapValue(
   state: MultState & Pick<PersistedState, 'generators'>,
   currentCps: number = cps(state),
 ): number {
-  let tapMult = artifactPowers(state.artifacts).tapMult;
+  let tapMult = effectivePowers(state.artifacts, state.dmUpgrades).tapMult;
   let cpsPercent = 0;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ARTIFACTS_BY_ID } from '../game/artifacts';
 import { UPGRADES_BY_ID } from '../game/balance';
+import { DM_UPGRADES_BY_ID } from '../game/darkmatter';
 import { EXPEDITIONS_BY_ID } from '../game/expeditions';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
@@ -18,6 +19,8 @@ export function toPersisted(state: GameState): PersistedState {
     generators: state.generators,
     upgrades: state.upgrades,
     darkMatter: state.darkMatter,
+    totalDarkMatter: state.totalDarkMatter,
+    dmUpgrades: state.dmUpgrades,
     prestigeCount: state.prestigeCount,
     startedAt: state.startedAt,
     frenzyUntil: state.frenzyUntil,
@@ -78,6 +81,16 @@ export function migrate(raw: string | null): SaveFile | null {
       if (ARTIFACTS_BY_ID[id]) artifacts[id] = true;
     }
   }
+  const dmUpgrades: Record<string, number> = {};
+  if (typeof raw_.dmUpgrades === 'object' && raw_.dmUpgrades !== null) {
+    for (const id of Object.keys(raw_.dmUpgrades)) {
+      const def = DM_UPGRADES_BY_ID[id];
+      if (!def) continue;
+      const level = Math.floor(finiteNumber((raw_.dmUpgrades as Record<string, unknown>)[id], 0));
+      if (level > 0) dmUpgrades[id] = Math.min(level, def.maxLevel);
+    }
+  }
+  const darkMatter = Math.max(0, finiteNumber(raw_.darkMatter, 0));
   let expedition: PersistedState['expedition'] = null;
   const rawExp = raw_.expedition;
   if (
@@ -100,7 +113,10 @@ export function migrate(raw: string | null): SaveFile | null {
     totalTaps: Math.max(0, Math.floor(finiteNumber(raw_.totalTaps, 0))),
     generators,
     upgrades,
-    darkMatter: Math.max(0, finiteNumber(raw_.darkMatter, 0)),
+    darkMatter,
+    // Old saves predate totalDarkMatter; seed it from the current balance.
+    totalDarkMatter: Math.max(darkMatter, finiteNumber(raw_.totalDarkMatter, darkMatter)),
+    dmUpgrades,
     prestigeCount: Math.max(0, Math.floor(finiteNumber(raw_.prestigeCount, 0))),
     startedAt: finiteNumber(raw_.startedAt, defaults.startedAt),
     frenzyUntil: Math.max(0, finiteNumber(raw_.frenzyUntil, 0)),

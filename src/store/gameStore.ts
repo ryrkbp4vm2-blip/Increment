@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { artifactPowers } from '../game/artifacts';
 import { applyDamage } from '../game/asteroids';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
+import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
 import { CometReward, frenzyFactor } from '../game/events';
 import {
   ExpeditionResult,
@@ -19,7 +19,8 @@ import {
   maxAffordable,
   tapValue,
 } from '../game/math';
-import { pendingDarkMatter } from '../game/prestige';
+import { effectivePowers } from '../game/powers';
+import { darkMatterGain, pendingDarkMatter } from '../game/prestige';
 import { BuyQty, GameState, GeneratorId, PersistedState } from '../game/types';
 
 export interface GameActions {
@@ -32,6 +33,7 @@ export interface GameActions {
   collectComet(reward: CometReward, nowMs: number): void;
   launchExpedition(defId: string, nowMs: number): void;
   claimExpedition(nowMs: number): ExpeditionResult | null;
+  buyDarkMatterUpgrade(id: string): void;
   doPrestige(): void;
 }
 
@@ -50,6 +52,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     generators: emptyGenerators(),
     upgrades: {},
     darkMatter: 0,
+    totalDarkMatter: 0,
+    dmUpgrades: {},
     prestigeCount: 0,
     startedAt: nowMs,
     frenzyUntil: 0,
@@ -155,7 +159,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const def = EXPEDITIONS_BY_ID[defId];
     if (!def || state.expedition) return;
-    const powers = artifactPowers(state.artifacts);
+    const powers = effectivePowers(state.artifacts, state.dmUpgrades);
     const fuel = expeditionFuel(def, state.cachedCps, powers);
     if (state.minerals < fuel) return;
     set({
@@ -184,20 +188,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return result;
   },
 
+  buyDarkMatterUpgrade(id) {
+    const state = get();
+    const def = DM_UPGRADES_BY_ID[id];
+    if (!def) return;
+    const level = state.dmUpgrades[id] ?? 0;
+    if (level >= def.maxLevel) return;
+    const cost = darkMatterUpgradeCost(def, level);
+    if (state.darkMatter < cost) return;
+    const dmUpgrades = { ...state.dmUpgrades, [id]: level + 1 };
+    set(withCaches({ ...state, darkMatter: state.darkMatter - cost, dmUpgrades }, state.lastTickAt));
+  },
+
   doPrestige() {
     const state = get();
-    const gained = pendingDarkMatter(state.lifetimeThisRun);
-    if (gained < 1) return;
+    if (pendingDarkMatter(state.lifetimeThisRun) < 1) return;
+    const powers = effectivePowers(state.artifacts, state.dmUpgrades);
+    const gained = darkMatterGain(state.lifetimeThisRun, powers.dmGainMult);
     set(
       withCaches(
         {
           ...initialPersistedState(Date.now()),
+          // Carry the permanent meta-progression across the collapse.
           lifetimeAllTime: state.lifetimeAllTime,
           totalTaps: state.totalTaps,
           darkMatter: state.darkMatter + gained,
+          totalDarkMatter: state.totalDarkMatter + gained,
+          dmUpgrades: state.dmUpgrades,
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
           expedition: state.expedition,
+          // Head start from the Dark Matter shop.
+          minerals: powers.startMinerals,
+          asteroidIndex: powers.startAsteroidIndex,
         },
         state.lastTickAt,
       ),

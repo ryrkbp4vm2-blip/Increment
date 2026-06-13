@@ -102,7 +102,7 @@ export const ARTIFACTS: ArtifactDef[] = [
     id: 'dm_locket',
     name: 'Dark Matter Locket',
     emoji: '🖤',
-    description: 'Dark Matter bonus +25% stronger',
+    description: '+25% Dark Matter from each collapse',
     effect: { kind: 'dmBonusMult', x: 1.25 },
   },
 ];

@@ -1,4 +1,11 @@
-import { ARTIFACTS, ArtifactPowers } from './artifacts';
+import { ARTIFACTS } from './artifacts';
+
+/** Subset of powers that affect expeditions (satisfied by EffectivePowers). */
+export interface ExpeditionPowers {
+  expeditionFuelMult: number;
+  expeditionLootMult: number;
+  expeditionSpeedMult: number;
+}
 
 export interface ExpeditionDef {
   id: string;
@@ -66,15 +73,15 @@ export interface ActiveExpedition {
   loot: number;
 }
 
-export function expeditionFuel(def: ExpeditionDef, cps: number, powers: ArtifactPowers): number {
+export function expeditionFuel(def: ExpeditionDef, cps: number, powers: ExpeditionPowers): number {
   return Math.ceil(Math.max(def.fuelMin, cps * def.fuelSeconds) * powers.expeditionFuelMult);
 }
 
-export function expeditionLoot(def: ExpeditionDef, cps: number, powers: ArtifactPowers): number {
+export function expeditionLoot(def: ExpeditionDef, cps: number, powers: ExpeditionPowers): number {
   return Math.ceil(Math.max(def.lootMin, cps * def.lootSeconds) * powers.expeditionLootMult);
 }
 
-export function expeditionDuration(def: ExpeditionDef, powers: ArtifactPowers): number {
+export function expeditionDuration(def: ExpeditionDef, powers: ExpeditionPowers): number {
   return Math.round(def.durationMs * powers.expeditionSpeedMult);
 }
 

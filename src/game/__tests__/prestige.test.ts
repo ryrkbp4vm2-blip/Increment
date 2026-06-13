@@ -1,31 +1,32 @@
-import { darkMatterMultiplier, nextDarkMatterAt, pendingDarkMatter } from '../prestige';
+import { darkMatterGain, nextDarkMatterAt, pendingDarkMatter } from '../prestige';
 
 describe('pendingDarkMatter', () => {
   it('is zero below the first threshold', () => {
     expect(pendingDarkMatter(0)).toBe(0);
-    expect(pendingDarkMatter(0.999e12)).toBe(0);
+    expect(pendingDarkMatter(0.999e9)).toBe(0);
   });
 
-  it('hits documented thresholds', () => {
-    expect(pendingDarkMatter(1e12)).toBe(1);
-    expect(pendingDarkMatter(3.9e12)).toBe(1);
-    expect(pendingDarkMatter(4e12)).toBe(2);
-    expect(pendingDarkMatter(1e14)).toBe(10);
+  it('grants a usable handful from the first collapse', () => {
+    expect(pendingDarkMatter(1e9)).toBe(1);
+    expect(pendingDarkMatter(4e9)).toBe(2);
+    expect(pendingDarkMatter(1e10)).toBe(3);
+    expect(pendingDarkMatter(1e11)).toBe(10);
+    expect(pendingDarkMatter(1e12)).toBe(31);
   });
 });
 
-describe('darkMatterMultiplier', () => {
-  it('grants +2% per dark matter', () => {
-    expect(darkMatterMultiplier(0)).toBe(1);
-    expect(darkMatterMultiplier(1)).toBeCloseTo(1.02);
-    expect(darkMatterMultiplier(100)).toBeCloseTo(3);
+describe('darkMatterGain', () => {
+  it('multiplies the raw gain and floors it', () => {
+    expect(darkMatterGain(1e11, 1)).toBe(10);
+    expect(darkMatterGain(1e11, 1.5)).toBe(15);
+    expect(darkMatterGain(1e9, 1.2)).toBe(1); // floor(1 * 1.2)
   });
 });
 
 describe('nextDarkMatterAt', () => {
   it('returns the threshold for the next point', () => {
-    expect(nextDarkMatterAt(0)).toBe(1e12);
-    expect(nextDarkMatterAt(1e12)).toBe(4e12);
-    expect(nextDarkMatterAt(4e12)).toBe(9e12);
+    expect(nextDarkMatterAt(0)).toBe(1e9);
+    expect(nextDarkMatterAt(1e9)).toBe(4e9);
+    expect(nextDarkMatterAt(4e9)).toBe(9e9);
   });
 });

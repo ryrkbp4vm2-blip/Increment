@@ -30,7 +30,7 @@ export function StatsHeader() {
       {darkMatter > 0 && (
         <View style={styles.dmBadge}>
           <Text style={styles.dmText}>🌑 {formatNumber(darkMatter)}</Text>
-          <Text style={styles.dmBonus}>+{formatNumber(darkMatter * 2)}%</Text>
+          <Text style={styles.dmBonus}>to spend</Text>
         </View>
       )}
     </View>

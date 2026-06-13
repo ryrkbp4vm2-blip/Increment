@@ -1,13 +1,13 @@
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
-import { artifactPowers } from '../game/artifacts';
 import {
   COMET_FIRST_SPAWN_MS,
   COMET_SPAWN_MS,
   COMET_VISIBLE_MS,
 } from '../game/balance';
 import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
+import { effectivePowers } from '../game/powers';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 
@@ -27,6 +27,8 @@ export function Comet({ onCollect }: Props) {
 
   const schedule = useCallback(
     (range: [number, number]) => {
+      const { artifacts, dmUpgrades } = useGameStore.getState();
+      const spawnMult = effectivePowers(artifacts, dmUpgrades).cometSpawnMult;
       const spawnTimer = setTimeout(() => {
         setPosition({
           x: 20 + Math.random() * (width - 100),
@@ -37,7 +39,7 @@ export function Comet({ onCollect }: Props) {
           schedule(COMET_SPAWN_MS);
         }, COMET_VISIBLE_MS);
         timers.current.push(despawnTimer);
-      }, rollSpawnDelay(range));
+      }, rollSpawnDelay(range) * spawnMult);
       timers.current.push(spawnTimer);
     },
     [width, height],
@@ -73,7 +75,13 @@ export function Comet({ onCollect }: Props) {
       // Haptics unavailable (e.g. web); ignore.
     }
     const state = useGameStore.getState();
-    onCollect(rollCometReward(state.cachedCps, artifactPowers(state.artifacts)));
+    const powers = effectivePowers(state.artifacts, state.dmUpgrades);
+    onCollect(
+      rollCometReward(state.cachedCps, {
+        cometMult: powers.cometRewardMult,
+        frenzyExtraMs: powers.frenzyExtraMs,
+      }),
+    );
   };
 
   return (
