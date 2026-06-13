@@ -1,0 +1,102 @@
+import { GENERATORS_BY_ID } from '../balance';
+import {
+  bulkCost,
+  costOfNext,
+  cps,
+  generatorProduction,
+  maxAffordable,
+  tapValue,
+} from '../math';
+
+const drone = GENERATORS_BY_ID.drone;
+
+describe('costOfNext', () => {
+  it('returns base cost for the first unit', () => {
+    expect(costOfNext(drone, 0)).toBe(15);
+  });
+
+  it('applies 1.15 growth with ceil', () => {
+    expect(costOfNext(drone, 1)).toBe(18); // ceil(17.25)
+    expect(costOfNext(drone, 10)).toBe(Math.ceil(15 * 1.15 ** 10)); // 61
+    expect(costOfNext(drone, 10)).toBe(61);
+  });
+});
+
+describe('bulkCost', () => {
+  it('is zero for zero count', () => {
+    expect(bulkCost(drone, 5, 0)).toBe(0);
+  });
+
+  it('matches the geometric sum within rounding of the sequential costs', () => {
+    const sequential = Array.from({ length: 10 }, (_, i) => costOfNext(drone, 3 + i)).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    const bulk = bulkCost(drone, 3, 10);
+    // bulkCost ceils once at the end; sequential ceils every step.
+    expect(Math.abs(bulk - sequential)).toBeLessThanOrEqual(10);
+  });
+});
+
+describe('maxAffordable', () => {
+  it('is zero when the next unit is unaffordable', () => {
+    expect(maxAffordable(drone, 0, 14)).toBe(0);
+  });
+
+  it('round-trips with bulkCost', () => {
+    for (const funds of [15, 100, 1234, 99999, 1e7, 3.7e9]) {
+      for (const owned of [0, 7, 42]) {
+        const max = maxAffordable(drone, owned, funds);
+        expect(bulkCost(drone, owned, max)).toBeLessThanOrEqual(funds);
+        expect(bulkCost(drone, owned, max + 1)).toBeGreaterThan(funds);
+      }
+    }
+  });
+});
+
+const baseState = {
+  generators: { drone: 0, excavator: 0, refinery: 0, hauler: 0, station: 0, harvester: 0, cracker: 0, dyson: 0 },
+  upgrades: {} as Record<string, true>,
+  darkMatter: 0,
+};
+
+describe('production', () => {
+  it('scales linearly with owned count', () => {
+    expect(generatorProduction(drone, 10, baseState)).toBeCloseTo(1.0);
+  });
+
+  it('applies generator multiplier upgrades', () => {
+    const state = { ...baseState, upgrades: { drone_x2_a: true as const } };
+    expect(generatorProduction(drone, 10, state)).toBeCloseTo(2.0);
+  });
+
+  it('applies global and dark matter multipliers to cps', () => {
+    const state = {
+      ...baseState,
+      generators: { ...baseState.generators, drone: 10 },
+      upgrades: { global1: true as const }, // x1.5
+      darkMatter: 50, // x2 (1 + 0.02*50)
+    };
+    expect(cps(state)).toBeCloseTo(1 * 1.5 * 2);
+  });
+});
+
+describe('tapValue', () => {
+  it('is 1 with no upgrades', () => {
+    expect(tapValue(baseState)).toBe(1);
+  });
+
+  it('applies tap multipliers and global multiplier', () => {
+    const state = { ...baseState, upgrades: { tap1: true as const, tap2: true as const }, darkMatter: 50 };
+    expect(tapValue(state)).toBeCloseTo(4 * 2);
+  });
+
+  it('adds a percentage of cps', () => {
+    const state = {
+      ...baseState,
+      generators: { ...baseState.generators, excavator: 100 }, // 100/s
+      upgrades: { tap4: true as const }, // +1% of cps
+    };
+    expect(tapValue(state)).toBeCloseTo(1 + 1);
+  });
+});
