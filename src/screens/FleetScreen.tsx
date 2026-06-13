@@ -22,6 +22,7 @@ import { formatDuration, formatNumber } from '../utils/format';
 const ARTIFACT_COLORS = [
   '#5EEAD4', '#FACC15', '#F87171', '#C084FC', '#60A5FA', '#34D399',
   '#FB923C', '#F472B6', '#A3E635', '#22D3EE', '#E879F9', '#FBBF24',
+  '#2DD4BF', '#FCA5A5', '#A78BFA', '#38BDF8', '#4ADE80', '#FDBA74',
 ];
 
 export function FleetScreen() {

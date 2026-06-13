@@ -18,6 +18,7 @@ export function GoalsScreen() {
   const lifetimeAllTime = useGameStore((s) => s.lifetimeAllTime);
   const totalTaps = useGameStore((s) => s.totalTaps);
   const prestigeCount = useGameStore((s) => s.prestigeCount);
+  const ascensionCount = useGameStore((s) => s.ascensionCount);
   const totalDarkMatter = useGameStore((s) => s.totalDarkMatter);
   const asteroidsShattered = useGameStore((s) => s.asteroidsShattered);
   const cometsCaught = useGameStore((s) => s.cometsCaught);
@@ -30,6 +31,7 @@ export function GoalsScreen() {
     lifetimeAllTime,
     totalTaps,
     prestigeCount,
+    ascensionCount,
     totalDarkMatter,
     asteroidsShattered,
     cometsCaught,

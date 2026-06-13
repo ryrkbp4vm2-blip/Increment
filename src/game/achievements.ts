@@ -4,6 +4,7 @@ export type MetricKey =
   | 'lifetime'
   | 'taps'
   | 'prestige'
+  | 'ascension'
   | 'totalDM'
   | 'shattered'
   | 'comets'
@@ -27,6 +28,7 @@ export interface AchievementMetrics {
   lifetime: number;
   taps: number;
   prestige: number;
+  ascension: number;
   totalDM: number;
   shattered: number;
   comets: number;
@@ -78,7 +80,20 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // Artifacts
   { id: 'a_1', name: 'Collector', description: 'Recover an artifact', bonusPct: STD, metric: 'artifacts', threshold: 1 },
   { id: 'a_6', name: 'Curator', description: 'Recover 6 artifacts', bonusPct: STD, metric: 'artifacts', threshold: 6 },
-  { id: 'a_12', name: 'Completionist', description: 'Recover all 12 artifacts', bonusPct: BIG, metric: 'artifacts', threshold: 12 },
+  { id: 'a_12', name: 'Master Curator', description: 'Recover 12 artifacts', bonusPct: STD, metric: 'artifacts', threshold: 12 },
+  { id: 'a_18', name: 'Completionist', description: 'Recover all 18 artifacts', bonusPct: BIG, metric: 'artifacts', threshold: 18 },
+
+  // Deep milestones
+  { id: 'm_1qa', name: 'Galactic Mogul', description: 'Earn 1qa minerals all-time', bonusPct: BIG, metric: 'lifetime', threshold: 1e18 },
+  { id: 'm_1qi', name: 'Universal Magnate', description: 'Earn 1Qi minerals all-time', bonusPct: BIG, metric: 'lifetime', threshold: 1e21 },
+  { id: 't_50k', name: 'Jackhammer', description: 'Tap 50,000 times', bonusPct: BIG, metric: 'taps', threshold: 50000 },
+  { id: 'g_cracker1', name: 'Moonbreaker', description: 'Build a Planet Cracker', bonusPct: STD, metric: 'gen', threshold: 1, genId: 'cracker' },
+  { id: 'g_total1000', name: 'Galactic Empire', description: 'Own 1,000 generators total', bonusPct: BIG, metric: 'genTotal', threshold: 1000 },
+  { id: 'p_50', name: 'Eternal Return', description: 'Collapse 50 times', bonusPct: BIG, metric: 'prestige', threshold: 50 },
+  { id: 'asc_1', name: 'Transcendent', description: 'Ascend for the first time', bonusPct: BIG, metric: 'ascension', threshold: 1 },
+  { id: 'asc_5', name: 'Beyond Infinity', description: 'Ascend 5 times', bonusPct: BIG, metric: 'ascension', threshold: 5 },
+  { id: 's_500', name: 'World Ender', description: 'Shatter 500 asteroids', bonusPct: BIG, metric: 'shattered', threshold: 500 },
+  { id: 'dm_1000', name: 'Singularity Touched', description: 'Earn 1,000 Dark Matter all-time', bonusPct: BIG, metric: 'totalDM', threshold: 1000 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<string, AchievementDef> = Object.fromEntries(
@@ -91,6 +106,7 @@ export function computeMetrics(
     | 'lifetimeAllTime'
     | 'totalTaps'
     | 'prestigeCount'
+    | 'ascensionCount'
     | 'totalDarkMatter'
     | 'asteroidsShattered'
     | 'cometsCaught'
@@ -105,6 +121,7 @@ export function computeMetrics(
     lifetime: s.lifetimeAllTime,
     taps: s.totalTaps,
     prestige: s.prestigeCount,
+    ascension: s.ascensionCount,
     totalDM: s.totalDarkMatter,
     shattered: s.asteroidsShattered,
     comets: s.cometsCaught,

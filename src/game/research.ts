@@ -50,6 +50,15 @@ export const RESEARCH_NODES: ResearchNodeDef[] = [
   { id: 'si1', name: 'Quantum Computing', description: 'Research Points ×2', branch: 'singularity', cost: 50, requires: ['ex3', 'lo3'], effect: { kind: 'rpGainMult', x: 2 } },
   { id: 'si2', name: 'Singularity Reactor', description: 'All production ×3', branch: 'singularity', cost: 150, requires: ['si1', 'co3'], effect: { kind: 'globalMult', x: 3 } },
   { id: 'si3', name: 'Cosmic Ascendancy', description: 'All production ×5 and tap power ×5', branch: 'singularity', cost: 400, requires: ['si2', 'ex4', 'lo4', 'co4'], effect: { kind: 'globalMult', x: 5 } },
+
+  // Tier II — deeper nodes for the long game
+  { id: 'ex5', name: 'Antimatter Excavation', description: 'All production ×3', branch: 'extraction', cost: 200, requires: ['ex4'], effect: { kind: 'globalMult', x: 3 } },
+  { id: 'ex6', name: 'Crustbuster Rigs', description: 'Planet Crackers ×3', branch: 'extraction', cost: 500, requires: ['ex5'], effect: { kind: 'genMult', genId: 'cracker', x: 3 } },
+  { id: 'lo5', name: 'Dyson Logistics', description: 'Dyson Swarms ×3', branch: 'logistics', cost: 220, requires: ['lo4'], effect: { kind: 'genMult', genId: 'dyson', x: 3 } },
+  { id: 'lo6', name: 'Instant Couriers', description: 'Expedition loot ×3', branch: 'logistics', cost: 550, requires: ['lo5'], effect: { kind: 'expeditionLootMult', x: 3 } },
+  { id: 'co5', name: 'Dark Comets', description: 'Comet rewards ×3', branch: 'cosmic', cost: 240, requires: ['co4'], effect: { kind: 'cometRewardMult', x: 3 } },
+  { id: 'co6', name: 'Stellar Cartography', description: 'Research Points ×2', branch: 'cosmic', cost: 600, requires: ['co5'], effect: { kind: 'rpGainMult', x: 2 } },
+  { id: 'si4', name: 'Omega Directive', description: 'All production ×10', branch: 'singularity', cost: 2000, requires: ['si3', 'ex6', 'lo6', 'co6'], effect: { kind: 'globalMult', x: 10 } },
 ];
 
 export const RESEARCH_BY_ID: Record<string, ResearchNodeDef> = Object.fromEntries(

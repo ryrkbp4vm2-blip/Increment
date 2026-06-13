@@ -105,6 +105,48 @@ export const ARTIFACTS: ArtifactDef[] = [
     description: '+25% Dark Matter from each collapse',
     effect: { kind: 'dmBonusMult', x: 1.25 },
   },
+  {
+    id: 'titan_gear',
+    name: 'Titan Gearbox',
+    emoji: '⚙️',
+    description: 'Cargo Haulers ×3',
+    effect: { kind: 'genMult', genId: 'hauler', x: 3 },
+  },
+  {
+    id: 'halo_ring',
+    name: 'Halo Ring',
+    emoji: '💫',
+    description: 'Orbital Stations ×3',
+    effect: { kind: 'genMult', genId: 'station', x: 3 },
+  },
+  {
+    id: 'solar_heart',
+    name: 'Solar Heart',
+    emoji: '☀️',
+    description: 'Dyson Swarms ×3',
+    effect: { kind: 'genMult', genId: 'dyson', x: 3 },
+  },
+  {
+    id: 'event_horizon',
+    name: 'Event Horizon Shard',
+    emoji: '🌀',
+    description: 'All production ×1.25',
+    effect: { kind: 'globalMult', x: 1.25 },
+  },
+  {
+    id: 'warp_compass',
+    name: 'Warp Compass',
+    emoji: '🧭',
+    description: 'Expeditions 30% faster',
+    effect: { kind: 'expeditionSpeedMult', x: 0.7 },
+  },
+  {
+    id: 'meteor_glass',
+    name: 'Meteor Glass',
+    emoji: '🪟',
+    description: 'Comet frenzies last +20s',
+    effect: { kind: 'frenzyExtraMs', ms: 20_000 },
+  },
 ];
 
 export const ARTIFACTS_BY_ID: Record<string, ArtifactDef> = Object.fromEntries(

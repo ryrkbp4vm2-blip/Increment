@@ -65,6 +65,19 @@ describe('isMet / newlyCompleted', () => {
   });
 });
 
+describe('ascension and deep milestones', () => {
+  it('tracks the ascension metric', () => {
+    const m = computeMetrics(stateWith({ ascensionCount: 1 }));
+    expect(m.ascension).toBe(1);
+    expect(newlyCompleted({}, m)).toContain('asc_1');
+  });
+
+  it('unlocks the 18-artifact completionist only with the full set', () => {
+    const eleven = computeMetrics(stateWith({ artifacts: { a: true, b: true } as any }));
+    expect(newlyCompleted({}, eleven)).not.toContain('a_18');
+  });
+});
+
 describe('achievementBonus', () => {
   it('is 1 with nothing completed', () => {
     expect(achievementBonus({})).toBe(1);
