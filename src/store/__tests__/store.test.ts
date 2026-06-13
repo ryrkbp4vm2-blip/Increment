@@ -273,6 +273,22 @@ describe('gameStore', () => {
     expect(s.researchPoints).toBe(20);
   });
 
+  it('applyEventOutcome handles each cosmic-event reward', () => {
+    reset({ minerals: 1000, researchPoints: 5 });
+    useGameStore.getState().applyEventOutcome({ kind: 'rp', amount: 7 }, 1000);
+    expect(useGameStore.getState().researchPoints).toBe(12);
+
+    // 500 windfall mines through asteroid 0 (400 HP), paying a +40 shatter bonus.
+    useGameStore.getState().applyEventOutcome({ kind: 'windfall', amount: 500 }, 1000);
+    expect(useGameStore.getState().minerals).toBe(1540);
+
+    useGameStore.getState().applyEventOutcome({ kind: 'frenzy', mult: 3, durationMs: 5000 }, 1000);
+    expect(useGameStore.getState().frenzyUntil).toBe(6000);
+
+    useGameStore.getState().applyEventOutcome({ kind: 'loseMineralsPct', pct: 0.1 }, 1000);
+    expect(useGameStore.getState().minerals).toBeCloseTo(1540 * 0.9);
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();

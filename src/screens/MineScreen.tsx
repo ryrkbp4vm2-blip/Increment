@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Asteroid } from '../components/Asteroid';
 import { Comet } from '../components/Comet';
+import { CosmicEvent } from '../components/CosmicEvent';
 import { CometArt } from '../components/art/CometArt';
 import { Icon } from '../components/art/Icon';
 import { asteroidHp, asteroidName, asteroidRichness } from '../game/asteroids';
@@ -63,6 +64,7 @@ export function MineScreen() {
   return (
     <View style={styles.screen}>
       <Comet onCollect={handleComet} />
+      <CosmicEvent />
       {banner && (
         <View style={styles.banner}>
           {banner.kind === 'comet' ? <CometArt size={20} /> : <Icon name="burst" size={18} />}

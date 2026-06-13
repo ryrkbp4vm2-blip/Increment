@@ -5,6 +5,7 @@ import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
 import { CometReward, frenzyFactor } from '../game/events';
+import { EventOutcome } from '../game/cosmicEvents';
 import {
   ExpeditionResult,
   EXPEDITIONS_BY_ID,
@@ -37,6 +38,7 @@ export interface GameActions {
   claimExpedition(nowMs: number): ExpeditionResult | null;
   buyDarkMatterUpgrade(id: string): void;
   buyResearch(id: string): void;
+  applyEventOutcome(outcome: EventOutcome, nowMs: number): void;
   doPrestige(): void;
   tickAchievements(): void;
   consumeAchievements(): string[];
@@ -247,6 +249,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
         state.lastTickAt,
       ),
     );
+  },
+
+  applyEventOutcome(outcome, nowMs) {
+    const state = get();
+    switch (outcome.kind) {
+      case 'frenzy':
+        set({ frenzyUntil: nowMs + outcome.durationMs, frenzyMult: outcome.mult });
+        break;
+      case 'windfall':
+        set(earn(state, outcome.amount));
+        break;
+      case 'rp':
+        set({
+          researchPoints: state.researchPoints + outcome.amount,
+          totalResearch: state.totalResearch + outcome.amount,
+        });
+        break;
+      case 'loseMineralsPct':
+        set({ minerals: state.minerals * (1 - outcome.pct) });
+        break;
+    }
   },
 
   doPrestige() {
