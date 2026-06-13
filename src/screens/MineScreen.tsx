@@ -5,7 +5,7 @@ import { Comet } from '../components/Comet';
 import { CosmicEvent } from '../components/CosmicEvent';
 import { CometArt } from '../components/art/CometArt';
 import { Icon } from '../components/art/Icon';
-import { asteroidHp, asteroidName, asteroidRichness } from '../game/asteroids';
+import { asteroidHp, asteroidName, asteroidRichness, isBoss } from '../game/asteroids';
 import { CometReward } from '../game/events';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -60,6 +60,7 @@ export function MineScreen() {
 
   const hp = asteroidHp(asteroidIndex);
   const integrity = Math.max(0, 1 - asteroidDamage / hp);
+  const boss = isBoss(asteroidIndex);
 
   return (
     <View style={styles.screen}>
@@ -72,12 +73,23 @@ export function MineScreen() {
         </View>
       )}
       <View style={styles.asteroidInfo}>
-        <Text style={styles.asteroidName}>{asteroidName(asteroidIndex)}</Text>
+        {boss && (
+          <View style={styles.bossTag}>
+            <Text style={styles.bossTagText}>BOSS</Text>
+          </View>
+        )}
+        <Text style={[styles.asteroidName, boss && styles.bossName]}>{asteroidName(asteroidIndex)}</Text>
         <Text style={styles.richness}>
           Belt richness ×{asteroidRichness(asteroidIndex).toFixed(2)}
         </Text>
         <View style={styles.integrityTrack}>
-          <View style={[styles.integrityFill, { width: `${integrity * 100}%` }]} />
+          <View
+            style={[
+              styles.integrityFill,
+              boss && styles.integrityFillBoss,
+              { width: `${integrity * 100}%` },
+            ]}
+          />
         </View>
         <Text style={styles.integrityLabel}>
           Integrity {formatNumber(Math.max(0, hp - asteroidDamage))} / {formatNumber(hp)}
@@ -161,6 +173,27 @@ const styles = StyleSheet.create({
   integrityFill: {
     height: '100%',
     backgroundColor: colors.accent,
+  },
+  integrityFillBoss: {
+    backgroundColor: colors.danger,
+  },
+  bossTag: {
+    backgroundColor: '#F8717122',
+    borderColor: colors.danger,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  bossTagText: {
+    color: colors.danger,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 2,
+  },
+  bossName: {
+    color: colors.danger,
   },
   integrityLabel: {
     color: colors.textMuted,

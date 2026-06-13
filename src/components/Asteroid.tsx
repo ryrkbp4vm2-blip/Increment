@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
+import { isBoss } from '../game/asteroids';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -114,7 +115,7 @@ export function Asteroid() {
       <Pressable onPress={handlePress} hitSlop={20}>
         <Animated.View style={[styles.asteroid, { transform: [{ scale }] }]}>
           <Animated.View style={{ transform: [{ rotate }] }}>
-            <AsteroidArt typeIndex={asteroidIndex} size={210} />
+            <AsteroidArt typeIndex={asteroidIndex} size={210} boss={isBoss(asteroidIndex)} />
           </Animated.View>
         </Animated.View>
       </Pressable>

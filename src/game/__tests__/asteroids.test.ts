@@ -2,10 +2,14 @@ import {
   applyDamage,
   ASTEROID_BASE_HP,
   ASTEROID_HP_GROWTH,
+  BOSS_HP_MULT,
+  BOSS_REWARD_MULT,
   asteroidHp,
   asteroidName,
   asteroidRichness,
   asteroidType,
+  isBoss,
+  rpFromShatter,
   shatterBonus,
 } from '../asteroids';
 
@@ -25,6 +29,28 @@ describe('asteroid curve', () => {
     expect(asteroidType(0).name).toBe('Rocky');
     expect(asteroidType(6).name).toBe('Rocky'); // 6 types, wraps
     expect(asteroidName(1)).toBe('Glacial Asteroid #2');
+  });
+});
+
+describe('boss asteroids', () => {
+  it('marks every 10th asteroid as a boss', () => {
+    expect(isBoss(0)).toBe(false);
+    expect(isBoss(8)).toBe(false);
+    expect(isBoss(9)).toBe(true); // #10
+    expect(isBoss(19)).toBe(true); // #20
+  });
+
+  it('gives bosses much more HP and bigger rewards', () => {
+    const normalHp = Math.ceil(ASTEROID_BASE_HP * ASTEROID_HP_GROWTH ** 9);
+    expect(asteroidHp(9)).toBe(normalHp * BOSS_HP_MULT);
+    // shatter bonus and RP are boss-multiplied
+    expect(shatterBonus(9)).toBe(Math.ceil(asteroidHp(9) * 0.1) * BOSS_REWARD_MULT);
+    expect(rpFromShatter(9)).toBe((1 + Math.floor(9 / 2)) * BOSS_REWARD_MULT);
+  });
+
+  it('names bosses distinctly', () => {
+    expect(asteroidName(9)).toMatch(/#10/);
+    expect(asteroidName(9)).not.toMatch(/Asteroid/);
   });
 });
 

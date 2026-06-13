@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { computeMetrics, newlyCompleted } from '../game/achievements';
-import { applyDamage, rpFromShatter } from '../game/asteroids';
+import { applyDamage, isBoss, rpFromShatter } from '../game/asteroids';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -115,10 +115,19 @@ function earn(state: GameState, amount: number): Partial<GameState> {
     // Research Points are minted by each asteroid we break, scaled by depth.
     const rpMult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).rpGainMult;
     let rp = 0;
-    for (let i = state.asteroidIndex; i < result.asteroidIndex; i++) rp += rpFromShatter(i);
+    let bossDown = false;
+    for (let i = state.asteroidIndex; i < result.asteroidIndex; i++) {
+      rp += rpFromShatter(i);
+      if (isBoss(i)) bossDown = true;
+    }
     rp = Math.ceil(rp * rpMult);
     delta.researchPoints = state.researchPoints + rp;
     delta.totalResearch = state.totalResearch + rp;
+    // Felling a boss kicks off a victory production frenzy.
+    if (bossDown) {
+      delta.frenzyUntil = Date.now() + 30_000;
+      delta.frenzyMult = Math.max(state.frenzyMult, 4);
+    }
     const next = { ...state, ...delta } as GameState;
     delta.cachedCps = cps(next);
     delta.cachedTapValue = tapValue(next, delta.cachedCps);

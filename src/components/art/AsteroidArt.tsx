@@ -39,18 +39,27 @@ function silhouette(cx: number, cy: number, r: number): string {
   }).join(' ');
 }
 
+const BOSS_PALETTE: Palette = {
+  light: '#FF8A6B',
+  base: '#C42B2B',
+  dark: '#5A1414',
+  rim: '#FFD0B0',
+  style: 'faceted',
+};
+
 interface Props {
   /** Belt type index (cycles through palettes). */
   typeIndex: number;
   size?: number;
+  boss?: boolean;
 }
 
-export function AsteroidArt({ typeIndex, size = 200 }: Props) {
-  const p = PALETTES[typeIndex % PALETTES.length];
+export function AsteroidArt({ typeIndex, size = 200, boss = false }: Props) {
+  const p = boss ? BOSS_PALETTE : PALETTES[typeIndex % PALETTES.length];
   const cx = 100;
   const cy = 100;
   const poly = silhouette(cx, cy, 78);
-  const id = `ast${typeIndex % PALETTES.length}`;
+  const id = boss ? 'astBoss' : `ast${typeIndex % PALETTES.length}`;
 
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200">
@@ -62,8 +71,9 @@ export function AsteroidArt({ typeIndex, size = 200 }: Props) {
         </RadialGradient>
       </Defs>
 
-      {/* Soft glow halo */}
-      <Polygon points={silhouette(cx, cy, 90)} fill={p.base} opacity={0.18} />
+      {/* Soft glow halo (an angrier ring for bosses) */}
+      <Polygon points={silhouette(cx, cy, 90)} fill={p.base} opacity={boss ? 0.32 : 0.18} />
+      {boss && <Polygon points={silhouette(cx, cy, 96)} fill="#FF3B3B" opacity={0.14} />}
 
       {/* Body */}
       <Polygon points={poly} fill={`url(#${id})`} stroke={p.dark} strokeWidth={2} />
