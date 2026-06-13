@@ -101,6 +101,17 @@ describe('migrate hardening', () => {
     expect(save.state.dmUpgrades).toEqual({});
   });
 
+  it('round-trips challenges and drops unknown ids', () => {
+    const state = makeState({ activeChallenge: 'famine', challengesCompleted: { asceticism: true } });
+    const save = migrate(serialize(state, 1))!;
+    expect(save.state.activeChallenge).toBe('famine');
+    expect(save.state.challengesCompleted).toEqual({ asceticism: true });
+
+    const dirty = migrate('{"version":1,"savedAt":1,"state":{"activeChallenge":"bogus","challengesCompleted":{"nope":true,"solitude":true}}}')!;
+    expect(dirty.state.activeChallenge).toBeNull();
+    expect(dirty.state.challengesCompleted).toEqual({ solitude: true });
+  });
+
   it('round-trips singularity perks and drops unknown ones', () => {
     const state = makeState({ singularityPerks: { auto_driller: true }, singularityCores: 3, totalSingularityCores: 7 });
     const save = migrate(serialize(state, 1))!;

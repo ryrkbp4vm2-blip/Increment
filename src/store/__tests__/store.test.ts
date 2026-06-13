@@ -375,6 +375,69 @@ describe('gameStore', () => {
     expect(s.generators.drone).toBe(1); // foreman bought the cheapest
   });
 
+  it('enterChallenge resets the run but keeps all meta progression', () => {
+    reset({
+      minerals: 1e6,
+      darkMatter: 50,
+      research: { ex1: true },
+      achievements: { t_100: true },
+      generators: { ...initialPersistedState().generators, drone: 30 },
+      singularityCores: 4,
+    });
+    useGameStore.getState().enterChallenge('famine');
+    const s = useGameStore.getState();
+    expect(s.activeChallenge).toBe('famine');
+    expect(s.generators.drone).toBe(0); // run reset
+    expect(s.lifetimeThisRun).toBe(0);
+    expect(s.darkMatter).toBe(50); // meta kept
+    expect(s.research.ex1).toBe(true);
+    expect(s.achievements.t_100).toBe(true);
+    expect(s.singularityCores).toBe(4);
+  });
+
+  it('famine challenge throttles production to 20%', () => {
+    reset({ generators: { ...initialPersistedState().generators, excavator: 10 } });
+    const normal = useGameStore.getState().cachedCps;
+    reset({
+      generators: { ...initialPersistedState().generators, excavator: 10 },
+      activeChallenge: 'famine',
+    });
+    expect(useGameStore.getState().cachedCps).toBeCloseTo(normal * 0.2);
+  });
+
+  it('asceticism disables generator purchases', () => {
+    reset({ minerals: 1e6, activeChallenge: 'asceticism' });
+    useGameStore.getState().buyGenerator('drone', 1);
+    expect(useGameStore.getState().generators.drone).toBe(0);
+  });
+
+  it('completeChallenge grants the permanent reward and clears the run', () => {
+    reset({ activeChallenge: 'famine', lifetimeThisRun: 1e8 });
+    const before = globalMultiplier({ ...useGameStore.getState(), activeChallenge: null });
+    useGameStore.getState().completeChallenge();
+    const s = useGameStore.getState();
+    expect(s.activeChallenge).toBeNull();
+    expect(s.challengesCompleted.famine).toBe(true);
+    expect(s.lifetimeThisRun).toBe(0);
+    // famine reward is ×2 global production, now active with no modifier
+    expect(globalMultiplier(s)).toBeCloseTo(before * 2);
+  });
+
+  it('completeChallenge does nothing before the goal is met', () => {
+    reset({ activeChallenge: 'famine', lifetimeThisRun: 1e3 });
+    useGameStore.getState().completeChallenge();
+    expect(useGameStore.getState().activeChallenge).toBe('famine');
+    expect(useGameStore.getState().challengesCompleted.famine).toBeUndefined();
+  });
+
+  it('abandonChallenge exits with no reward', () => {
+    reset({ activeChallenge: 'famine', lifetimeThisRun: 1e8 });
+    useGameStore.getState().abandonChallenge();
+    const s = useGameStore.getState();
+    expect(s.activeChallenge).toBeNull();
+    expect(s.challengesCompleted.famine).toBeUndefined();
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();

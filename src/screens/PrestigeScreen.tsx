@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../components/BigButton';
+import { ChallengesSection } from '../components/ChallengesSection';
 import { Amount } from '../components/art/Amount';
 import { Icon, IconName } from '../components/art/Icon';
 import {
@@ -30,6 +31,7 @@ export function PrestigeScreen() {
   const darkMatter = useGameStore((s) => s.darkMatter);
   const totalDarkMatter = useGameStore((s) => s.totalDarkMatter);
   const prestigeCount = useGameStore((s) => s.prestigeCount);
+  const activeChallenge = useGameStore((s) => s.activeChallenge);
   const dmUpgrades = useGameStore((s) => s.dmUpgrades);
   const artifacts = useGameStore((s) => s.artifacts);
   const doPrestige = useGameStore((s) => s.doPrestige);
@@ -226,6 +228,8 @@ export function PrestigeScreen() {
           onBuy={() => buyDarkMatterUpgrade(def.id)}
         />
       ))}
+
+      {(prestigeCount > 0 || activeChallenge !== null) && <ChallengesSection />}
     </ScrollView>
   );
 }

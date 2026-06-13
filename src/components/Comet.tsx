@@ -6,6 +6,7 @@ import {
   COMET_SPAWN_MS,
   COMET_VISIBLE_MS,
 } from '../game/balance';
+import { cometsDisabled } from '../game/challenges';
 import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
 import { effectivePowers } from '../game/powers';
 import { playSound } from '../audio/sound';
@@ -32,6 +33,11 @@ export function Comet({ onCollect }: Props) {
       const { artifacts, dmUpgrades, research } = useGameStore.getState();
       const spawnMult = effectivePowers(artifacts, dmUpgrades, research).cometSpawnMult;
       const spawnTimer = setTimeout(() => {
+        // Some challenges forbid comets — silently reschedule instead.
+        if (cometsDisabled(useGameStore.getState().activeChallenge)) {
+          schedule(COMET_SPAWN_MS);
+          return;
+        }
         setPosition({
           x: 20 + Math.random() * (width - 100),
           y: 80 + Math.random() * (height * 0.5),

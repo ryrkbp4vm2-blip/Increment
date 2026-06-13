@@ -20,6 +20,7 @@ export type IconName =
   | 'check'
   | 'lock'
   | 'stats'
+  | 'challenge'
   // generators
   | 'drone'
   | 'excavator'
@@ -355,6 +356,13 @@ function glyph(name: IconName, c: string, a: string): React.ReactElement {
           <Rect x={4} y={13} width={4} height={7} rx={1} />
           <Rect x={10} y={8} width={4} height={12} rx={1} fill={a} />
           <Rect x={16} y={4} width={4} height={16} rx={1} />
+        </G>
+      );
+    case 'challenge':
+      return (
+        <G>
+          <Line x1={6} y1={3} x2={6} y2={21} stroke={c} strokeWidth={2} strokeLinecap="round" />
+          <Path d="M6 4 H18 L15 8 L18 12 H6 Z" fill={a} />
         </G>
       );
     case 'shard':

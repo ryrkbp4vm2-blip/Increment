@@ -65,6 +65,8 @@ const baseState = {
   singularityCores: 0,
   totalSingularityCores: 0,
   singularityPerks: {} as Record<string, true>,
+  activeChallenge: null as string | null,
+  challengesCompleted: {} as Record<string, true>,
   asteroidIndex: 0,
 };
 

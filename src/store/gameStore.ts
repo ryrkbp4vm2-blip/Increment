@@ -7,6 +7,11 @@ import {
   perkStartAsteroid,
 } from '../game/ascension';
 import { applyDamage, isBoss, rpFromShatter } from '../game/asteroids';
+import {
+  CHALLENGES_BY_ID,
+  challengeComplete,
+  challengeModifiers,
+} from '../game/challenges';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -49,6 +54,9 @@ export interface GameActions {
   doPrestige(): void;
   doAscend(): void;
   buySingularityPerk(id: string): void;
+  enterChallenge(id: string): void;
+  abandonChallenge(): void;
+  completeChallenge(): void;
   autoTick(nowMs: number): void;
   tickAchievements(): void;
   consumeAchievements(): string[];
@@ -92,6 +100,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     ascensionCount: 0,
     dmSinceAscension: 0,
     singularityPerks: {},
+    activeChallenge: null,
+    challengesCompleted: {},
   };
 }
 
@@ -107,6 +117,27 @@ function withCaches(
     lastTickAt,
     cachedCps,
     cachedTapValue: tapValue(persisted, cachedCps),
+  };
+}
+
+/**
+ * Run-scoped fields for starting (or leaving) a challenge. Spread over the
+ * current state so every meta-currency, collection and upgrade is preserved
+ * automatically; only the active run resets.
+ */
+function challengeRunReset(state: GameState, activeChallenge: string | null): Partial<PersistedState> {
+  const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
+  return {
+    minerals: powers.startMinerals,
+    lifetimeThisRun: 0,
+    generators: emptyGenerators(),
+    upgrades: {},
+    frenzyUntil: 0,
+    frenzyMult: 1,
+    asteroidIndex: Math.max(powers.startAsteroidIndex, perkStartAsteroid(state.singularityPerks)),
+    asteroidDamage: 0,
+    expedition: null,
+    activeChallenge,
   };
 }
 
@@ -177,6 +208,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyGenerator(id, qty) {
     const state = get();
+    if (challengeModifiers(state.activeChallenge).disableGenerators) return;
     const def = GENERATORS_BY_ID[id];
     const owned = state.generators[id] ?? 0;
     const count =
@@ -279,6 +311,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
     );
   },
 
+  enterChallenge(id) {
+    const state = get();
+    if (state.activeChallenge || !CHALLENGES_BY_ID[id]) return;
+    set(withCaches({ ...state, ...challengeRunReset(state, id) }, state.lastTickAt));
+  },
+
+  abandonChallenge() {
+    const state = get();
+    if (!state.activeChallenge) return;
+    set(withCaches({ ...state, ...challengeRunReset(state, null) }, state.lastTickAt));
+  },
+
+  completeChallenge() {
+    const state = get();
+    const active = state.activeChallenge;
+    if (!active || !challengeComplete(active, state.lifetimeThisRun)) return;
+    const challengesCompleted = { ...state.challengesCompleted, [active]: true as const };
+    set(
+      withCaches(
+        { ...state, challengesCompleted, ...challengeRunReset(state, null) },
+        state.lastTickAt,
+      ),
+    );
+  },
+
   applyEventOutcome(outcome, nowMs) {
     const state = get();
     switch (outcome.kind) {
@@ -319,6 +376,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalSingularityCores: state.totalSingularityCores,
           ascensionCount: state.ascensionCount,
           singularityPerks: state.singularityPerks,
+          challengesCompleted: state.challengesCompleted,
           dmUpgrades: state.dmUpgrades,
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
@@ -366,6 +424,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ascensionCount: state.ascensionCount + 1,
           dmSinceAscension: 0,
           singularityPerks: state.singularityPerks,
+          challengesCompleted: state.challengesCompleted,
           asteroidIndex: perkStartAsteroid(state.singularityPerks),
         },
         state.lastTickAt,

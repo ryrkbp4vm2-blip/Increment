@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
+import { cometsDisabled } from '../game/challenges';
 import { rollSpawnDelay } from '../game/events';
 import {
   CosmicEvent as EventInstance,
@@ -32,6 +33,10 @@ export function CosmicEvent() {
   const schedule = useCallback((range: [number, number]) => {
     const t = setTimeout(() => {
       const s = useGameStore.getState();
+      if (cometsDisabled(s.activeChallenge)) {
+        schedule(EVENT_SPAWN_MS);
+        return;
+      }
       const ev = pickEvent({ cps: s.cachedCps, minerals: s.minerals, totalResearch: s.totalResearch });
       eventRef.current = ev;
       setEvent(ev);

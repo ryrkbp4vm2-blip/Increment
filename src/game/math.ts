@@ -1,6 +1,7 @@
 import { achievementBonus } from './achievements';
 import { singularityMult } from './ascension';
 import { asteroidRichness } from './asteroids';
+import { challengeModifiers, challengeRewardMult } from './challenges';
 import { GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
 import { effectivePowers } from './powers';
 import { GameState, GeneratorDef, GeneratorId, PersistedState, UnlockCondition } from './types';
@@ -39,6 +40,8 @@ type MultState = Pick<
   | 'research'
   | 'totalSingularityCores'
   | 'singularityPerks'
+  | 'activeChallenge'
+  | 'challengesCompleted'
 >;
 
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
@@ -56,7 +59,9 @@ export function globalMultiplier(state: MultState): number {
     powers.globalMult *
     asteroidRichness(state.asteroidIndex) *
     achievementBonus(state.achievements) *
-    singularityMult(state.totalSingularityCores, state.singularityPerks);
+    singularityMult(state.totalSingularityCores, state.singularityPerks) *
+    challengeRewardMult(state.challengesCompleted).globalMult *
+    challengeModifiers(state.activeChallenge).productionMult;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'globalMult') mult *= effect.x;
@@ -113,6 +118,8 @@ export function tapValue(
   currentCps: number = cps(state),
 ): number {
   let tapMult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).tapMult;
+  tapMult *= challengeRewardMult(state.challengesCompleted).tapMult;
+  tapMult *= challengeModifiers(state.activeChallenge).tapMult;
   let cpsPercent = 0;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
