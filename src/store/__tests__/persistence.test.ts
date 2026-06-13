@@ -124,6 +124,14 @@ describe('migrate hardening', () => {
     expect(save.state.cometsCaught).toBe(0);
   });
 
+  it('round-trips ascension state', () => {
+    const state = makeState({ singularityCores: 4, ascensionCount: 2, dmSinceAscension: 250 });
+    const save = migrate(serialize(state, 1))!;
+    expect(save.state.singularityCores).toBe(4);
+    expect(save.state.ascensionCount).toBe(2);
+    expect(save.state.dmSinceAscension).toBe(250);
+  });
+
   it('round-trips research and drops unknown nodes', () => {
     const state = makeState({
       researchPoints: 42,

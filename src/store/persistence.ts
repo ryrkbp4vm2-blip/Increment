@@ -38,6 +38,9 @@ export function toPersisted(state: GameState): PersistedState {
     researchPoints: state.researchPoints,
     totalResearch: state.totalResearch,
     research: state.research,
+    singularityCores: state.singularityCores,
+    ascensionCount: state.ascensionCount,
+    dmSinceAscension: state.dmSinceAscension,
   };
 }
 
@@ -153,6 +156,9 @@ export function migrate(raw: string | null): SaveFile | null {
     researchPoints: Math.max(0, finiteNumber(raw_.researchPoints, 0)),
     totalResearch: Math.max(0, finiteNumber(raw_.totalResearch, 0)),
     research,
+    singularityCores: Math.max(0, Math.floor(finiteNumber(raw_.singularityCores, 0))),
+    ascensionCount: Math.max(0, Math.floor(finiteNumber(raw_.ascensionCount, 0))),
+    dmSinceAscension: Math.max(0, finiteNumber(raw_.dmSinceAscension, 0)),
   };
   return {
     version: SAVE_VERSION,

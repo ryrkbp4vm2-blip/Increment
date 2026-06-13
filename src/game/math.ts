@@ -1,4 +1,5 @@
 import { achievementBonus } from './achievements';
+import { singularityMult } from './ascension';
 import { asteroidRichness } from './asteroids';
 import { GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
 import { effectivePowers } from './powers';
@@ -30,7 +31,13 @@ export function maxAffordable(def: GeneratorDef, owned: number, funds: number): 
 
 type MultState = Pick<
   PersistedState,
-  'upgrades' | 'artifacts' | 'asteroidIndex' | 'dmUpgrades' | 'achievements' | 'research'
+  | 'upgrades'
+  | 'artifacts'
+  | 'asteroidIndex'
+  | 'dmUpgrades'
+  | 'achievements'
+  | 'research'
+  | 'singularityCores'
 >;
 
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
@@ -45,7 +52,10 @@ export function generatorMultiplier(genId: GeneratorId, state: MultState): numbe
 export function globalMultiplier(state: MultState): number {
   const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
   let mult =
-    powers.globalMult * asteroidRichness(state.asteroidIndex) * achievementBonus(state.achievements);
+    powers.globalMult *
+    asteroidRichness(state.asteroidIndex) *
+    achievementBonus(state.achievements) *
+    singularityMult(state.singularityCores);
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'globalMult') mult *= effect.x;

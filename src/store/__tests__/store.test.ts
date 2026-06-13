@@ -1,4 +1,5 @@
-import { costOfNext } from '../../game/math';
+import { costOfNext, globalMultiplier } from '../../game/math';
+import { singularityMult } from '../../game/ascension';
 import { GENERATORS_BY_ID } from '../../game/balance';
 import { achievementBonus } from '../../game/achievements';
 import { initialPersistedState, useGameStore } from '../gameStore';
@@ -287,6 +288,48 @@ describe('gameStore', () => {
 
     useGameStore.getState().applyEventOutcome({ kind: 'loseMineralsPct', pct: 0.1 }, 1000);
     expect(useGameStore.getState().minerals).toBeCloseTo(1540 * 0.9);
+  });
+
+  it('prestige banks Dark Matter toward ascension', () => {
+    reset({ lifetimeThisRun: 1e11 }); // pending 10 DM
+    useGameStore.getState().doPrestige();
+    expect(useGameStore.getState().dmSinceAscension).toBe(10);
+  });
+
+  it('doAscend grants cores, resets the DM layer, keeps research/artifacts', () => {
+    reset({
+      dmSinceAscension: 400, // sqrt(400/100) = 2 cores
+      darkMatter: 50,
+      dmUpgrades: { stellar_density: 5 },
+      research: { ex1: true },
+      researchPoints: 30,
+      artifacts: { pulsar_shard: true },
+      generators: { ...initialPersistedState().generators, dyson: 3 },
+      ascensionCount: 1,
+    });
+    useGameStore.getState().doAscend();
+    const s = useGameStore.getState();
+    expect(s.singularityCores).toBe(2);
+    expect(s.ascensionCount).toBe(2);
+    expect(s.dmSinceAscension).toBe(0);
+    // Dark Matter layer is sacrificed
+    expect(s.darkMatter).toBe(0);
+    expect(s.dmUpgrades).toEqual({});
+    expect(s.generators.dyson).toBe(0);
+    // deeper layers persist
+    expect(s.research.ex1).toBe(true);
+    expect(s.researchPoints).toBe(30);
+    expect(s.artifacts.pulsar_shard).toBe(true);
+    // The 2-core ×2 bonus is folded into the live production multiplier.
+    expect(singularityMult(s.singularityCores)).toBe(2);
+    expect(s.cachedTapValue).toBeCloseTo(globalMultiplier(s));
+  });
+
+  it('doAscend does nothing below the threshold', () => {
+    reset({ dmSinceAscension: 50, darkMatter: 10 });
+    useGameStore.getState().doAscend();
+    expect(useGameStore.getState().singularityCores).toBe(0);
+    expect(useGameStore.getState().darkMatter).toBe(10);
   });
 
   it('resetGame wipes all progress back to a fresh state', () => {

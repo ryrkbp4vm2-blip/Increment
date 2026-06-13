@@ -62,6 +62,7 @@ const baseState = {
   dmUpgrades: {} as Record<string, number>,
   achievements: {} as Record<string, true>,
   research: {} as Record<string, true>,
+  singularityCores: 0,
   asteroidIndex: 0,
 };
 

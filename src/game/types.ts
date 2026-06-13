@@ -81,6 +81,10 @@ export interface PersistedState {
   researchPoints: number;
   totalResearch: number;
   research: Record<string, true>;
+  /** Ascension layer: permanent cores, count, and DM banked toward the next. */
+  singularityCores: number;
+  ascensionCount: number;
+  dmSinceAscension: number;
 }
 
 export interface GameState extends PersistedState {

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { computeMetrics, newlyCompleted } from '../game/achievements';
+import { pendingSingularityCores } from '../game/ascension';
 import { applyDamage, isBoss, rpFromShatter } from '../game/asteroids';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
@@ -40,6 +41,7 @@ export interface GameActions {
   buyResearch(id: string): void;
   applyEventOutcome(outcome: EventOutcome, nowMs: number): void;
   doPrestige(): void;
+  doAscend(): void;
   tickAchievements(): void;
   consumeAchievements(): string[];
   resetGame(): void;
@@ -77,6 +79,9 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     researchPoints: 0,
     totalResearch: 0,
     research: {},
+    singularityCores: 0,
+    ascensionCount: 0,
+    dmSinceAscension: 0,
   };
 }
 
@@ -295,6 +300,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalTaps: state.totalTaps,
           darkMatter: state.darkMatter + gained,
           totalDarkMatter: state.totalDarkMatter + gained,
+          dmSinceAscension: state.dmSinceAscension + gained,
+          singularityCores: state.singularityCores,
+          ascensionCount: state.ascensionCount,
           dmUpgrades: state.dmUpgrades,
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
@@ -309,6 +317,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // Head start from the Dark Matter shop.
           minerals: powers.startMinerals,
           asteroidIndex: powers.startAsteroidIndex,
+        },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  doAscend() {
+    const state = get();
+    const gained = pendingSingularityCores(state.dmSinceAscension);
+    if (gained < 1) return;
+    set(
+      withCaches(
+        {
+          ...initialPersistedState(Date.now()),
+          // Ascension keeps the deepest meta-layers but sacrifices the Dark
+          // Matter economy (currency + shop) for permanent Singularity Cores.
+          lifetimeAllTime: state.lifetimeAllTime,
+          totalTaps: state.totalTaps,
+          prestigeCount: state.prestigeCount,
+          artifacts: state.artifacts,
+          achievements: state.achievements,
+          asteroidsShattered: state.asteroidsShattered,
+          cometsCaught: state.cometsCaught,
+          expeditionsCompleted: state.expeditionsCompleted,
+          researchPoints: state.researchPoints,
+          totalResearch: state.totalResearch,
+          research: state.research,
+          totalDarkMatter: state.totalDarkMatter,
+          singularityCores: state.singularityCores + gained,
+          ascensionCount: state.ascensionCount + 1,
+          dmSinceAscension: 0,
         },
         state.lastTickAt,
       ),

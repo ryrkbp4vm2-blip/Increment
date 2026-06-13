@@ -3,6 +3,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../components/BigButton';
 import { Amount } from '../components/art/Amount';
 import { Icon, IconName } from '../components/art/Icon';
+import {
+  ASCEND_BASE,
+  SINGULARITY_BONUS,
+  nextAscensionAt,
+  pendingSingularityCores,
+  singularityMult,
+} from '../game/ascension';
 import { PRESTIGE_BASE } from '../game/balance';
 import {
   DM_UPGRADES,
@@ -26,7 +33,17 @@ export function PrestigeScreen() {
   const artifacts = useGameStore((s) => s.artifacts);
   const doPrestige = useGameStore((s) => s.doPrestige);
   const buyDarkMatterUpgrade = useGameStore((s) => s.buyDarkMatterUpgrade);
+  const singularityCores = useGameStore((s) => s.singularityCores);
+  const ascensionCount = useGameStore((s) => s.ascensionCount);
+  const dmSinceAscension = useGameStore((s) => s.dmSinceAscension);
+  const doAscend = useGameStore((s) => s.doAscend);
   const [confirming, setConfirming] = useState(false);
+  const [confirmingAscend, setConfirmingAscend] = useState(false);
+
+  const pendingCores = pendingSingularityCores(dmSinceAscension);
+  const ascendNextAt = nextAscensionAt(dmSinceAscension);
+  // Reveal the ascension layer once the player is at least halfway to it.
+  const ascendRevealed = singularityCores > 0 || dmSinceAscension >= ASCEND_BASE * 0.5;
 
   const powers = effectivePowers(artifacts, dmUpgrades);
   const pending = pendingDarkMatter(lifetimeThisRun);
@@ -100,6 +117,58 @@ export function PrestigeScreen() {
           disabled={pending < 1}
           onPress={() => setConfirming(true)}
         />
+      )}
+
+      {ascendRevealed && (
+        <View style={styles.ascendCard}>
+          <View style={styles.titleRow}>
+            <Icon name="prestige" size={18} color={colors.gold} accent={colors.gold} />
+            <Text style={styles.ascendTitle}>Ascension</Text>
+          </View>
+          <Text style={styles.ascendBody}>
+            Ascend to sacrifice your Dark Matter and its shop for Singularity Cores — each grants
+            +{SINGULARITY_BONUS * 100}% production forever. Artifacts, research and goals remain.
+          </Text>
+          <StatRow label="Singularity Cores" value={`${formatNumber(singularityCores)}`} />
+          <StatRow label="Current bonus" value={`×${singularityMult(singularityCores).toFixed(2)}`} />
+          <StatRow label="Ascensions" value={formatNumber(ascensionCount)} />
+          <StatRow
+            label="Dark Matter banked"
+            value={`${formatNumber(dmSinceAscension)} / ${formatNumber(ascendNextAt)}`}
+          />
+          {confirmingAscend ? (
+            <View style={styles.confirmButtons}>
+              <BigButton
+                label={`Ascend +${formatNumber(pendingCores)}`}
+                color={colors.gold}
+                onPress={() => {
+                  doAscend();
+                  playSound('prestige');
+                  setConfirmingAscend(false);
+                }}
+                style={styles.confirmButton}
+              />
+              <BigButton
+                label="Cancel"
+                color={colors.panelLight}
+                onPress={() => setConfirmingAscend(false)}
+                style={styles.confirmButton}
+              />
+            </View>
+          ) : (
+            <BigButton
+              label={
+                pendingCores >= 1
+                  ? `Ascend for +${formatNumber(pendingCores)} Cores`
+                  : `Need ${formatNumber(ASCEND_BASE)} Dark Matter banked`
+              }
+              color={colors.gold}
+              disabled={pendingCores < 1}
+              onPress={() => setConfirmingAscend(true)}
+              style={styles.ascendButton}
+            />
+          )}
+        </View>
       )}
 
       <View style={styles.shopTitleRow}>
@@ -274,6 +343,23 @@ const styles = StyleSheet.create({
   confirmButton: {
     flex: 1,
   },
+  ascendCard: {
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    padding: spacing.lg,
+    marginTop: spacing.xl,
+  },
+  ascendTitle: { color: colors.gold, fontSize: 18, fontWeight: '800' },
+  ascendBody: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    marginVertical: spacing.sm,
+  },
+  ascendButton: { marginTop: spacing.md },
   shopTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
