@@ -8,6 +8,7 @@ import {
   maxAffordable,
   tapValue,
 } from '../game/math';
+import { CometReward, frenzyFactor } from '../game/events';
 import { pendingDarkMatter } from '../game/prestige';
 import { advance } from '../game/tick';
 import { BuyQty, GameState, GeneratorId, PersistedState } from '../game/types';
@@ -19,6 +20,7 @@ export interface GameActions {
   buyUpgrade(id: string): void;
   applyTick(nowMs: number): void;
   applyOffline(earned: number, nowMs: number): void;
+  collectComet(reward: CometReward, nowMs: number): void;
   doPrestige(): void;
 }
 
@@ -39,6 +41,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     darkMatter: 0,
     prestigeCount: 0,
     startedAt: nowMs,
+    frenzyUntil: 0,
+    frenzyMult: 1,
   };
 }
 
@@ -61,7 +65,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   tap() {
     const state = get();
-    const earned = state.cachedTapValue;
+    const earned = state.cachedTapValue * frenzyFactor(state, Date.now());
     set({
       minerals: state.minerals + earned,
       lifetimeThisRun: state.lifetimeThisRun + earned,
@@ -105,6 +109,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lifetimeAllTime: state.lifetimeAllTime + earned,
       lastTickAt: nowMs,
     });
+  },
+
+  collectComet(reward, nowMs) {
+    const state = get();
+    if (reward.kind === 'frenzy') {
+      set({ frenzyUntil: nowMs + reward.durationMs, frenzyMult: reward.mult });
+    } else {
+      set({
+        minerals: state.minerals + reward.amount,
+        lifetimeThisRun: state.lifetimeThisRun + reward.amount,
+        lifetimeAllTime: state.lifetimeAllTime + reward.amount,
+      });
+    }
   },
 
   doPrestige() {

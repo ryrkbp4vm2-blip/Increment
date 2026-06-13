@@ -51,6 +51,9 @@ export interface PersistedState {
   darkMatter: number;
   prestigeCount: number;
   startedAt: number;
+  /** Golden-comet frenzy buff: production multiplier active until this time. */
+  frenzyUntil: number;
+  frenzyMult: number;
 }
 
 export interface GameState extends PersistedState {

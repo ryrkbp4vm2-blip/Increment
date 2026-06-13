@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { frenzyFactor } from '../game/events';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
@@ -8,12 +9,23 @@ export function StatsHeader() {
   const minerals = useGameStore((s) => s.minerals);
   const cps = useGameStore((s) => s.cachedCps);
   const darkMatter = useGameStore((s) => s.darkMatter);
+  const frenzyUntil = useGameStore((s) => s.frenzyUntil);
+  const frenzyMult = useGameStore((s) => s.frenzyMult);
+
+  // The header re-renders every tick (minerals changes), so reading the
+  // clock during render keeps the frenzy countdown fresh.
+  const now = Date.now();
+  const frenzy = frenzyFactor({ frenzyUntil, frenzyMult }, now);
+  const frenzySecondsLeft = Math.ceil((frenzyUntil - now) / 1000);
 
   return (
     <View style={styles.header}>
       <View style={styles.center}>
         <Text style={styles.minerals}>💎 {formatNumber(minerals)}</Text>
-        <Text style={styles.rate}>{formatRate(cps)}</Text>
+        <Text style={[styles.rate, frenzy > 1 && styles.rateFrenzy]}>
+          {formatRate(cps * frenzy)}
+          {frenzy > 1 ? `  ☄️×${frenzyMult} ${frenzySecondsLeft}s` : ''}
+        </Text>
       </View>
       {darkMatter > 0 && (
         <View style={styles.dmBadge}>
@@ -48,6 +60,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
     fontVariant: ['tabular-nums'],
+  },
+  rateFrenzy: {
+    color: colors.gold,
   },
   dmBadge: {
     position: 'absolute',

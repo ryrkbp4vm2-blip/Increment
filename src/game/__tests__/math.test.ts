@@ -5,6 +5,7 @@ import {
   cps,
   generatorProduction,
   maxAffordable,
+  milestoneMultiplier,
   tapValue,
 } from '../math';
 
@@ -12,13 +13,13 @@ const drone = GENERATORS_BY_ID.drone;
 
 describe('costOfNext', () => {
   it('returns base cost for the first unit', () => {
-    expect(costOfNext(drone, 0)).toBe(15);
+    expect(costOfNext(drone, 0)).toBe(10);
   });
 
   it('applies 1.15 growth with ceil', () => {
-    expect(costOfNext(drone, 1)).toBe(18); // ceil(17.25)
-    expect(costOfNext(drone, 10)).toBe(Math.ceil(15 * 1.15 ** 10)); // 61
-    expect(costOfNext(drone, 10)).toBe(61);
+    expect(costOfNext(drone, 1)).toBe(12); // ceil(11.5)
+    expect(costOfNext(drone, 10)).toBe(Math.ceil(10 * 1.15 ** 10)); // 41
+    expect(costOfNext(drone, 10)).toBe(41);
   });
 });
 
@@ -40,7 +41,7 @@ describe('bulkCost', () => {
 
 describe('maxAffordable', () => {
   it('is zero when the next unit is unaffordable', () => {
-    expect(maxAffordable(drone, 0, 14)).toBe(0);
+    expect(maxAffordable(drone, 0, 9)).toBe(0);
   });
 
   it('round-trips with bulkCost', () => {
@@ -62,12 +63,22 @@ const baseState = {
 
 describe('production', () => {
   it('scales linearly with owned count', () => {
-    expect(generatorProduction(drone, 10, baseState)).toBeCloseTo(1.0);
+    expect(generatorProduction(drone, 10, baseState)).toBeCloseTo(5.0);
   });
 
   it('applies generator multiplier upgrades', () => {
     const state = { ...baseState, upgrades: { drone_x2_a: true as const } };
-    expect(generatorProduction(drone, 10, state)).toBeCloseTo(2.0);
+    expect(generatorProduction(drone, 10, state)).toBeCloseTo(10.0);
+  });
+
+  it('doubles output at every 25-owned milestone', () => {
+    expect(milestoneMultiplier(0)).toBe(1);
+    expect(milestoneMultiplier(24)).toBe(1);
+    expect(milestoneMultiplier(25)).toBe(2);
+    expect(milestoneMultiplier(50)).toBe(4);
+    expect(milestoneMultiplier(75)).toBe(8);
+    // 25 drones at 0.5 each, doubled once
+    expect(generatorProduction(drone, 25, baseState)).toBeCloseTo(25);
   });
 
   it('applies global and dark matter multipliers to cps', () => {
@@ -77,7 +88,7 @@ describe('production', () => {
       upgrades: { global1: true as const }, // x1.5
       darkMatter: 50, // x2 (1 + 0.02*50)
     };
-    expect(cps(state)).toBeCloseTo(1 * 1.5 * 2);
+    expect(cps(state)).toBeCloseTo(5 * 1.5 * 2);
   });
 });
 
@@ -94,9 +105,9 @@ describe('tapValue', () => {
   it('adds a percentage of cps', () => {
     const state = {
       ...baseState,
-      generators: { ...baseState.generators, excavator: 100 }, // 100/s
-      upgrades: { tap4: true as const }, // +1% of cps
+      generators: { ...baseState.generators, excavator: 10 }, // 30/s
+      upgrades: { tap4: true as const }, // +2% of cps
     };
-    expect(tapValue(state)).toBeCloseTo(1 + 1);
+    expect(tapValue(state)).toBeCloseTo(1 + 0.6);
   });
 });

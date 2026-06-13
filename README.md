@@ -7,9 +7,12 @@ it all into **Dark Matter** for permanent production bonuses.
 
 ## Gameplay
 
-- **⛏️ Mine** — tap the asteroid to earn minerals.
+- **⛏️ Mine** — tap the asteroid to earn minerals and kick-start your empire.
+- **☄️ Golden comets** — every minute or two a comet streaks by; catch it for a ×7
+  production frenzy or an instant mineral windfall.
 - **🚀 Empire** — spend minerals on 8 tiers of generators (Mining Drones → Dyson Swarm) that
   produce passively, plus upgrades that multiply tap power and production. Buy ×1, ×10, or Max.
+  Every 25 of a generator doubles its output.
 - **🌌 Prestige** — once you've mined 1T minerals in a run, trigger a *Supernova Collapse*:
   reset the run for Dark Matter, each granting **+2% to all production and taps, forever**.
 - **💤 Offline earnings** — your empire keeps mining while the app is closed (up to 8 hours),

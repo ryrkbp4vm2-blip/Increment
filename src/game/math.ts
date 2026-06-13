@@ -1,4 +1,4 @@
-import { DARK_MATTER_BONUS, GENERATORS, UPGRADES_BY_ID } from './balance';
+import { DARK_MATTER_BONUS, GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
 import { GameState, GeneratorDef, GeneratorId, PersistedState, UnlockCondition } from './types';
 
 export function costOfNext(def: GeneratorDef, owned: number): number {
@@ -49,12 +49,23 @@ export function globalMultiplier(state: MultState): number {
   return mult;
 }
 
+/** Every MILESTONE_EVERY owned doubles that generator's output. */
+export function milestoneMultiplier(owned: number): number {
+  return 2 ** Math.floor(owned / MILESTONE_EVERY);
+}
+
 export function generatorProduction(
   def: GeneratorDef,
   owned: number,
   state: MultState,
 ): number {
-  return def.baseProd * owned * generatorMultiplier(def.id, state) * globalMultiplier(state);
+  return (
+    def.baseProd *
+    owned *
+    milestoneMultiplier(owned) *
+    generatorMultiplier(def.id, state) *
+    globalMultiplier(state)
+  );
 }
 
 export function cps(state: MultState & Pick<PersistedState, 'generators'>): number {

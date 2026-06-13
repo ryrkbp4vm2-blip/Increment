@@ -18,6 +18,8 @@ export function toPersisted(state: GameState): PersistedState {
     darkMatter: state.darkMatter,
     prestigeCount: state.prestigeCount,
     startedAt: state.startedAt,
+    frenzyUntil: state.frenzyUntil,
+    frenzyMult: state.frenzyMult,
   };
 }
 
@@ -74,6 +76,8 @@ export function migrate(raw: string | null): SaveFile | null {
     darkMatter: Math.max(0, finiteNumber(raw_.darkMatter, 0)),
     prestigeCount: Math.max(0, Math.floor(finiteNumber(raw_.prestigeCount, 0))),
     startedAt: finiteNumber(raw_.startedAt, defaults.startedAt),
+    frenzyUntil: Math.max(0, finiteNumber(raw_.frenzyUntil, 0)),
+    frenzyMult: Math.max(1, finiteNumber(raw_.frenzyMult, 1)),
   };
   return {
     version: SAVE_VERSION,

@@ -14,13 +14,26 @@ export const DARK_MATTER_BONUS = 0.02;
 /** A generator row is revealed once lifetime earnings reach this fraction of its base cost. */
 export const REVEAL_FRACTION = 0.5;
 
+/** Owning multiples of this count doubles a generator's output (x2, x4, ...). */
+export const MILESTONE_EVERY = 25;
+
+/** Golden comet event timing/rewards. */
+export const COMET_FIRST_SPAWN_MS: [number, number] = [25_000, 45_000];
+export const COMET_SPAWN_MS: [number, number] = [60_000, 120_000];
+export const COMET_VISIBLE_MS = 9_000;
+export const COMET_FRENZY_MULT = 7;
+export const COMET_FRENZY_DURATION_MS = 30_000;
+/** Windfall grants this many seconds of production, with a floor for new players. */
+export const COMET_WINDFALL_SECONDS = 180;
+export const COMET_WINDFALL_MIN = 25;
+
 export const GENERATORS: GeneratorDef[] = [
   {
     id: 'drone',
     name: 'Mining Drone',
     description: 'A scrappy autonomous drone chipping away at the rock.',
-    baseCost: 15,
-    baseProd: 0.1,
+    baseCost: 10,
+    baseProd: 0.5,
     growth: 1.15,
     emoji: '🛸',
   },
@@ -28,8 +41,8 @@ export const GENERATORS: GeneratorDef[] = [
     id: 'excavator',
     name: 'Rock Excavator',
     description: 'Heavy treads, heavier appetite for regolith.',
-    baseCost: 100,
-    baseProd: 1,
+    baseCost: 80,
+    baseProd: 3,
     growth: 1.15,
     emoji: '🚜',
   },
@@ -37,8 +50,8 @@ export const GENERATORS: GeneratorDef[] = [
     id: 'refinery',
     name: 'Ore Refinery',
     description: 'Smelts raw ore into pure, sellable minerals.',
-    baseCost: 1_100,
-    baseProd: 8,
+    baseCost: 750,
+    baseProd: 15,
     growth: 1.15,
     emoji: '🏭',
   },
@@ -46,8 +59,8 @@ export const GENERATORS: GeneratorDef[] = [
     id: 'hauler',
     name: 'Cargo Hauler Fleet',
     description: 'Freighters running nonstop supply routes.',
-    baseCost: 12_000,
-    baseProd: 47,
+    baseCost: 8_000,
+    baseProd: 75,
     growth: 1.15,
     emoji: '🚀',
   },
@@ -55,8 +68,8 @@ export const GENERATORS: GeneratorDef[] = [
     id: 'station',
     name: 'Orbital Station',
     description: 'A permanent foothold in the asteroid belt.',
-    baseCost: 130_000,
-    baseProd: 260,
+    baseCost: 90_000,
+    baseProd: 400,
     growth: 1.15,
     emoji: '🛰️',
   },
@@ -64,8 +77,8 @@ export const GENERATORS: GeneratorDef[] = [
     id: 'harvester',
     name: 'Belt Harvester',
     description: 'Strip-mines entire asteroid clusters at once.',
-    baseCost: 1.4e6,
-    baseProd: 1_400,
+    baseCost: 1e6,
+    baseProd: 2_200,
     growth: 1.15,
     emoji: '🌌',
   },
@@ -73,8 +86,8 @@ export const GENERATORS: GeneratorDef[] = [
     id: 'cracker',
     name: 'Planet Cracker',
     description: 'Why mine an asteroid when you can split a moon?',
-    baseCost: 20e6,
-    baseProd: 7_800,
+    baseCost: 15e6,
+    baseProd: 12_000,
     growth: 1.15,
     emoji: '🪐',
   },
@@ -82,8 +95,8 @@ export const GENERATORS: GeneratorDef[] = [
     id: 'dyson',
     name: 'Dyson Swarm',
     description: 'Harnesses a star to power galaxy-scale extraction.',
-    baseCost: 3.3e8,
-    baseProd: 44_000,
+    baseCost: 2.5e8,
+    baseProd: 65_000,
     growth: 1.15,
     emoji: '☀️',
   },
@@ -98,41 +111,41 @@ const tapUpgrades: UpgradeDef[] = [
     id: 'tap1',
     name: 'Reinforced Drill',
     description: 'Tap power x2',
-    cost: 100,
-    unlock: { kind: 'taps', n: 25 },
+    cost: 50,
+    unlock: { kind: 'taps', n: 10 },
     effect: { kind: 'tapMult', x: 2 },
   },
   {
     id: 'tap2',
     name: 'Plasma Cutter',
     description: 'Tap power x2',
-    cost: 2_500,
-    unlock: { kind: 'taps', n: 100 },
+    cost: 1_000,
+    unlock: { kind: 'taps', n: 75 },
     effect: { kind: 'tapMult', x: 2 },
   },
   {
     id: 'tap3',
     name: 'Laser Array',
     description: 'Tap power x2',
-    cost: 50_000,
-    unlock: { kind: 'taps', n: 250 },
+    cost: 25_000,
+    unlock: { kind: 'taps', n: 200 },
     effect: { kind: 'tapMult', x: 2 },
   },
   {
     id: 'tap4',
     name: 'Quantum Pick',
-    description: 'Taps also yield +1% of your minerals/sec',
-    cost: 5e6,
-    unlock: { kind: 'taps', n: 500 },
-    effect: { kind: 'tapCpsPercent', pct: 0.01 },
+    description: 'Taps also yield +2% of your minerals/sec',
+    cost: 150_000,
+    unlock: { kind: 'taps', n: 300 },
+    effect: { kind: 'tapCpsPercent', pct: 0.02 },
   },
   {
     id: 'tap5',
     name: 'Singularity Tip',
-    description: 'Taps also yield +4% of your minerals/sec',
-    cost: 1e9,
-    unlock: { kind: 'taps', n: 1000 },
-    effect: { kind: 'tapCpsPercent', pct: 0.04 },
+    description: 'Taps also yield +5% of your minerals/sec',
+    cost: 5e8,
+    unlock: { kind: 'taps', n: 600 },
+    effect: { kind: 'tapCpsPercent', pct: 0.05 },
   },
 ];
 
