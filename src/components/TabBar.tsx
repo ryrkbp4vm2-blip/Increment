@@ -1,14 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing } from '../theme';
+import { Icon, IconName } from './art/Icon';
 
 export type Tab = 'mine' | 'shop' | 'fleet' | 'prestige';
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'mine', label: 'Mine', icon: '⛏️' },
-  { id: 'shop', label: 'Empire', icon: '🏭' },
-  { id: 'fleet', label: 'Fleet', icon: '🚀' },
-  { id: 'prestige', label: 'Prestige', icon: '🌌' },
+const TABS: { id: Tab; label: string; icon: IconName }[] = [
+  { id: 'mine', label: 'Mine', icon: 'mine' },
+  { id: 'shop', label: 'Empire', icon: 'empire' },
+  { id: 'fleet', label: 'Fleet', icon: 'fleet' },
+  { id: 'prestige', label: 'Prestige', icon: 'prestige' },
 ];
 
 interface Props {
@@ -23,7 +24,12 @@ export function TabBar({ active, onChange }: Props) {
         const isActive = tab.id === active;
         return (
           <Pressable key={tab.id} style={styles.tab} onPress={() => onChange(tab.id)}>
-            <Text style={styles.icon}>{tab.icon}</Text>
+            <Icon
+              name={tab.icon}
+              size={24}
+              color={isActive ? colors.accent : colors.textMuted}
+              accent={isActive ? colors.accent : colors.textMuted}
+            />
             <Text style={[styles.label, isActive && styles.labelActive]}>{tab.label}</Text>
           </Pressable>
         );
@@ -43,15 +49,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacing.md,
-  },
-  icon: {
-    fontSize: 20,
+    gap: 3,
   },
   label: {
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 2,
   },
   labelActive: {
     color: colors.accent,

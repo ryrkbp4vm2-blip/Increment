@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../components/BigButton';
+import { Amount } from '../components/art/Amount';
+import { Icon, IconName } from '../components/art/Icon';
 import { PRESTIGE_BASE } from '../game/balance';
 import {
   DM_UPGRADES,
@@ -33,7 +35,10 @@ export function PrestigeScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>🌌 Supernova Collapse</Text>
+      <View style={styles.titleRow}>
+        <Icon name="prestige" size={22} />
+        <Text style={styles.title}>Supernova Collapse</Text>
+      </View>
       <Text style={styles.body}>
         Collapse your empire into Dark Matter — spend it below on permanent upgrades that
         persist through every future collapse. You keep artifacts and the shop; everything else
@@ -41,13 +46,14 @@ export function PrestigeScreen() {
       </Text>
 
       <View style={styles.statsCard}>
-        <StatRow label="Dark Matter to spend" value={`🌑 ${formatNumber(darkMatter)}`} />
-        <StatRow label="Earned all-time" value={`🌑 ${formatNumber(totalDarkMatter)}`} />
+        <StatRow label="Dark Matter to spend" currency="dm" value={darkMatter} />
+        <StatRow label="Earned all-time" currency="dm" value={totalDarkMatter} />
         <StatRow label="Collapses so far" value={formatNumber(prestigeCount)} />
-        <StatRow label="Mined this run" value={`💎 ${formatNumber(lifetimeThisRun)}`} />
+        <StatRow label="Mined this run" currency="mineral" value={lifetimeThisRun} />
         <StatRow
           label={pending > 0 ? 'Next Dark Matter at' : 'First Dark Matter at'}
-          value={`💎 ${formatNumber(pending > 0 ? nextAt : PRESTIGE_BASE)}`}
+          currency="mineral"
+          value={pending > 0 ? nextAt : PRESTIGE_BASE}
         />
       </View>
 
@@ -94,7 +100,10 @@ export function PrestigeScreen() {
         />
       )}
 
-      <Text style={styles.shopTitle}>🌑 Dark Matter Shop</Text>
+      <View style={styles.shopTitleRow}>
+        <Icon name="darkmatter" size={18} />
+        <Text style={styles.shopTitle}>Dark Matter Shop</Text>
+      </View>
       <Text style={styles.shopHint}>Permanent upgrades. Effects stack and survive collapses.</Text>
       {DM_UPGRADES.map((def) => (
         <DarkMatterRow
@@ -126,7 +135,9 @@ function DarkMatterRow({
 
   return (
     <View style={styles.dmRow}>
-      <Text style={styles.dmEmoji}>{def.emoji}</Text>
+      <View style={styles.dmIconBox}>
+        <Icon name={def.id as IconName} size={26} color={colors.darkMatter} accent={colors.gold} />
+      </View>
       <View style={styles.dmInfo}>
         <Text style={styles.dmName}>
           {def.name} <Text style={styles.dmLevel}>Lv {level}/{def.maxLevel}</Text>
@@ -142,20 +153,35 @@ function DarkMatterRow({
         {maxed ? (
           <Text style={styles.dmMaxedText}>MAX</Text>
         ) : (
-          <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>
-            🌑 {formatNumber(cost)}
-          </Text>
+          <Amount
+            kind="dm"
+            value={cost}
+            size={13}
+            textStyle={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}
+          />
         )}
       </Pressable>
     </View>
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatRow({
+  label,
+  value,
+  currency,
+}: {
+  label: string;
+  value: number | string;
+  currency?: 'mineral' | 'dm';
+}) {
   return (
     <View style={styles.statRow}>
       <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
+      {currency && typeof value === 'number' ? (
+        <Amount kind={currency} value={value} size={14} textStyle={styles.statValue} />
+      ) : (
+        <Text style={styles.statValue}>{value}</Text>
+      )}
     </View>
   );
 }
@@ -168,12 +194,17 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xl,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   title: {
     color: colors.darkMatter,
     fontSize: 22,
     fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: spacing.md,
   },
   body: {
     color: colors.textMuted,
@@ -237,11 +268,16 @@ const styles = StyleSheet.create({
   confirmButton: {
     flex: 1,
   },
+  shopTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+  },
   shopTitle: {
     color: colors.darkMatter,
     fontSize: 18,
     fontWeight: '800',
-    marginTop: spacing.xl,
   },
   shopHint: {
     color: colors.textMuted,
@@ -258,9 +294,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  dmEmoji: {
-    fontSize: 26,
-    marginRight: spacing.md,
+  dmIconBox: {
+    width: 34,
+    alignItems: 'center',
+    marginRight: spacing.sm,
   },
   dmInfo: {
     flex: 1,

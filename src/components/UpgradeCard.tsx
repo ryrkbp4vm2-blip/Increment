@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { UpgradeDef } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
-import { formatNumber } from '../utils/format';
+import { Amount } from './art/Amount';
 
 interface Props {
   def: UpgradeDef;
@@ -26,9 +26,12 @@ export function UpgradeCard({ def }: Props) {
       <Text style={styles.name}>{def.name}</Text>
       <Text style={styles.description}>{def.description}</Text>
       <View style={styles.costRow}>
-        <Text style={[styles.cost, !affordable && styles.costDisabled]}>
-          💎 {formatNumber(def.cost)}
-        </Text>
+        <Amount
+          kind="mineral"
+          value={def.cost}
+          size={13}
+          textStyle={[styles.cost, !affordable && styles.costDisabled]}
+        />
       </View>
     </Pressable>
   );

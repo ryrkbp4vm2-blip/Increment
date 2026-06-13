@@ -4,7 +4,9 @@ import { GeneratorDef, BuyQty } from '../game/types';
 import { generatorProduction, maxAffordable } from '../game/math';
 import { purchaseCost, useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
-import { formatNumber, formatRate } from '../utils/format';
+import { formatRate } from '../utils/format';
+import { Amount } from './art/Amount';
+import { Icon, IconName } from './art/Icon';
 
 interface Props {
   def: GeneratorDef;
@@ -28,7 +30,9 @@ export function GeneratorRow({ def, qty }: Props) {
 
   return (
     <View style={styles.row}>
-      <Text style={styles.emoji}>{def.emoji}</Text>
+      <View style={styles.iconBox}>
+        <Icon name={def.id as IconName} size={30} />
+      </View>
       <View style={styles.info}>
         <Text style={styles.name}>
           {def.name} <Text style={styles.owned}>×{owned}</Text>
@@ -49,9 +53,12 @@ export function GeneratorRow({ def, qty }: Props) {
         <Text style={[styles.buyLabel, !affordable && styles.buyLabelDisabled]}>
           Buy {qty === 'max' ? (buyCount > 0 ? `×${buyCount}` : 'Max') : `×${qty}`}
         </Text>
-        <Text style={[styles.buyCost, !affordable && styles.buyLabelDisabled]}>
-          💎 {formatNumber(cost)}
-        </Text>
+        <Amount
+          kind="mineral"
+          value={cost}
+          size={12}
+          textStyle={[styles.buyCost, !affordable && styles.buyLabelDisabled]}
+        />
       </Pressable>
     </View>
   );
@@ -68,9 +75,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  emoji: {
-    fontSize: 30,
-    marginRight: spacing.md,
+  iconBox: {
+    width: 38,
+    alignItems: 'center',
+    marginRight: spacing.sm,
   },
   info: {
     flex: 1,
@@ -114,7 +122,6 @@ const styles = StyleSheet.create({
   buyCost: {
     color: colors.accent,
     fontSize: 12,
-    marginTop: 2,
     fontVariant: ['tabular-nums'],
   },
   buyLabelDisabled: {

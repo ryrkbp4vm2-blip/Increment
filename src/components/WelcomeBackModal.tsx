@@ -2,7 +2,8 @@ import React from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { OfflineReport } from '../hooks/useAppLifecycle';
 import { colors, spacing } from '../theme';
-import { formatDuration, formatNumber } from '../utils/format';
+import { formatDuration } from '../utils/format';
+import { Amount } from './art/Amount';
 import { BigButton } from './BigButton';
 
 interface Props {
@@ -19,7 +20,14 @@ export function WelcomeBackModal({ report, onDismiss }: Props) {
           <Text style={styles.subtitle}>
             Your empire kept mining for {formatDuration(report?.elapsedMs ?? 0)}
           </Text>
-          <Text style={styles.earned}>+💎 {formatNumber(report?.earned ?? 0)}</Text>
+          <Amount
+            kind="mineral"
+            value={report?.earned ?? 0}
+            size={26}
+            textStyle={styles.earned}
+            prefix="+"
+            style={styles.earnedRow}
+          />
           <BigButton label="Collect" onPress={onDismiss} />
         </View>
       </View>
@@ -56,10 +64,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlign: 'center',
   },
+  earnedRow: {
+    marginVertical: spacing.lg,
+  },
   earned: {
     color: colors.accent,
     fontSize: 28,
     fontWeight: '800',
-    marginVertical: spacing.lg,
   },
 });

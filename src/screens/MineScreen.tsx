@@ -2,11 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Asteroid } from '../components/Asteroid';
 import { Comet } from '../components/Comet';
+import { CometArt } from '../components/art/CometArt';
+import { Icon } from '../components/art/Icon';
 import { asteroidHp, asteroidName, asteroidRichness } from '../game/asteroids';
 import { CometReward } from '../game/events';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
+
+type Banner = { kind: 'shatter' | 'comet'; text: string };
 
 export function MineScreen() {
   const tapValue = useGameStore((s) => s.cachedTapValue);
@@ -14,23 +18,24 @@ export function MineScreen() {
   const asteroidIndex = useGameStore((s) => s.asteroidIndex);
   const asteroidDamage = useGameStore((s) => s.asteroidDamage);
   const collectComet = useGameStore((s) => s.collectComet);
-  const [banner, setBanner] = useState<string | null>(null);
+  const [banner, setBanner] = useState<Banner | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevIndex = useRef(asteroidIndex);
 
-  const showBanner = (text: string) => {
-    setBanner(text);
+  const showBanner = (b: Banner) => {
+    setBanner(b);
     if (bannerTimer.current) clearTimeout(bannerTimer.current);
     bannerTimer.current = setTimeout(() => setBanner(null), 4000);
   };
 
   useEffect(() => {
     if (asteroidIndex > prevIndex.current) {
-      showBanner(
-        `💥 Asteroid shattered! ${asteroidName(asteroidIndex)} is ×${asteroidRichness(
+      showBanner({
+        kind: 'shatter',
+        text: `Asteroid shattered! ${asteroidName(asteroidIndex)} is ×${asteroidRichness(
           asteroidIndex,
         ).toFixed(2)} richer`,
-      );
+      });
     }
     prevIndex.current = asteroidIndex;
   }, [asteroidIndex]);
@@ -43,11 +48,13 @@ export function MineScreen() {
 
   const handleComet = (reward: CometReward) => {
     collectComet(reward, Date.now());
-    showBanner(
-      reward.kind === 'frenzy'
-        ? `☄️ FRENZY! ×${reward.mult} production for ${Math.round(reward.durationMs / 1000)}s`
-        : `☄️ Windfall! +💎 ${formatNumber(reward.amount)}`,
-    );
+    showBanner({
+      kind: 'comet',
+      text:
+        reward.kind === 'frenzy'
+          ? `FRENZY! ×${reward.mult} production for ${Math.round(reward.durationMs / 1000)}s`
+          : `Windfall! +${formatNumber(reward.amount)} minerals`,
+    });
   };
 
   const hp = asteroidHp(asteroidIndex);
@@ -58,7 +65,8 @@ export function MineScreen() {
       <Comet onCollect={handleComet} />
       {banner && (
         <View style={styles.banner}>
-          <Text style={styles.bannerText}>{banner}</Text>
+          {banner.kind === 'comet' ? <CometArt size={20} /> : <Icon name="burst" size={18} />}
+          <Text style={styles.bannerText}>{banner.text}</Text>
         </View>
       )}
       <View style={styles.asteroidInfo}>
@@ -76,7 +84,10 @@ export function MineScreen() {
       <View style={styles.spacer} />
       <Asteroid />
       <View style={styles.stats}>
-        <Text style={styles.tapValue}>⛏️ {formatNumber(tapValue)} per tap</Text>
+        <View style={styles.tapRow}>
+          <Icon name="mine" size={15} color={colors.text} accent={colors.text} />
+          <Text style={styles.tapValue}>{formatNumber(tapValue)} per tap</Text>
+        </View>
         <Text style={styles.taps}>{formatNumber(totalTaps)} taps all time</Text>
       </View>
     </View>
@@ -95,6 +106,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.md,
     alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    maxWidth: '92%',
     backgroundColor: colors.panelLight,
     borderColor: colors.gold,
     borderWidth: 1,
@@ -105,8 +120,14 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     color: colors.gold,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
+    flexShrink: 1,
+  },
+  tapRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   asteroidInfo: {
     alignItems: 'center',

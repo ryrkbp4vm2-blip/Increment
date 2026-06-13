@@ -4,6 +4,8 @@ import { frenzyFactor } from '../game/events';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
+import { CometArt } from './art/CometArt';
+import { Icon } from './art/Icon';
 
 export function StatsHeader() {
   const minerals = useGameStore((s) => s.minerals);
@@ -21,15 +23,28 @@ export function StatsHeader() {
   return (
     <View style={styles.header}>
       <View style={styles.center}>
-        <Text style={styles.minerals}>💎 {formatNumber(minerals)}</Text>
-        <Text style={[styles.rate, frenzy > 1 && styles.rateFrenzy]}>
-          {formatRate(cps * frenzy)}
-          {frenzy > 1 ? `  ☄️×${frenzyMult} ${frenzySecondsLeft}s` : ''}
-        </Text>
+        <View style={styles.mineralRow}>
+          <Icon name="mineral" size={26} />
+          <Text style={styles.minerals}>{formatNumber(minerals)}</Text>
+        </View>
+        <View style={styles.rateRow}>
+          <Text style={[styles.rate, frenzy > 1 && styles.rateFrenzy]}>{formatRate(cps * frenzy)}</Text>
+          {frenzy > 1 && (
+            <View style={styles.frenzyTag}>
+              <CometArt size={16} />
+              <Text style={styles.frenzyText}>
+                ×{frenzyMult} · {frenzySecondsLeft}s
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
       {darkMatter > 0 && (
         <View style={styles.dmBadge}>
-          <Text style={styles.dmText}>🌑 {formatNumber(darkMatter)}</Text>
+          <View style={styles.dmRow}>
+            <Icon name="darkmatter" size={15} />
+            <Text style={styles.dmText}>{formatNumber(darkMatter)}</Text>
+          </View>
           <Text style={styles.dmBonus}>to spend</Text>
         </View>
       )}
@@ -48,27 +63,52 @@ const styles = StyleSheet.create({
   center: {
     alignItems: 'center',
   },
+  mineralRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   minerals: {
     color: colors.text,
     fontSize: 30,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
   },
+  rateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 2,
+  },
   rate: {
     color: colors.accent,
     fontSize: 14,
     fontWeight: '600',
-    marginTop: 2,
     fontVariant: ['tabular-nums'],
   },
   rateFrenzy: {
     color: colors.gold,
+  },
+  frenzyTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  frenzyText: {
+    color: colors.gold,
+    fontSize: 12,
+    fontWeight: '700',
   },
   dmBadge: {
     position: 'absolute',
     right: spacing.lg,
     top: spacing.md,
     alignItems: 'flex-end',
+  },
+  dmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   dmText: {
     color: colors.darkMatter,

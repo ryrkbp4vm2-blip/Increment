@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BigButton } from '../components/BigButton';
-import { ARTIFACTS, ARTIFACTS_BY_ID, artifactPowers } from '../game/artifacts';
+import { Amount } from '../components/art/Amount';
+import { Icon, IconName } from '../components/art/Icon';
+import { ARTIFACTS, ARTIFACTS_BY_ID } from '../game/artifacts';
 import {
   EXPEDITIONS,
   EXPEDITIONS_BY_ID,
@@ -10,13 +12,21 @@ import {
   expeditionFuel,
   expeditionLoot,
 } from '../game/expeditions';
+import { effectivePowers } from '../game/powers';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatDuration, formatNumber } from '../utils/format';
 
+/** A distinct accent colour per artifact, by collection order. */
+const ARTIFACT_COLORS = [
+  '#5EEAD4', '#FACC15', '#F87171', '#C084FC', '#60A5FA', '#34D399',
+  '#FB923C', '#F472B6', '#A3E635', '#22D3EE', '#E879F9', '#FBBF24',
+];
+
 export function FleetScreen() {
   const expedition = useGameStore((s) => s.expedition);
   const artifacts = useGameStore((s) => s.artifacts);
+  const dmUpgrades = useGameStore((s) => s.dmUpgrades);
   const minerals = useGameStore((s) => s.minerals);
   const cachedCps = useGameStore((s) => s.cachedCps);
   const launchExpedition = useGameStore((s) => s.launchExpedition);
@@ -34,7 +44,7 @@ export function FleetScreen() {
     };
   }, []);
 
-  const powers = artifactPowers(artifacts);
+  const powers = effectivePowers(artifacts, dmUpgrades);
   const activeDef = expedition ? EXPEDITIONS_BY_ID[expedition.defId] : null;
   const done = expedition !== null && now >= expedition.endsAt;
   const ownedCount = Object.keys(artifacts).length;
@@ -45,8 +55,8 @@ export function FleetScreen() {
     const artifact = result.artifactId ? ARTIFACTS_BY_ID[result.artifactId] : null;
     setResultBanner(
       artifact
-        ? `${artifact.emoji} Recovered ${artifact.name}! ${artifact.description} (+💎 ${formatNumber(result.loot)})`
-        : `Expedition returned with 💎 ${formatNumber(result.loot)}`,
+        ? `Recovered ${artifact.name}! ${artifact.description} (+${formatNumber(result.loot)} minerals)`
+        : `Expedition returned with ${formatNumber(result.loot)} minerals`,
     );
     if (bannerTimer.current) clearTimeout(bannerTimer.current);
     bannerTimer.current = setTimeout(() => setResultBanner(null), 6000);
@@ -54,7 +64,10 @@ export function FleetScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>🚀 Fleet Command</Text>
+      <View style={styles.titleRow}>
+        <Icon name="fleet" size={22} />
+        <Text style={styles.title}>Fleet Command</Text>
+      </View>
 
       {resultBanner && (
         <View style={styles.resultBanner}>
@@ -64,9 +77,10 @@ export function FleetScreen() {
 
       {expedition && activeDef ? (
         <View style={styles.activeCard}>
-          <Text style={styles.cardName}>
-            {activeDef.emoji} {activeDef.name}
-          </Text>
+          <View style={styles.cardNameRow}>
+            <Icon name={activeDef.id as IconName} size={22} />
+            <Text style={styles.cardName}>{activeDef.name}</Text>
+          </View>
           {done ? (
             <BigButton label="Claim rewards" color={colors.gold} onPress={handleClaim} />
           ) : (
@@ -86,10 +100,12 @@ export function FleetScreen() {
                   ]}
                 />
               </View>
-              <Text style={styles.countdown}>
-                Returns in {formatDuration(expedition.endsAt - now)} · carrying ~💎{' '}
-                {formatNumber(expedition.loot)}
-              </Text>
+              <View style={styles.countdownRow}>
+                <Text style={styles.countdown}>
+                  Returns in {formatDuration(expedition.endsAt - now)} · carrying
+                </Text>
+                <Amount kind="mineral" value={expedition.loot} size={13} textStyle={styles.countdown} prefix="~" />
+              </View>
             </>
           )}
         </View>
@@ -114,11 +130,15 @@ export function FleetScreen() {
         Permanent relics recovered by expeditions. They survive prestige.
       </Text>
       <View style={styles.artifactGrid}>
-        {ARTIFACTS.map((a) => {
+        {ARTIFACTS.map((a, i) => {
           const owned = artifacts[a.id];
           return (
             <View key={a.id} style={[styles.artifactCell, owned && styles.artifactOwned]}>
-              <Text style={styles.artifactEmoji}>{owned ? a.emoji : '❓'}</Text>
+              {owned ? (
+                <Icon name="artifact" size={26} color={ARTIFACT_COLORS[i % ARTIFACT_COLORS.length]} />
+              ) : (
+                <Icon name="gem_outline" size={26} color={colors.textMuted} />
+              )}
               <Text style={[styles.artifactName, !owned && styles.artifactUnknown]}>
                 {owned ? a.name : 'Undiscovered'}
               </Text>
@@ -148,12 +168,13 @@ function ExpeditionCard({
 }) {
   return (
     <View style={styles.card}>
-      <Text style={styles.cardName}>
-        {def.emoji} {def.name}
-      </Text>
+      <View style={styles.cardNameRow}>
+        <Icon name={def.id as IconName} size={22} />
+        <Text style={styles.cardName}>{def.name}</Text>
+      </View>
       <Text style={styles.cardDesc}>{def.description}</Text>
       <Text style={styles.cardStats}>
-        ⏱ {formatDuration(durationMs)} · loot ~💎 {formatNumber(loot)} · artifact odds{' '}
+        {formatDuration(durationMs)} · loot ~{formatNumber(loot)} · artifacts{' '}
         {Math.round(def.artifactChance * 100)}%
       </Text>
       <Pressable
@@ -161,9 +182,14 @@ function ExpeditionCard({
         disabled={!affordable}
         style={[styles.launchButton, !affordable && styles.launchDisabled]}
       >
-        <Text style={[styles.launchLabel, !affordable && styles.launchLabelDisabled]}>
-          Launch · 💎 {formatNumber(fuel)} fuel
-        </Text>
+        <Text style={[styles.launchLabel, !affordable && styles.launchLabelDisabled]}>Launch · </Text>
+        <Amount
+          kind="mineral"
+          value={fuel}
+          size={13}
+          textStyle={[styles.launchLabel, !affordable && styles.launchLabelDisabled]}
+        />
+        <Text style={[styles.launchLabel, !affordable && styles.launchLabelDisabled]}> fuel</Text>
       </Pressable>
     </View>
   );
@@ -177,12 +203,17 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xl,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   title: {
     color: colors.text,
     fontSize: 20,
     fontWeight: '800',
-    marginBottom: spacing.md,
-    textAlign: 'center',
   },
   resultBanner: {
     backgroundColor: colors.panelLight,
@@ -214,6 +245,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.md,
   },
+  cardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   cardName: {
     color: colors.text,
     fontSize: 16,
@@ -231,6 +267,8 @@ const styles = StyleSheet.create({
   },
   launchButton: {
     marginTop: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'center',
     backgroundColor: colors.accentDim,
     borderColor: colors.accent,
     borderWidth: 1,
@@ -263,10 +301,17 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.accent,
   },
+  countdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: spacing.sm,
+  },
   countdown: {
     color: colors.textMuted,
     fontSize: 13,
-    marginTop: spacing.sm,
     textAlign: 'center',
   },
   sectionTitle: {

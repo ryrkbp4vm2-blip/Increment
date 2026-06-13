@@ -10,6 +10,7 @@ import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
 import { effectivePowers } from '../game/powers';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
+import { CometArt } from './art/CometArt';
 
 interface Props {
   onCollect: (reward: CometReward) => void;
@@ -86,18 +87,13 @@ export function Comet({ onCollect }: Props) {
 
   return (
     <Pressable onPress={catchComet} hitSlop={24} style={[styles.comet, { left: position.x, top: position.y }]}>
-      <Animated.Text
-        style={[
-          styles.emoji,
-          {
-            transform: [
-              { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] }) },
-            ],
-          },
-        ]}
+      <Animated.View
+        style={{
+          transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] }) }],
+        }}
       >
-        ☄️
-      </Animated.Text>
+        <CometArt size={52} />
+      </Animated.View>
     </Pressable>
   );
 }
