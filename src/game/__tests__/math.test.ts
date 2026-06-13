@@ -56,7 +56,7 @@ describe('maxAffordable', () => {
 });
 
 const baseState = {
-  generators: { drone: 0, excavator: 0, refinery: 0, hauler: 0, station: 0, harvester: 0, cracker: 0, dyson: 0 },
+  generators: { drone: 0, excavator: 0, refinery: 0, hauler: 0, station: 0, harvester: 0, cracker: 0, dyson: 0, forge: 0, core: 0 },
   upgrades: {} as Record<string, true>,
   artifacts: {} as Record<string, true>,
   dmUpgrades: {} as Record<string, number>,

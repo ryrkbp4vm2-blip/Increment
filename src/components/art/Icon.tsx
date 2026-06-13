@@ -31,6 +31,8 @@ export type IconName =
   | 'harvester'
   | 'cracker'
   | 'dyson'
+  | 'forge'
+  | 'core'
   // dark matter shop
   | 'stellar_density'
   | 'kinetic_amplifier'
@@ -213,6 +215,23 @@ function glyph(name: IconName, c: string, a: string): React.ReactElement {
           <Circle cx={12} cy={12} r={5} fill="#FACC15" />
           <Polygon points={starPoints(12, 12, 11, 6, 8)} fill="#FACC15" opacity={0.35} />
           <Circle cx={12} cy={12} r={5} fill="none" stroke="#FFE9A8" strokeWidth={1} />
+        </G>
+      );
+    case 'forge':
+      return (
+        <G>
+          <Circle cx={12} cy={12} r={4} fill="#A78BFA" />
+          <Polygon points="12,2 14,10 12,12 10,10" fill={a} />
+          <Polygon points="12,22 10,14 12,12 14,14" fill={a} />
+          <Circle cx={12} cy={12} r={4} fill="none" stroke="#E6D2FF" strokeWidth={1} />
+        </G>
+      );
+    case 'core':
+      return (
+        <G>
+          <Circle cx={12} cy={12} r={9} fill="none" stroke={a} strokeWidth={1.5} opacity={0.5} />
+          <Circle cx={12} cy={12} r={5.5} fill={colors.darkMatter} />
+          <Circle cx={12} cy={12} r={2.2} fill="#0B0E1A" />
         </G>
       );
     case 'kinetic_amplifier':

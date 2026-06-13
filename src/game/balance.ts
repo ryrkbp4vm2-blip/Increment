@@ -100,6 +100,24 @@ export const GENERATORS: GeneratorDef[] = [
     growth: 1.15,
     emoji: '☀️',
   },
+  {
+    id: 'forge',
+    name: 'Quasar Forge',
+    description: 'Channels a quasar jet into raw, refined matter.',
+    baseCost: 5e9,
+    baseProd: 380_000,
+    growth: 1.15,
+    emoji: '🌠',
+  },
+  {
+    id: 'core',
+    name: 'Galactic Core Tap',
+    description: 'Siphons the supermassive heart of the galaxy itself.',
+    baseCost: 9e10,
+    baseProd: 2_200_000,
+    growth: 1.15,
+    emoji: '🌑',
+  },
 ];
 
 export const GENERATORS_BY_ID: Record<GeneratorId, GeneratorDef> = Object.fromEntries(
@@ -158,6 +176,8 @@ const GEN_UPGRADE_NAMES: Record<GeneratorId, [string, string]> = {
   harvester: ['Magnetic Scoops', 'Antimatter Harvesters'],
   cracker: ['Tectonic Charges', 'Core Extraction Rigs'],
   dyson: ['Mirror Alignment', 'Stellar Lifting'],
+  forge: ['Jet Focusing', 'Quark Distillation'],
+  core: ['Accretion Tuning', 'Relativistic Siphon'],
 };
 
 const generatorUpgrades: UpgradeDef[] = GENERATORS.flatMap((g) => {

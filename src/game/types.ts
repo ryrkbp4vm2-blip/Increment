@@ -6,7 +6,9 @@ export type GeneratorId =
   | 'station'
   | 'harvester'
   | 'cracker'
-  | 'dyson';
+  | 'dyson'
+  | 'forge'
+  | 'core';
 
 export interface GeneratorDef {
   id: GeneratorId;

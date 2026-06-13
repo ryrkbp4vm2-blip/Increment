@@ -61,11 +61,24 @@ export async function setMuted(value: boolean): Promise<void> {
 /** Fire-and-forget SFX. Safe to call rapidly; never throws. */
 export function playSound(name: SoundName): void {
   if (muted) return;
+  // On web, browsers reject audio before the first user gesture (autoplay
+  // policy). Skip those calls entirely so they don't throw unhandled.
+  const ua = (globalThis as { navigator?: { userActivation?: { hasBeenActive: boolean } } })
+    .navigator?.userActivation;
+  if (ua && !ua.hasBeenActive) return;
   const player = players[name];
   if (!player) return;
   try {
-    player.seekTo(0);
-    player.play();
+    const seek = player.seekTo(0) as unknown as Promise<void> | void;
+    if (seek && typeof (seek as Promise<void>).catch === 'function') {
+      (seek as Promise<void>).catch(() => {});
+    }
+    const played = player.play() as unknown as Promise<void> | void;
+    // On web, play() rejects under the autoplay policy before any user
+    // gesture — swallow that rejection so it doesn't surface as an error.
+    if (played && typeof (played as Promise<void>).catch === 'function') {
+      (played as Promise<void>).catch(() => {});
+    }
   } catch {
     // ignore playback hiccups
   }
