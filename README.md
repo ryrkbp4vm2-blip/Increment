@@ -59,7 +59,15 @@ To ship store builds later, use [EAS Build](https://docs.expo.dev/build/setup/):
 ```bash
 npm run typecheck   # strict TypeScript check
 npm test            # jest suite (game math, store, persistence, economy simulation)
+npm run sim         # balance playthrough: prints a timeline + ASCII charts of
+                    # how long each part of the game takes (re-run while tuning)
 ```
+
+The simulator (`scripts/balance-sim.ts`) drives the real game store with an
+"active then idle" optimal-payback strategy and fast-forwards idle gaps, so its
+timing always reflects the current balance constants. Tweak the `STRATEGY` knobs
+at the top of that file (taps/sec, prestige/ascend thresholds) to model
+different player behaviour.
 
 ### Architecture
 
