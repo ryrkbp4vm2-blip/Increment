@@ -1,20 +1,52 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { SafeAreaView, StyleSheet } from 'react-native';
+import { OFFLINE_MIN_MS } from './src/game/balance';
+import { cps } from './src/game/math';
+import { computeOfflineEarnings } from './src/game/offline';
+import { OfflineReport } from './src/hooks/useAppLifecycle';
+import { GameRoot } from './src/screens/GameRoot';
+import { useGameStore } from './src/store/gameStore';
+import { loadSave } from './src/store/persistence';
+import { colors } from './src/theme';
 
 export default function App() {
+  const [ready, setReady] = useState(false);
+  const [offlineReport, setOfflineReport] = useState<OfflineReport | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const save = await loadSave();
+      if (cancelled) return;
+      if (save) {
+        const now = Date.now();
+        useGameStore.getState().hydrate(save.state, now);
+        const elapsedMs = now - save.savedAt;
+        if (elapsedMs > OFFLINE_MIN_MS) {
+          const earned = computeOfflineEarnings(elapsedMs, cps(save.state));
+          useGameStore.getState().applyOffline(earned, now);
+          if (earned > 0) setOfflineReport({ earned, elapsedMs });
+        }
+      }
+      setReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="light" />
+      {ready && <GameRoot initialOfflineReport={offlineReport} />}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.background,
   },
 });
