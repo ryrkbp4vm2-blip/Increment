@@ -7,24 +7,34 @@ it all into **Dark Matter** for permanent production bonuses.
 
 ## Gameplay
 
-- **⛏️ Mine** — tap the asteroid to earn minerals and kick-start your empire.
-- **💥 Shatter the belt** — every mineral you earn damages the current asteroid. Break it and
-  it shatters (with a bonus payout), and you fly to the next rock — Glacial, Ferrous, Auric,
-  Crystalline, Voidstone — each one permanently richer (+15% production per asteroid this run).
-- **☄️ Golden comets** — every minute or two a comet streaks by; catch it for a ×7
-  production frenzy or an instant mineral windfall.
-- **🚀 Empire** — spend minerals on 8 tiers of generators (Mining Drones → Dyson Swarm) that
-  produce passively, plus upgrades that multiply tap power and production. Buy ×1, ×10, or Max.
-  Every 25 of a generator doubles its output.
-- **🛰️ Fleet expeditions** — send your fleet on timed missions (5 min sweeps to 2 h ghost-ship
-  salvages). They cost fuel, return mineral loot, and can recover one of **12 unique artifacts**
-  with permanent perks. Artifacts survive prestige. Expeditions keep flying while you're away.
-- **🌌 Prestige** — once you've mined 1T minerals in a run, trigger a *Supernova Collapse*:
-  reset the run for Dark Matter, each granting **+2% to all production and taps, forever**.
-- **💤 Offline earnings** — your empire keeps mining while the app is closed (up to 8 hours),
-  collected via a "Welcome back" report.
-- **💾 Auto-save** — progress persists locally (every 10 s and on backgrounding). No account,
-  no network needed.
+**Core loop**
+- **Mine** — tap the asteroid to earn minerals and kick-start your empire.
+- **Shatter the belt** — every mineral earned damages the current asteroid. Break it for a
+  bonus payout and fly to the next rock; each is permanently richer, and every 10th is a
+  tougher **boss** with a huge reward and a victory frenzy.
+- **Empire** — 10 generator tiers (Mining Drone → Galactic Core Tap) with passive output,
+  per-generator and global upgrades, and a milestone doubling every 25 owned. Buy ×1/×10/Max.
+
+**Events**
+- **Golden comets** — catch them for a ×7 production frenzy or a mineral windfall.
+- **Cosmic events** — timed opportunity pop-ups with risk/reward choices.
+
+**Meta progression**
+- **Fleet expeditions** — timed missions that cost fuel, return loot, and recover one of
+  **18 artifacts** (permanent perks).
+- **Research Lab** — a two-tier tech tree bought with Research Points minted by shattering.
+- **Prestige (Supernova Collapse)** — reset the run for **Dark Matter**, spent in a permanent
+  shop (production, taps, comets, expeditions, head starts, offline cap, DM gain).
+- **Ascension** — sacrifice the Dark Matter layer for **Singularity Cores** (permanent
+  multiplier) and **perks**, including automation: auto-tap, auto-buy, auto-expeditions.
+- **Challenges** — six constrained runs (no generators, no upgrades, throttled production…)
+  that grant permanent rewards.
+- **Goals** — 41 achievements, each a permanent production bonus.
+
+**Quality of life**
+- **Offline earnings** while away (capped, extendable), a **daily bonus** with streaks,
+  **sound** + **settings**, a **Statistics** breakdown of every multiplier, and
+  **save backup/restore** via portable codes. Auto-saves locally; no account or network.
 
 ## Running the game
 

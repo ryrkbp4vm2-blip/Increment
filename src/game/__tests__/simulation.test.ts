@@ -2,9 +2,15 @@
  * Balance regression net: simulate hours of greedy play (tap, then always buy
  * the cheapest affordable thing) and assert the economy stays sane.
  */
+import { ACHIEVEMENTS } from '../achievements';
+import { ARTIFACTS } from '../artifacts';
+import { SINGULARITY_PERKS } from '../ascension';
 import { GENERATORS, UPGRADES } from '../balance';
-import { costOfNext, cps, isUnlockMet, tapValue } from '../math';
-import { initialPersistedState, useGameStore } from '../../store/gameStore';
+import { CHALLENGES } from '../challenges';
+import { DM_UPGRADES } from '../darkmatter';
+import { costOfNext, cps, globalMultiplier, isUnlockMet, tapValue } from '../math';
+import { RESEARCH_NODES } from '../research';
+import { emptyGenerators, initialPersistedState, useGameStore } from '../../store/gameStore';
 
 function simulateSeconds(seconds: number, tapsPerSecond: number) {
   let now = useGameStore.getState().lastTickAt;
@@ -54,6 +60,40 @@ describe('economy simulation', () => {
     expect(s.cachedCps).toBeGreaterThan(10);
     expect(s.cachedCps).toBe(cps(s));
     expect(s.cachedTapValue).toBe(tapValue(s, s.cachedCps));
+  });
+
+  it('a fully-loaded state keeps production finite and positive', () => {
+    const generators = emptyGenerators();
+    for (const g of GENERATORS) generators[g.id] = 120;
+    const trueSet = (ids: string[]) => Object.fromEntries(ids.map((i) => [i, true]));
+
+    const loaded = {
+      ...initialPersistedState(0),
+      generators,
+      upgrades: trueSet(UPGRADES.map((u) => u.id)) as Record<string, true>,
+      artifacts: trueSet(ARTIFACTS.map((a) => a.id)) as Record<string, true>,
+      research: trueSet(RESEARCH_NODES.map((n) => n.id)) as Record<string, true>,
+      achievements: trueSet(ACHIEVEMENTS.map((a) => a.id)) as Record<string, true>,
+      challengesCompleted: trueSet(CHALLENGES.map((c) => c.id)) as Record<string, true>,
+      singularityPerks: trueSet(SINGULARITY_PERKS.map((p) => p.id)) as Record<string, true>,
+      dmUpgrades: Object.fromEntries(DM_UPGRADES.map((u) => [u.id, u.maxLevel])) as Record<string, number>,
+      totalSingularityCores: 1000,
+      asteroidIndex: 60,
+    };
+    useGameStore.getState().hydrate(loaded, 0);
+    const s = useGameStore.getState();
+
+    expect(Number.isFinite(s.cachedCps)).toBe(true);
+    expect(Number.isFinite(s.cachedTapValue)).toBe(true);
+    expect(Number.isFinite(globalMultiplier(s))).toBe(true);
+    expect(s.cachedCps).toBeGreaterThan(0);
+    expect(s.cachedTapValue).toBeGreaterThan(0);
+    expect(s.cachedCps).toBe(cps(s));
+
+    // Every active challenge modifier still yields a finite production figure.
+    for (const c of CHALLENGES) {
+      expect(Number.isFinite(globalMultiplier({ ...s, activeChallenge: c.id }))).toBe(true);
+    }
   });
 
   it('lifetime tracking is monotonic and consistent', () => {
