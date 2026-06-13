@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { playSound } from '../audio/sound';
+import { dailyAvailable } from '../game/daily';
 import { frenzyFactor } from '../game/events';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -17,12 +19,24 @@ export function StatsHeader({ onOpenSettings }: Props) {
   const darkMatter = useGameStore((s) => s.darkMatter);
   const frenzyUntil = useGameStore((s) => s.frenzyUntil);
   const frenzyMult = useGameStore((s) => s.frenzyMult);
+  const lastDailyAt = useGameStore((s) => s.lastDailyAt);
+  const claimDaily = useGameStore((s) => s.claimDaily);
+  const [dailyMsg, setDailyMsg] = useState<string | null>(null);
 
   // The header re-renders every tick (minerals changes), so reading the
   // clock during render keeps the frenzy countdown fresh.
   const now = Date.now();
   const frenzy = frenzyFactor({ frenzyUntil, frenzyMult }, now);
   const frenzySecondsLeft = Math.ceil((frenzyUntil - now) / 1000);
+  const dailyReady = dailyAvailable(lastDailyAt, now);
+
+  const onClaimDaily = () => {
+    const result = claimDaily(Date.now());
+    if (!result) return;
+    playSound('prestige');
+    setDailyMsg(`+${formatNumber(result.reward)} · day ${result.streak} streak`);
+    setTimeout(() => setDailyMsg(null), 3500);
+  };
 
   return (
     <View style={styles.header}>
@@ -45,6 +59,14 @@ export function StatsHeader({ onOpenSettings }: Props) {
             </View>
           )}
         </View>
+        {dailyMsg ? (
+          <Text style={styles.dailyMsg}>{dailyMsg}</Text>
+        ) : dailyReady ? (
+          <Pressable style={styles.dailyPill} onPress={onClaimDaily}>
+            <Icon name="gift" size={15} color={colors.gold} accent={colors.gold} />
+            <Text style={styles.dailyText}>Daily bonus — claim</Text>
+          </Pressable>
+        ) : null}
       </View>
       {darkMatter > 0 && (
         <View style={styles.dmBadge}>
@@ -112,6 +134,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  dailyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    backgroundColor: '#FACC1522',
+    borderColor: colors.gold,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.md,
+  },
+  dailyText: { color: colors.gold, fontSize: 12, fontWeight: '700' },
+  dailyMsg: { color: colors.gold, fontSize: 12, fontWeight: '700', marginTop: 6 },
   dmBadge: {
     position: 'absolute',
     right: spacing.lg,

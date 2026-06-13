@@ -47,6 +47,8 @@ export function toPersisted(state: GameState): PersistedState {
     singularityPerks: state.singularityPerks,
     activeChallenge: state.activeChallenge,
     challengesCompleted: state.challengesCompleted,
+    lastDailyAt: state.lastDailyAt,
+    dailyStreak: state.dailyStreak,
   };
 }
 
@@ -239,6 +241,8 @@ export function migrate(raw: string | null): SaveFile | null {
     singularityPerks,
     activeChallenge,
     challengesCompleted,
+    lastDailyAt: Math.max(0, finiteNumber(raw_.lastDailyAt, 0)),
+    dailyStreak: Math.max(0, Math.floor(finiteNumber(raw_.dailyStreak, 0))),
   };
   return {
     version: SAVE_VERSION,

@@ -438,6 +438,20 @@ describe('gameStore', () => {
     expect(s.challengesCompleted.famine).toBeUndefined();
   });
 
+  it('claimDaily grants a reward once per cooldown and tracks the streak', () => {
+    reset({ generators: { ...initialPersistedState().generators, excavator: 10 }, lastDailyAt: 0 });
+    const t1 = 1_000_000_000;
+    const first = useGameStore.getState().claimDaily(t1);
+    expect(first).not.toBeNull();
+    expect(first!.streak).toBe(1);
+    expect(useGameStore.getState().minerals).toBeGreaterThan(0);
+    // Immediate re-claim is refused.
+    expect(useGameStore.getState().claimDaily(t1 + 1000)).toBeNull();
+    // After the cooldown, claim again and the streak grows.
+    const second = useGameStore.getState().claimDaily(t1 + 20 * 3600_000);
+    expect(second!.streak).toBe(2);
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();

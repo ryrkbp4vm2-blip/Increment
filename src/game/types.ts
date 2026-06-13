@@ -92,6 +92,9 @@ export interface PersistedState {
   activeChallenge: string | null;
   /** Completed challenge ids (permanent rewards, survive everything). */
   challengesCompleted: Record<string, true>;
+  /** Daily bonus: last claim time (ms epoch) and consecutive-day streak. */
+  lastDailyAt: number;
+  dailyStreak: number;
 }
 
 export interface GameState extends PersistedState {

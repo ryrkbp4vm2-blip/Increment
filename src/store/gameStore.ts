@@ -12,6 +12,7 @@ import {
   challengeComplete,
   challengeModifiers,
 } from '../game/challenges';
+import { dailyAvailable, dailyReward, dailyStreakAfter } from '../game/daily';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -58,6 +59,7 @@ export interface GameActions {
   abandonChallenge(): void;
   completeChallenge(): void;
   autoTick(nowMs: number): void;
+  claimDaily(nowMs: number): { reward: number; streak: number } | null;
   tickAchievements(): void;
   consumeAchievements(): string[];
   resetGame(): void;
@@ -102,6 +104,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     singularityPerks: {},
     activeChallenge: null,
     challengesCompleted: {},
+    lastDailyAt: 0,
+    dailyStreak: 0,
   };
 }
 
@@ -377,6 +381,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ascensionCount: state.ascensionCount,
           singularityPerks: state.singularityPerks,
           challengesCompleted: state.challengesCompleted,
+          lastDailyAt: state.lastDailyAt,
+          dailyStreak: state.dailyStreak,
           dmUpgrades: state.dmUpgrades,
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
@@ -425,6 +431,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           dmSinceAscension: 0,
           singularityPerks: state.singularityPerks,
           challengesCompleted: state.challengesCompleted,
+          lastDailyAt: state.lastDailyAt,
+          dailyStreak: state.dailyStreak,
           asteroidIndex: perkStartAsteroid(state.singularityPerks),
         },
         state.lastTickAt,
@@ -490,6 +498,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (pick) get().launchExpedition(pick, nowMs);
       }
     }
+  },
+
+  claimDaily(nowMs) {
+    const state = get();
+    if (!dailyAvailable(state.lastDailyAt, nowMs)) return null;
+    const streak = dailyStreakAfter(state.lastDailyAt, state.dailyStreak, nowMs);
+    const reward = dailyReward(state.cachedCps, streak);
+    set({ ...earn(state, reward), lastDailyAt: nowMs, dailyStreak: streak });
+    return { reward, streak };
   },
 
   tickAchievements() {
