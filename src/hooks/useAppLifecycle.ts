@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
+import { offlineEfficiency } from '../game/ascension';
 import { effectivePowers } from '../game/powers';
 import { OFFLINE_MIN_MS } from '../game/balance';
 import { computeOfflineEarnings } from '../game/offline';
@@ -27,8 +28,14 @@ export function useAppLifecycle() {
       if (nowActive) {
         const elapsedMs = Date.now() - state.lastTickAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
-          const capBonus = effectivePowers(state.artifacts, state.dmUpgrades).offlineCapBonusMs;
-          const earned = computeOfflineEarnings(elapsedMs, state.cachedCps, capBonus);
+          const capBonus = effectivePowers(state.artifacts, state.dmUpgrades, state.research)
+            .offlineCapBonusMs;
+          const earned = computeOfflineEarnings(
+            elapsedMs,
+            state.cachedCps,
+            capBonus,
+            offlineEfficiency(state.singularityPerks),
+          );
           state.applyOffline(earned, Date.now());
           if (earned > 0) setOfflineReport({ earned, elapsedMs });
         }

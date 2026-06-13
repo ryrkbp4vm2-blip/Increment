@@ -11,6 +11,7 @@ export function useGameLoop(running: boolean) {
     const interval = setInterval(() => {
       const now = Date.now();
       useGameStore.getState().applyTick(now);
+      useGameStore.getState().autoTick(now);
       useGameStore.getState().tickAchievements();
       saveThrottled(useGameStore.getState(), now);
     }, TICK_MS);

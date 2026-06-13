@@ -4,8 +4,9 @@ export function computeOfflineEarnings(
   elapsedMs: number,
   cps: number,
   capBonusMs: number = 0,
+  efficiency: number = OFFLINE_EFFICIENCY,
 ): number {
   if (elapsedMs <= 0 || cps <= 0) return 0;
   const cappedMs = Math.min(elapsedMs, OFFLINE_CAP_MS + capBonusMs);
-  return cps * (cappedMs / 1000) * OFFLINE_EFFICIENCY;
+  return cps * (cappedMs / 1000) * efficiency;
 }

@@ -63,6 +63,8 @@ const baseState = {
   achievements: {} as Record<string, true>,
   research: {} as Record<string, true>,
   singularityCores: 0,
+  totalSingularityCores: 0,
+  singularityPerks: {} as Record<string, true>,
   asteroidIndex: 0,
 };
 

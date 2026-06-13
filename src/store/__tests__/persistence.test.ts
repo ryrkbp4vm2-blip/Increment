@@ -101,6 +101,17 @@ describe('migrate hardening', () => {
     expect(save.state.dmUpgrades).toEqual({});
   });
 
+  it('round-trips singularity perks and drops unknown ones', () => {
+    const state = makeState({ singularityPerks: { auto_driller: true }, singularityCores: 3, totalSingularityCores: 7 });
+    const save = migrate(serialize(state, 1))!;
+    expect(save.state.singularityPerks).toEqual({ auto_driller: true });
+    expect(save.state.totalSingularityCores).toBe(7);
+
+    const dirty = migrate('{"version":1,"savedAt":1,"state":{"singularityPerks":{"fake":true,"fleet_ai":true},"singularityCores":5}}')!;
+    expect(dirty.state.singularityPerks).toEqual({ fleet_ai: true });
+    expect(dirty.state.totalSingularityCores).toBe(5); // seeded from cores
+  });
+
   it('round-trips achievements and counters', () => {
     const state = makeState({
       achievements: { t_100: true, m_1k: true },

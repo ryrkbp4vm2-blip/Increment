@@ -6,6 +6,7 @@ import { Icon, IconName } from '../components/art/Icon';
 import {
   ASCEND_BASE,
   SINGULARITY_BONUS,
+  SINGULARITY_PERKS,
   nextAscensionAt,
   pendingSingularityCores,
   singularityMult,
@@ -34,9 +35,12 @@ export function PrestigeScreen() {
   const doPrestige = useGameStore((s) => s.doPrestige);
   const buyDarkMatterUpgrade = useGameStore((s) => s.buyDarkMatterUpgrade);
   const singularityCores = useGameStore((s) => s.singularityCores);
+  const totalSingularityCores = useGameStore((s) => s.totalSingularityCores);
+  const singularityPerks = useGameStore((s) => s.singularityPerks);
   const ascensionCount = useGameStore((s) => s.ascensionCount);
   const dmSinceAscension = useGameStore((s) => s.dmSinceAscension);
   const doAscend = useGameStore((s) => s.doAscend);
+  const buySingularityPerk = useGameStore((s) => s.buySingularityPerk);
   const [confirming, setConfirming] = useState(false);
   const [confirmingAscend, setConfirmingAscend] = useState(false);
 
@@ -129,8 +133,11 @@ export function PrestigeScreen() {
             Ascend to sacrifice your Dark Matter and its shop for Singularity Cores — each grants
             +{SINGULARITY_BONUS * 100}% production forever. Artifacts, research and goals remain.
           </Text>
-          <StatRow label="Singularity Cores" value={`${formatNumber(singularityCores)}`} />
-          <StatRow label="Current bonus" value={`×${singularityMult(singularityCores).toFixed(2)}`} />
+          <StatRow label="Cores to spend" value={`${formatNumber(singularityCores)}`} />
+          <StatRow
+            label="Current bonus"
+            value={`×${singularityMult(totalSingularityCores, singularityPerks).toFixed(2)}`}
+          />
           <StatRow label="Ascensions" value={formatNumber(ascensionCount)} />
           <StatRow
             label="Dark Matter banked"
@@ -168,6 +175,40 @@ export function PrestigeScreen() {
               style={styles.ascendButton}
             />
           )}
+
+          <Text style={styles.perksTitle}>Singularity Perks</Text>
+          <Text style={styles.perksHint}>One-time unlocks bought with Cores. Permanent — survive everything.</Text>
+          {SINGULARITY_PERKS.map((perk) => {
+            const owned = !!singularityPerks[perk.id];
+            const affordable = !owned && singularityCores >= perk.cost;
+            return (
+              <View key={perk.id} style={[styles.perkRow, owned && styles.perkOwned]}>
+                <View style={styles.perkIcon}>
+                  <Icon name={perk.icon as IconName} size={24} color={colors.gold} accent={colors.gold} />
+                </View>
+                <View style={styles.perkInfo}>
+                  <Text style={styles.perkName}>{perk.name}</Text>
+                  <Text style={styles.perkDesc}>{perk.description}</Text>
+                </View>
+                <Pressable
+                  onPress={() => {
+                    buySingularityPerk(perk.id);
+                    playSound('buy');
+                  }}
+                  disabled={!affordable}
+                  style={[styles.perkBuy, owned && styles.perkBuyOwned, !affordable && !owned && styles.perkBuyDisabled]}
+                >
+                  {owned ? (
+                    <Icon name="check" size={18} accent={colors.gold} />
+                  ) : (
+                    <Text style={[styles.perkCost, !affordable && styles.perkCostDisabled]}>
+                      {perk.cost}◆
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -360,6 +401,43 @@ const styles = StyleSheet.create({
     marginVertical: spacing.sm,
   },
   ascendButton: { marginTop: spacing.md },
+  perksTitle: {
+    color: colors.gold,
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: spacing.lg,
+  },
+  perksHint: { color: colors.textMuted, fontSize: 11, marginBottom: spacing.sm },
+  perkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  perkOwned: { borderColor: colors.gold },
+  perkIcon: { width: 32, alignItems: 'center', marginRight: spacing.sm },
+  perkInfo: { flex: 1 },
+  perkName: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  perkDesc: { color: colors.textMuted, fontSize: 11, marginTop: 1 },
+  perkBuy: {
+    minWidth: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: '#FACC1522',
+  },
+  perkBuyOwned: { backgroundColor: 'transparent' },
+  perkBuyDisabled: { borderColor: colors.disabled, backgroundColor: 'transparent' },
+  perkCost: { color: colors.gold, fontSize: 13, fontWeight: '800' },
+  perkCostDisabled: { color: colors.disabled },
   shopTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',

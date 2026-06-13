@@ -332,6 +332,49 @@ describe('gameStore', () => {
     expect(useGameStore.getState().darkMatter).toBe(10);
   });
 
+  it('buySingularityPerk spends cores, blocks dupes and the unaffordable', () => {
+    reset({ singularityCores: 2 });
+    useGameStore.getState().buySingularityPerk('auto_driller'); // cost 1
+    expect(useGameStore.getState().singularityCores).toBe(1);
+    expect(useGameStore.getState().singularityPerks.auto_driller).toBe(true);
+    // already owned: no further charge
+    useGameStore.getState().buySingularityPerk('auto_driller');
+    expect(useGameStore.getState().singularityCores).toBe(1);
+    // unaffordable (core_resonance costs 8)
+    useGameStore.getState().buySingularityPerk('core_resonance');
+    expect(useGameStore.getState().singularityPerks.core_resonance).toBeUndefined();
+  });
+
+  it('Core Resonance strengthens the live production multiplier', () => {
+    reset({
+      singularityCores: 10,
+      totalSingularityCores: 4,
+      generators: { ...initialPersistedState().generators, excavator: 10 },
+    });
+    const before = useGameStore.getState().cachedCps;
+    useGameStore.getState().buySingularityPerk('core_resonance');
+    // 1+0.75*4 = 4 vs 1+0.5*4 = 3
+    expect(useGameStore.getState().cachedCps).toBeCloseTo((before * 4) / 3);
+  });
+
+  it('doAscend keeps perks and accrues total cores; Belt Memory seeds the belt', () => {
+    reset({ dmSinceAscension: 400, singularityPerks: { belt_memory: true }, totalSingularityCores: 3 });
+    useGameStore.getState().doAscend();
+    const s = useGameStore.getState();
+    expect(s.singularityPerks.belt_memory).toBe(true);
+    expect(s.totalSingularityCores).toBe(5); // 3 + 2 gained
+    expect(s.asteroidIndex).toBe(4); // BELT_MEMORY_INDEX
+  });
+
+  it('autoTick Auto-Driller mines and Auto-Foreman buys', () => {
+    reset({ minerals: 100, singularityPerks: { auto_driller: true, auto_foreman: true } });
+    const now = Date.now() + 10_000;
+    useGameStore.getState().autoTick(now);
+    const s = useGameStore.getState();
+    expect(s.totalTaps).toBeGreaterThanOrEqual(1); // driller tapped
+    expect(s.generators.drone).toBe(1); // foreman bought the cheapest
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();

@@ -5,6 +5,7 @@ import { UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID } from '../game/darkmatter';
 import { EXPEDITIONS_BY_ID } from '../game/expeditions';
 import { RESEARCH_BY_ID } from '../game/research';
+import { SINGULARITY_PERKS_BY_ID } from '../game/ascension';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
 
@@ -39,8 +40,10 @@ export function toPersisted(state: GameState): PersistedState {
     totalResearch: state.totalResearch,
     research: state.research,
     singularityCores: state.singularityCores,
+    totalSingularityCores: state.totalSingularityCores,
     ascensionCount: state.ascensionCount,
     dmSinceAscension: state.dmSinceAscension,
+    singularityPerks: state.singularityPerks,
   };
 }
 
@@ -108,6 +111,13 @@ export function migrate(raw: string | null): SaveFile | null {
       if (ACHIEVEMENTS_BY_ID[id]) achievements[id] = true;
     }
   }
+  const singularityPerks: Record<string, true> = {};
+  if (typeof raw_.singularityPerks === 'object' && raw_.singularityPerks !== null) {
+    for (const id of Object.keys(raw_.singularityPerks)) {
+      if (SINGULARITY_PERKS_BY_ID[id]) singularityPerks[id] = true;
+    }
+  }
+  const singularityCores = Math.max(0, Math.floor(finiteNumber(raw_.singularityCores, 0)));
   const research: Record<string, true> = {};
   if (typeof raw_.research === 'object' && raw_.research !== null) {
     for (const id of Object.keys(raw_.research)) {
@@ -156,9 +166,15 @@ export function migrate(raw: string | null): SaveFile | null {
     researchPoints: Math.max(0, finiteNumber(raw_.researchPoints, 0)),
     totalResearch: Math.max(0, finiteNumber(raw_.totalResearch, 0)),
     research,
-    singularityCores: Math.max(0, Math.floor(finiteNumber(raw_.singularityCores, 0))),
+    singularityCores,
+    // Old saves predate totalSingularityCores; seed it from the current balance.
+    totalSingularityCores: Math.max(
+      singularityCores,
+      Math.floor(finiteNumber(raw_.totalSingularityCores, singularityCores)),
+    ),
     ascensionCount: Math.max(0, Math.floor(finiteNumber(raw_.ascensionCount, 0))),
     dmSinceAscension: Math.max(0, finiteNumber(raw_.dmSinceAscension, 0)),
+    singularityPerks,
   };
   return {
     version: SAVE_VERSION,

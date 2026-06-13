@@ -37,7 +37,8 @@ type MultState = Pick<
   | 'dmUpgrades'
   | 'achievements'
   | 'research'
-  | 'singularityCores'
+  | 'totalSingularityCores'
+  | 'singularityPerks'
 >;
 
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
@@ -55,7 +56,7 @@ export function globalMultiplier(state: MultState): number {
     powers.globalMult *
     asteroidRichness(state.asteroidIndex) *
     achievementBonus(state.achievements) *
-    singularityMult(state.singularityCores);
+    singularityMult(state.totalSingularityCores, state.singularityPerks);
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'globalMult') mult *= effect.x;

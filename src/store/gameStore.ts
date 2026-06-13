@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { computeMetrics, newlyCompleted } from '../game/achievements';
-import { pendingSingularityCores } from '../game/ascension';
+import {
+  AUTO_TAPS_PER_SEC,
+  SINGULARITY_PERKS_BY_ID,
+  pendingSingularityCores,
+  perkStartAsteroid,
+} from '../game/ascension';
 import { applyDamage, isBoss, rpFromShatter } from '../game/asteroids';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
@@ -8,6 +13,7 @@ import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
 import { CometReward, frenzyFactor } from '../game/events';
 import { EventOutcome } from '../game/cosmicEvents';
 import {
+  EXPEDITIONS,
   ExpeditionResult,
   EXPEDITIONS_BY_ID,
   expeditionDuration,
@@ -42,6 +48,8 @@ export interface GameActions {
   applyEventOutcome(outcome: EventOutcome, nowMs: number): void;
   doPrestige(): void;
   doAscend(): void;
+  buySingularityPerk(id: string): void;
+  autoTick(nowMs: number): void;
   tickAchievements(): void;
   consumeAchievements(): string[];
   resetGame(): void;
@@ -80,8 +88,10 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     totalResearch: 0,
     research: {},
     singularityCores: 0,
+    totalSingularityCores: 0,
     ascensionCount: 0,
     dmSinceAscension: 0,
+    singularityPerks: {},
   };
 }
 
@@ -139,6 +149,10 @@ function earn(state: GameState, amount: number): Partial<GameState> {
   }
   return delta;
 }
+
+// Throttles for automation perks (module-level; not part of saved state).
+let lastAutoBuyAt = 0;
+let lastAutoFleetAt = 0;
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
@@ -302,7 +316,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalDarkMatter: state.totalDarkMatter + gained,
           dmSinceAscension: state.dmSinceAscension + gained,
           singularityCores: state.singularityCores,
+          totalSingularityCores: state.totalSingularityCores,
           ascensionCount: state.ascensionCount,
+          singularityPerks: state.singularityPerks,
           dmUpgrades: state.dmUpgrades,
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
@@ -314,9 +330,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           researchPoints: state.researchPoints,
           totalResearch: state.totalResearch,
           research: state.research,
-          // Head start from the Dark Matter shop.
+          // Head start from the Dark Matter shop, floored by the Belt Memory perk.
           minerals: powers.startMinerals,
-          asteroidIndex: powers.startAsteroidIndex,
+          asteroidIndex: Math.max(powers.startAsteroidIndex, perkStartAsteroid(state.singularityPerks)),
         },
         state.lastTickAt,
       ),
@@ -346,12 +362,75 @@ export const useGameStore = create<GameStore>((set, get) => ({
           research: state.research,
           totalDarkMatter: state.totalDarkMatter,
           singularityCores: state.singularityCores + gained,
+          totalSingularityCores: state.totalSingularityCores + gained,
           ascensionCount: state.ascensionCount + 1,
           dmSinceAscension: 0,
+          singularityPerks: state.singularityPerks,
+          asteroidIndex: perkStartAsteroid(state.singularityPerks),
         },
         state.lastTickAt,
       ),
     );
+  },
+
+  buySingularityPerk(id) {
+    const state = get();
+    const def = SINGULARITY_PERKS_BY_ID[id];
+    if (!def || state.singularityPerks[id]) return;
+    if (state.singularityCores < def.cost) return;
+    const singularityPerks = { ...state.singularityPerks, [id]: true as const };
+    set(
+      withCaches(
+        { ...state, singularityCores: state.singularityCores - def.cost, singularityPerks },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  autoTick(nowMs) {
+    const state = get();
+    const perks = state.singularityPerks;
+    // Auto-Driller: mine a share of taps each 100ms tick.
+    if (perks.auto_driller) {
+      const taps = Math.max(1, Math.round(AUTO_TAPS_PER_SEC / 10));
+      let acc: Partial<GameState> = {};
+      let base: GameState = state;
+      for (let i = 0; i < taps; i++) {
+        const earned = base.cachedTapValue * frenzyFactor(base, nowMs);
+        acc = earn(base, earned);
+        acc.totalTaps = base.totalTaps + 1;
+        base = { ...base, ...acc } as GameState;
+      }
+      set(acc);
+    }
+    // Auto-Foreman: buy the single cheapest affordable generator (~1/sec).
+    if (perks.auto_foreman && nowMs - lastAutoBuyAt > 1000) {
+      lastAutoBuyAt = nowMs;
+      const s = get();
+      let bestId: GeneratorId | null = null;
+      let bestCost = Infinity;
+      for (const def of GENERATORS) {
+        const cost = costOfNext(def, s.generators[def.id] ?? 0);
+        if (cost <= s.minerals && cost < bestCost) {
+          bestCost = cost;
+          bestId = def.id;
+        }
+      }
+      if (bestId) get().buyGenerator(bestId, 1);
+    }
+    // Fleet AI: launch the most expensive affordable expedition when idle.
+    if (perks.fleet_ai && nowMs - lastAutoFleetAt > 2000) {
+      lastAutoFleetAt = nowMs;
+      const s = get();
+      if (!s.expedition) {
+        const powers = effectivePowers(s.artifacts, s.dmUpgrades, s.research);
+        let pick: string | null = null;
+        for (const def of EXPEDITIONS) {
+          if (s.minerals >= expeditionFuel(def, s.cachedCps, powers)) pick = def.id;
+        }
+        if (pick) get().launchExpedition(pick, nowMs);
+      }
+    }
   },
 
   tickAchievements() {

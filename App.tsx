@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
 import { initSound } from './src/audio/sound';
 import { OFFLINE_MIN_MS } from './src/game/balance';
+import { offlineEfficiency } from './src/game/ascension';
 import { effectivePowers } from './src/game/powers';
 import { cps } from './src/game/math';
 import { computeOfflineEarnings } from './src/game/offline';
@@ -27,9 +28,14 @@ export default function App() {
         useGameStore.getState().hydrate(save.state, now);
         const elapsedMs = now - save.savedAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
-          const capBonus = effectivePowers(save.state.artifacts, save.state.dmUpgrades)
+          const capBonus = effectivePowers(save.state.artifacts, save.state.dmUpgrades, save.state.research)
             .offlineCapBonusMs;
-          const earned = computeOfflineEarnings(elapsedMs, cps(save.state), capBonus);
+          const earned = computeOfflineEarnings(
+            elapsedMs,
+            cps(save.state),
+            capBonus,
+            offlineEfficiency(save.state.singularityPerks),
+          );
           useGameStore.getState().applyOffline(earned, now);
           if (earned > 0) setOfflineReport({ earned, elapsedMs });
         }

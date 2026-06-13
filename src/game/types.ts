@@ -83,8 +83,11 @@ export interface PersistedState {
   research: Record<string, true>;
   /** Ascension layer: permanent cores, count, and DM banked toward the next. */
   singularityCores: number;
+  totalSingularityCores: number;
   ascensionCount: number;
   dmSinceAscension: number;
+  /** One-time Singularity perks bought with cores (survive everything). */
+  singularityPerks: Record<string, true>;
 }
 
 export interface GameState extends PersistedState {

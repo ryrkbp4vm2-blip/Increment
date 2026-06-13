@@ -1,7 +1,10 @@
 import {
   ASCEND_BASE,
+  BELT_MEMORY_INDEX,
   nextAscensionAt,
+  offlineEfficiency,
   pendingSingularityCores,
+  perkStartAsteroid,
   singularityMult,
 } from '../ascension';
 
@@ -30,5 +33,22 @@ describe('singularityMult', () => {
     expect(singularityMult(0)).toBe(1);
     expect(singularityMult(2)).toBeCloseTo(2);
     expect(singularityMult(10)).toBeCloseTo(6);
+  });
+
+  it('is 50% stronger per core with Core Resonance', () => {
+    // base: 1 + 0.5*4 = 3; resonance: 1 + 0.75*4 = 4
+    expect(singularityMult(4, { core_resonance: true })).toBeCloseTo(4);
+  });
+});
+
+describe('perk helpers', () => {
+  it('boosts offline efficiency with Offline Overdrive', () => {
+    expect(offlineEfficiency({})).toBe(1.0);
+    expect(offlineEfficiency({ offline_overdrive: true })).toBe(1.5);
+  });
+
+  it('starts deeper with Belt Memory', () => {
+    expect(perkStartAsteroid({})).toBe(0);
+    expect(perkStartAsteroid({ belt_memory: true })).toBe(BELT_MEMORY_INDEX);
   });
 });
