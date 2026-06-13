@@ -64,6 +64,23 @@ export function globalMultiplier(state: MultState): number {
   return mult;
 }
 
+/** Labelled global-multiplier factors for the statistics screen. */
+export function globalFactors(state: MultState): { label: string; value: number }[] {
+  const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
+  let upgradeMult = 1;
+  for (const id of Object.keys(state.upgrades)) {
+    const effect = UPGRADES_BY_ID[id]?.effect;
+    if (effect?.kind === 'globalMult') upgradeMult *= effect.x;
+  }
+  return [
+    { label: 'Belt richness', value: asteroidRichness(state.asteroidIndex) },
+    { label: 'Achievements', value: achievementBonus(state.achievements) },
+    { label: 'Singularity Cores', value: singularityMult(state.totalSingularityCores, state.singularityPerks) },
+    { label: 'Artifacts · shop · research', value: powers.globalMult },
+    { label: 'Mineral upgrades', value: upgradeMult },
+  ];
+}
+
 /** Every MILESTONE_EVERY owned doubles that generator's output. */
 export function milestoneMultiplier(owned: number): number {
   return 2 ** Math.floor(owned / MILESTONE_EVERY);

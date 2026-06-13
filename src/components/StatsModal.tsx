@@ -1,0 +1,125 @@
+import React from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ACHIEVEMENTS } from '../game/achievements';
+import { ARTIFACTS } from '../game/artifacts';
+import { RESEARCH_NODES } from '../game/research';
+import { globalFactors } from '../game/math';
+import { useGameStore } from '../store/gameStore';
+import { colors, spacing } from '../theme';
+import { formatNumber, formatRate } from '../utils/format';
+import { Amount } from './art/Amount';
+import { Icon } from './art/Icon';
+
+interface Props {
+  visible: boolean;
+  onClose: () => void;
+}
+
+export function StatsModal({ visible, onClose }: Props) {
+  const s = useGameStore();
+  const factors = globalFactors(s);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.header}>
+            <Icon name="stats" size={22} />
+            <Text style={styles.title}>Statistics</Text>
+          </View>
+          <ScrollView style={styles.scroll}>
+            <Text style={styles.section}>Production</Text>
+            <Row label="Minerals / sec" value={formatRate(s.cachedCps)} />
+            <Row label="Per tap" value={formatNumber(s.cachedTapValue)} />
+            <Text style={styles.section}>Global multiplier breakdown</Text>
+            {factors.map((f) => (
+              <Row key={f.label} label={f.label} value={`×${f.value.toFixed(2)}`} muted />
+            ))}
+
+            <Text style={styles.section}>Lifetime</Text>
+            <CurrencyRow label="Minerals all-time" kind="mineral" value={s.lifetimeAllTime} />
+            <Row label="Total taps" value={formatNumber(s.totalTaps)} />
+            <Row label="Asteroids shattered" value={formatNumber(s.asteroidsShattered)} />
+            <Row label="Comets caught" value={formatNumber(s.cometsCaught)} />
+            <Row label="Expeditions run" value={formatNumber(s.expeditionsCompleted)} />
+
+            <Text style={styles.section}>Progression</Text>
+            <Row label="Collapses" value={formatNumber(s.prestigeCount)} />
+            <Row label="Ascensions" value={formatNumber(s.ascensionCount)} />
+            <CurrencyRow label="Dark Matter all-time" kind="dm" value={s.totalDarkMatter} />
+            <Row label="Singularity Cores (total)" value={formatNumber(s.totalSingularityCores)} />
+
+            <Text style={styles.section}>Collections</Text>
+            <Row label="Artifacts" value={`${Object.keys(s.artifacts).length} / ${ARTIFACTS.length}`} />
+            <Row label="Research" value={`${Object.keys(s.research).length} / ${RESEARCH_NODES.length}`} />
+            <Row label="Goals" value={`${Object.keys(s.achievements).length} / ${ACHIEVEMENTS.length}`} />
+            <Row label="Singularity perks" value={`${Object.keys(s.singularityPerks).length}`} />
+          </ScrollView>
+          <Pressable style={styles.done} onPress={onClose}>
+            <Text style={styles.doneText}>Done</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.value, muted && styles.valueMuted]}>{value}</Text>
+    </View>
+  );
+}
+
+function CurrencyRow({ label, kind, value }: { label: string; kind: 'mineral' | 'dm'; value: number }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.label}>{label}</Text>
+      <Amount kind={kind} value={value} size={14} textStyle={styles.value} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: '#000000AA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 380,
+    maxHeight: '82%',
+    backgroundColor: colors.panel,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  title: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  scroll: { flexGrow: 0 },
+  section: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  label: { color: colors.textMuted, fontSize: 14 },
+  value: { color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  valueMuted: { color: colors.accent },
+  done: { marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.sm },
+  doneText: { color: colors.accent, fontSize: 15, fontWeight: '700' },
+});

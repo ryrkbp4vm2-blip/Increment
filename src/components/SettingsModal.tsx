@@ -10,9 +10,10 @@ import { Icon } from './art/Icon';
 interface Props {
   visible: boolean;
   onClose: () => void;
+  onOpenStats: () => void;
 }
 
-export function SettingsModal({ visible, onClose }: Props) {
+export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
   const resetGame = useGameStore((s) => s.resetGame);
   const [soundOn, setSoundOn] = useState(!isMuted());
   const [confirmingReset, setConfirmingReset] = useState(false);
@@ -51,6 +52,20 @@ export function SettingsModal({ visible, onClose }: Props) {
               thumbColor={colors.text}
             />
           </View>
+
+          <Pressable
+            style={styles.row}
+            onPress={() => {
+              onClose();
+              onOpenStats();
+            }}
+          >
+            <View style={styles.rowLabel}>
+              <Icon name="stats" size={20} />
+              <Text style={styles.rowText}>Statistics</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
 
           <View style={styles.divider} />
 
@@ -114,6 +129,7 @@ const styles = StyleSheet.create({
   },
   rowLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rowText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  chevron: { color: colors.textMuted, fontSize: 22, fontWeight: '700' },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   resetRow: { paddingVertical: spacing.sm },
   resetText: { color: colors.danger, fontSize: 15, fontWeight: '700' },

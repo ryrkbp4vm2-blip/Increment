@@ -19,6 +19,7 @@ export type IconName =
   | 'muted'
   | 'check'
   | 'lock'
+  | 'stats'
   // generators
   | 'drone'
   | 'excavator'
@@ -346,6 +347,14 @@ function glyph(name: IconName, c: string, a: string): React.ReactElement {
         <G>
           <Rect x={6} y={11} width={12} height={9} rx={1.5} fill={c} />
           <Path d="M8 11 V8 A4 4 0 0 1 16 8 V11" fill="none" stroke={c} strokeWidth={2} />
+        </G>
+      );
+    case 'stats':
+      return (
+        <G fill={c}>
+          <Rect x={4} y={13} width={4} height={7} rx={1} />
+          <Rect x={10} y={8} width={4} height={12} rx={1} fill={a} />
+          <Rect x={16} y={4} width={4} height={16} rx={1} />
         </G>
       );
     case 'shard':

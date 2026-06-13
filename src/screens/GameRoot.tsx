@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { AchievementToast } from '../components/AchievementToast';
 import { SettingsModal } from '../components/SettingsModal';
+import { StatsModal } from '../components/StatsModal';
 import { StatsHeader } from '../components/StatsHeader';
 import { Tab, TabBar } from '../components/TabBar';
 import { WelcomeBackModal } from '../components/WelcomeBackModal';
@@ -23,6 +24,7 @@ interface Props {
 export function GameRoot({ initialOfflineReport }: Props) {
   const [tab, setTab] = useState<Tab>('mine');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const { active, offlineReport, dismissOfflineReport, showOfflineReport } = useAppLifecycle();
   useGameLoop(active);
 
@@ -45,7 +47,12 @@ export function GameRoot({ initialOfflineReport }: Props) {
       <TabBar active={tab} onChange={setTab} />
       <AchievementToast />
       <WelcomeBackModal report={offlineReport} onDismiss={dismissOfflineReport} />
-      <SettingsModal visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenStats={() => setStatsOpen(true)}
+      />
+      <StatsModal visible={statsOpen} onClose={() => setStatsOpen(false)} />
     </View>
   );
 }
