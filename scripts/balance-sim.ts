@@ -24,14 +24,15 @@ import { isUnlockMet } from '../src/game/math';
 import { initialPersistedState, useGameStore } from '../src/store/gameStore';
 import { formatNumber } from '../src/utils/format';
 
-// ── Strategy knobs (tweak these) ─────────────────────────────────────────────
-const TAPS_PER_SEC = 4; // how fast an active player taps
+// ── Strategy knobs (tweak via env, e.g. `TAPS_PER_SEC=0 npm run sim`) ─────────
+const envNum = (k: string, d: number) => (process.env[k] ? Number(process.env[k]) : d);
+const TAPS_PER_SEC = envNum('TAPS_PER_SEC', 4); // active-player tap rate
 const MAX_STEP_SECONDS = 60 * 60 * 6; // cap on a single analytic time-skip
-const SIM_CAP_YEARS = 50; // stop the sim after this much in-game time
-const STOP_AT_ASCENSIONS = 3; // ...or once this many ascensions are reached
-// Prestige/ascend when the pending gain both clears 1 and grows the bank ≥50%.
-const PRESTIGE_GROWTH = 0.5;
-const ASCEND_GROWTH = 0.5;
+const SIM_CAP_YEARS = envNum('SIM_CAP_YEARS', 50); // stop after this much game time
+const STOP_AT_ASCENSIONS = envNum('STOP_AT_ASCENSIONS', 3); // ...or this many ascensions
+// Prestige/ascend when the pending gain both clears 1 and grows the bank ≥this.
+const PRESTIGE_GROWTH = envNum('PRESTIGE_GROWTH', 0.5);
+const ASCEND_GROWTH = envNum('ASCEND_GROWTH', 0.5);
 
 const out = (s = '') => process.stdout.write(s + '\n');
 
@@ -51,7 +52,7 @@ interface Event {
   cps: number;
 }
 
-function runSimulation(): Event[] {
+function runSimulation(tapsPerSec: number): Event[] {
   const events: Event[] = [];
   let simMs = 0;
   const get = () => useGameStore.getState();
@@ -85,7 +86,11 @@ function runSimulation(): Event[] {
 
   const effectiveRate = (): number => {
     const s = get();
-    const tapCps = s.cachedTapValue * TAPS_PER_SEC;
+    // Even an "idle" player must tap to bootstrap their first generator;
+    // after that they rely on the chosen tap rate (0 = pure passive).
+    const genTotal = GENERATORS.reduce((n, g) => n + s.generators[g.id], 0);
+    const taps = genTotal === 0 ? Math.max(tapsPerSec, 2) : tapsPerSec;
+    const tapCps = s.cachedTapValue * taps;
     // Model active tapping only while it meaningfully beats passive income.
     return s.cachedCps + (tapCps > s.cachedCps * 0.25 ? tapCps : 0);
   };
@@ -202,12 +207,11 @@ function runSimulation(): Event[] {
   return events;
 }
 
-function printReport(events: Event[]) {
+function printReport(events: Event[], title: string) {
   events.sort((a, b) => a.t - b.t);
   out('');
   out('═══════════════════════════════════════════════════════════════');
-  out('  ASTEROID TYCOON — BALANCE PLAYTHROUGH SIMULATION');
-  out(`  strategy: ${TAPS_PER_SEC} taps/s active, optimal-payback buying`);
+  out(`  ASTEROID TYCOON — BALANCE PLAYTHROUGH (${title})`);
   out('═══════════════════════════════════════════════════════════════');
   out('');
   out('  TIMELINE  (cumulative game-time · gap since previous · event)');
@@ -250,10 +254,37 @@ function printReport(events: Event[]) {
   out('');
 }
 
+function printComparison(active: Event[], idle: Event[]) {
+  const at = (evs: Event[], re: RegExp) => {
+    const e = evs.find((x) => re.test(x.label));
+    return e ? fmtDur(e.t) : '—';
+  };
+  const rows: [string, RegExp][] = [
+    ['First prestige', /Prestige #1/],
+    ['Fifth prestige', /Prestige #5/],
+    ['First ascension', /Ascension #1/],
+    ['Second ascension', /Ascension #2/],
+    ['All research', /All research/],
+    ['Total simulated', /.*/],
+  ];
+  out('');
+  out('  ACTIVE vs IDLE  (time to reach milestone)');
+  out('  ───────────────────────────────────────────────────────────');
+  out(`  ${'milestone'.padEnd(20)} ${'active'.padStart(9)} ${'idle'.padStart(9)}`);
+  for (const [label, re] of rows) {
+    const a = label === 'Total simulated' ? fmtDur(active.at(-1)?.t ?? 0) : at(active, re);
+    const i = label === 'Total simulated' ? fmtDur(idle.at(-1)?.t ?? 0) : at(idle, re);
+    out(`  ${label.padEnd(20)} ${a.padStart(9)} ${i.padStart(9)}`);
+  }
+  out('');
+}
+
 describe('balance playthrough', () => {
   it('prints a timeline (no assertions — output is the report)', () => {
-    const events = runSimulation();
-    printReport(events);
-    expect(events.length).toBeGreaterThan(0);
+    const active = runSimulation(TAPS_PER_SEC);
+    const idle = runSimulation(0); // pure passive/offline player, never taps
+    printReport(active, `ACTIVE · ${TAPS_PER_SEC} taps/s`);
+    printComparison(active, idle);
+    expect(active.length).toBeGreaterThan(0);
   }, 120_000);
 });

@@ -64,10 +64,17 @@ npm run sim         # balance playthrough: prints a timeline + ASCII charts of
 ```
 
 The simulator (`scripts/balance-sim.ts`) drives the real game store with an
-"active then idle" optimal-payback strategy and fast-forwards idle gaps, so its
-timing always reflects the current balance constants. Tweak the `STRATEGY` knobs
-at the top of that file (taps/sec, prestige/ascend thresholds) to model
-different player behaviour.
+optimal-payback strategy and fast-forwards idle gaps, so its timing always
+reflects the current balance constants. It prints a milestone timeline, a
+per-phase bar chart, and an **active-vs-idle** comparison (an idle player taps
+only to bootstrap their first generator, then runs purely passive). Override
+the strategy via env vars without editing the file, e.g.:
+
+```bash
+TAPS_PER_SEC=0 npm run sim          # model a pure-idle playstyle
+STOP_AT_ASCENSIONS=1 npm run sim    # only simulate up to the first ascension
+PRESTIGE_GROWTH=1 npm run sim       # prestige less eagerly
+```
 
 ### Architecture
 
