@@ -139,12 +139,18 @@ describe('tapValue', () => {
     expect(tapValue(state)).toBeCloseTo(4 * 4);
   });
 
-  it('adds a percentage of cps', () => {
+  it('adds a percentage of cps (5% baseline + upgrades)', () => {
     const state = {
       ...baseState,
       generators: { ...baseState.generators, excavator: 10 }, // 30/s
-      upgrades: { tap4: true as const }, // +2% of cps
+      upgrades: { tap4: true as const }, // +2% of cps, on top of the 5% baseline
     };
-    expect(tapValue(state)).toBeCloseTo(1 + 0.6);
+    // 1 (base tap) + 30 * (0.05 + 0.02)
+    expect(tapValue(state)).toBeCloseTo(1 + 30 * 0.07);
+  });
+
+  it('the 5% baseline makes a bare tap worth a slice of production', () => {
+    const state = { ...baseState, generators: { ...baseState.generators, excavator: 10 } };
+    expect(tapValue(state)).toBeCloseTo(1 + 30 * 0.05);
   });
 });

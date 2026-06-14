@@ -90,9 +90,8 @@ function runSimulation(tapsPerSec: number): Event[] {
     // after that they rely on the chosen tap rate (0 = pure passive).
     const genTotal = GENERATORS.reduce((n, g) => n + s.generators[g.id], 0);
     const taps = genTotal === 0 ? Math.max(tapsPerSec, 2) : tapsPerSec;
-    const tapCps = s.cachedTapValue * taps;
-    // Model active tapping only while it meaningfully beats passive income.
-    return s.cachedCps + (tapCps > s.cachedCps * 0.25 ? tapCps : 0);
+    // An active player taps continuously; idle (tapsPerSec 0) relies on passive.
+    return s.cachedCps + s.cachedTapValue * taps;
   };
 
   const buyPhase = () => {

@@ -17,6 +17,12 @@ export const REVEAL_FRACTION = 0.5;
 /** Owning multiples of this count doubles a generator's output (x2, x4, ...). */
 export const MILESTONE_EVERY = 25;
 
+/**
+ * Every tap is worth at least this fraction of current production, so active
+ * tapping meaningfully beats pure idle at all stages. Tap upgrades stack on top.
+ */
+export const BASE_TAP_CPS_PCT = 0.05;
+
 /** Golden comet event timing/rewards. */
 export const COMET_FIRST_SPAWN_MS: [number, number] = [12_000, 25_000];
 export const COMET_SPAWN_MS: [number, number] = [55_000, 110_000];

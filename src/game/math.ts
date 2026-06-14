@@ -2,7 +2,7 @@ import { achievementBonus } from './achievements';
 import { singularityMult } from './ascension';
 import { asteroidRichness } from './asteroids';
 import { challengeModifiers, challengeRewardMult } from './challenges';
-import { GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
+import { BASE_TAP_CPS_PCT, GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
 import { effectivePowers } from './powers';
 import { GameState, GeneratorDef, GeneratorId, PersistedState, UnlockCondition } from './types';
 
@@ -119,14 +119,18 @@ export function tapValue(
 ): number {
   let tapMult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).tapMult;
   tapMult *= challengeRewardMult(state.challengesCompleted).tapMult;
-  tapMult *= challengeModifiers(state.activeChallenge).tapMult;
-  let cpsPercent = 0;
+  // Baseline: every tap is worth a slice of current production, so active
+  // tapping beats pure idle at every stage. Tap upgrades stack on top.
+  let cpsPercent = BASE_TAP_CPS_PCT;
   for (const id of Object.keys(state.upgrades)) {
     const effect = UPGRADES_BY_ID[id]?.effect;
     if (effect?.kind === 'tapMult') tapMult *= effect.x;
     if (effect?.kind === 'tapCpsPercent') cpsPercent += effect.pct;
   }
-  return tapMult * globalMultiplier(state) + currentCps * cpsPercent;
+  // The active-challenge tap modifier throttles the whole tap (Famine ×0.2,
+  // Idle Doctrine ×0).
+  const chTap = challengeModifiers(state.activeChallenge).tapMult;
+  return (tapMult * globalMultiplier(state) + currentCps * cpsPercent) * chTap;
 }
 
 export function isUnlockMet(cond: UnlockCondition, state: GameState): boolean {
