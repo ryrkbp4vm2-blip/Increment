@@ -1,5 +1,6 @@
 import { achievementBonus } from './achievements';
 import { singularityMult } from './ascension';
+import { corePowers } from './ascension';
 import { asteroidRichness } from './asteroids';
 import { challengeModifiers, challengeRewardMult } from './challenges';
 import { sectorMult } from './zones';
@@ -41,6 +42,7 @@ type MultState = Pick<
   | 'research'
   | 'totalSingularityCores'
   | 'singularityPerks'
+  | 'coreUpgrades'
   | 'activeChallenge'
   | 'challengesCompleted'
   | 'sector'
@@ -62,6 +64,7 @@ export function globalMultiplier(state: MultState): number {
     asteroidRichness(state.asteroidIndex) *
     achievementBonus(state.achievements) *
     singularityMult(state.totalSingularityCores, state.singularityPerks) *
+    corePowers(state.coreUpgrades).globalMult *
     sectorMult(state.sector) *
     challengeRewardMult(state.challengesCompleted).globalMult *
     challengeModifiers(state.activeChallenge).productionMult;
@@ -85,6 +88,7 @@ export function globalFactors(state: MultState): { label: string; value: number 
     { label: 'Achievements', value: achievementBonus(state.achievements) },
     { label: 'Singularity Cores', value: singularityMult(state.totalSingularityCores, state.singularityPerks) },
     { label: 'Sector', value: sectorMult(state.sector) },
+    { label: 'Singularity upgrades', value: corePowers(state.coreUpgrades).globalMult },
     { label: 'Artifacts · shop · research', value: powers.globalMult },
     { label: 'Mineral upgrades', value: upgradeMult },
   ];
@@ -122,6 +126,7 @@ export function tapValue(
   currentCps: number = cps(state),
 ): number {
   let tapMult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).tapMult;
+  tapMult *= corePowers(state.coreUpgrades).tapMult;
   tapMult *= challengeRewardMult(state.challengesCompleted).tapMult;
   // Baseline: every tap is worth a slice of current production, so active
   // tapping beats pure idle at every stage. Tap upgrades stack on top.

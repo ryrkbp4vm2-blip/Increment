@@ -464,6 +464,30 @@ describe('gameStore', () => {
     expect(second!.streak).toBe(2);
   });
 
+  it('buyCoreUpgrade spends cores for a repeatable production boost', () => {
+    reset({
+      singularityCores: 10,
+      generators: { ...initialPersistedState().generators, excavator: 10 },
+    });
+    const before = useGameStore.getState().cachedCps;
+    useGameStore.getState().buyCoreUpgrade('core_overcharge'); // +25%, costs 1
+    let s = useGameStore.getState();
+    expect(s.singularityCores).toBe(9);
+    expect(s.coreUpgrades.core_overcharge).toBe(1);
+    expect(s.cachedCps).toBeCloseTo(before * 1.25);
+    // Cost rises with level, so cores keep having a sink.
+    useGameStore.getState().buyCoreUpgrade('core_overcharge'); // level 1 -> 2 costs 2
+    s = useGameStore.getState();
+    expect(s.singularityCores).toBe(7);
+    expect(s.coreUpgrades.core_overcharge).toBe(2);
+  });
+
+  it('core upgrades survive ascension and warp', () => {
+    reset({ dmSinceAscension: 4e6, coreUpgrades: { core_overcharge: 3 } });
+    useGameStore.getState().doAscend();
+    expect(useGameStore.getState().coreUpgrades.core_overcharge).toBe(3);
+  });
+
   it('doAscend counts toward the sector warp gate', () => {
     reset({ dmSinceAscension: 4e6, ascensionsSinceWarp: 2 });
     useGameStore.getState().doAscend();

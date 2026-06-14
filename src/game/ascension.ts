@@ -99,3 +99,73 @@ export function offlineEfficiency(perks: Record<string, true>): number {
 export function perkStartAsteroid(perks: Record<string, true>): number {
   return perks.belt_memory ? BELT_MEMORY_INDEX : 0;
 }
+
+/**
+ * Leveled Singularity Upgrades — a permanent, repeatable sink for spendable
+ * cores so they stay useful long after the one-time perks are bought. Levels
+ * survive prestige, ascension and warp.
+ */
+export interface CoreUpgradeDef {
+  id: string;
+  name: string;
+  perLevel: string;
+  /** Cost to buy the next level is baseCost * (currentLevel + 1). */
+  baseCost: number;
+  maxLevel: number;
+  kind: 'global' | 'tap';
+  pct: number;
+  /** IconName from the art layer (string to keep this module React-free). */
+  icon: string;
+}
+
+export const CORE_UPGRADES: CoreUpgradeDef[] = [
+  {
+    id: 'core_overcharge',
+    name: 'Core Overcharge',
+    perLevel: '+25% all production',
+    baseCost: 1,
+    maxLevel: 100,
+    kind: 'global',
+    pct: 0.25,
+    icon: 'dark_compression',
+  },
+  {
+    id: 'core_capacitor',
+    name: 'Core Capacitor',
+    perLevel: '+50% tap power',
+    baseCost: 1,
+    maxLevel: 100,
+    kind: 'tap',
+    pct: 0.5,
+    icon: 'kinetic_amplifier',
+  },
+];
+
+export const CORE_UPGRADES_BY_ID: Record<string, CoreUpgradeDef> = Object.fromEntries(
+  CORE_UPGRADES.map((u) => [u.id, u]),
+);
+
+export function coreUpgradeCost(def: CoreUpgradeDef, level: number): number {
+  return def.baseCost * (level + 1);
+}
+
+export interface CorePowers {
+  globalMult: number;
+  tapMult: number;
+}
+
+export function corePowers(levels: Record<string, number>): CorePowers {
+  let globalMult = 1;
+  let tapMult = 1;
+  for (const def of CORE_UPGRADES) {
+    const level = levels[def.id] ?? 0;
+    if (level <= 0) continue;
+    if (def.kind === 'global') globalMult *= 1 + def.pct * level;
+    else tapMult *= 1 + def.pct * level;
+  }
+  return { globalMult, tapMult };
+}
+
+export function coreTotalEffect(def: CoreUpgradeDef, level: number): string {
+  return `+${Math.round(def.pct * level * 100)}% ${def.kind === 'global' ? 'production' : 'tap'}`;
+}

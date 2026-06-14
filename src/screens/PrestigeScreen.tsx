@@ -6,8 +6,11 @@ import { Amount } from '../components/art/Amount';
 import { Icon, IconName } from '../components/art/Icon';
 import {
   ASCEND_BASE,
+  CORE_UPGRADES,
   SINGULARITY_BONUS,
   SINGULARITY_PERKS,
+  coreTotalEffect,
+  coreUpgradeCost,
   nextAscensionAt,
   pendingSingularityCores,
   singularityMult,
@@ -44,6 +47,8 @@ export function PrestigeScreen() {
   const dmSinceAscension = useGameStore((s) => s.dmSinceAscension);
   const doAscend = useGameStore((s) => s.doAscend);
   const buySingularityPerk = useGameStore((s) => s.buySingularityPerk);
+  const coreUpgrades = useGameStore((s) => s.coreUpgrades);
+  const buyCoreUpgrade = useGameStore((s) => s.buyCoreUpgrade);
   const sector = useGameStore((s) => s.sector);
   const ascensionsSinceWarp = useGameStore((s) => s.ascensionsSinceWarp);
   const doWarp = useGameStore((s) => s.doWarp);
@@ -182,6 +187,43 @@ export function PrestigeScreen() {
               style={styles.ascendButton}
             />
           )}
+
+          <Text style={styles.perksTitle}>Singularity Upgrades</Text>
+          <Text style={styles.perksHint}>Repeatable, bought with Cores. Levels are permanent.</Text>
+          {CORE_UPGRADES.map((def) => {
+            const level = coreUpgrades[def.id] ?? 0;
+            const maxed = level >= def.maxLevel;
+            const cost = coreUpgradeCost(def, level);
+            const affordable = !maxed && singularityCores >= cost;
+            return (
+              <View key={def.id} style={styles.dmRow}>
+                <View style={styles.dmIconBox}>
+                  <Icon name={def.icon as IconName} size={26} color={colors.gold} accent={colors.gold} />
+                </View>
+                <View style={styles.dmInfo}>
+                  <Text style={styles.dmName}>
+                    {def.name} <Text style={styles.dmLevel}>Lv {level}/{def.maxLevel}</Text>
+                  </Text>
+                  <Text style={styles.dmDesc}>{def.perLevel}</Text>
+                  {level > 0 && <Text style={styles.dmCurrent}>Now: {coreTotalEffect(def, level)}</Text>}
+                </View>
+                <Pressable
+                  onPress={() => {
+                    buyCoreUpgrade(def.id);
+                    playSound('buy');
+                  }}
+                  disabled={!affordable}
+                  style={[styles.dmBuy, maxed && styles.dmMaxed, !affordable && !maxed && styles.dmBuyDisabled]}
+                >
+                  {maxed ? (
+                    <Text style={styles.dmMaxedText}>MAX</Text>
+                  ) : (
+                    <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost}◆</Text>
+                  )}
+                </Pressable>
+              </View>
+            );
+          })}
 
           <Text style={styles.perksTitle}>Singularity Perks</Text>
           <Text style={styles.perksHint}>One-time unlocks bought with Cores. Permanent — survive everything.</Text>

@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { computeMetrics, newlyCompleted } from '../game/achievements';
 import {
   AUTO_TAPS_PER_SEC,
+  CORE_UPGRADES_BY_ID,
   SINGULARITY_PERKS_BY_ID,
+  coreUpgradeCost,
   pendingSingularityCores,
   perkStartAsteroid,
 } from '../game/ascension';
@@ -58,6 +60,7 @@ export interface GameActions {
   doAscend(): void;
   doWarp(): void;
   buySingularityPerk(id: string): void;
+  buyCoreUpgrade(id: string): void;
   enterChallenge(id: string): void;
   abandonChallenge(): void;
   completeChallenge(): void;
@@ -105,6 +108,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     ascensionCount: 0,
     dmSinceAscension: 0,
     singularityPerks: {},
+    coreUpgrades: {},
     activeChallenge: null,
     challengesCompleted: {},
     lastDailyAt: 0,
@@ -394,6 +398,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalSingularityCores: state.totalSingularityCores,
           ascensionCount: state.ascensionCount,
           singularityPerks: state.singularityPerks,
+          coreUpgrades: state.coreUpgrades,
           challengesCompleted: state.challengesCompleted,
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
@@ -446,6 +451,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ascensionCount: state.ascensionCount + 1,
           dmSinceAscension: 0,
           singularityPerks: state.singularityPerks,
+          coreUpgrades: state.coreUpgrades,
           challengesCompleted: state.challengesCompleted,
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
@@ -483,6 +489,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalDarkMatter: state.totalDarkMatter,
           totalSingularityCores: state.totalSingularityCores,
           singularityPerks: state.singularityPerks,
+          coreUpgrades: state.coreUpgrades,
           challengesCompleted: state.challengesCompleted,
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
@@ -504,6 +511,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(
       withCaches(
         { ...state, singularityCores: state.singularityCores - def.cost, singularityPerks },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  buyCoreUpgrade(id) {
+    const state = get();
+    const def = CORE_UPGRADES_BY_ID[id];
+    if (!def) return;
+    const level = state.coreUpgrades[id] ?? 0;
+    if (level >= def.maxLevel) return;
+    const cost = coreUpgradeCost(def, level);
+    if (state.singularityCores < cost) return;
+    const coreUpgrades = { ...state.coreUpgrades, [id]: level + 1 };
+    set(
+      withCaches(
+        { ...state, singularityCores: state.singularityCores - cost, coreUpgrades },
         state.lastTickAt,
       ),
     );

@@ -5,7 +5,7 @@ import { UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID } from '../game/darkmatter';
 import { EXPEDITIONS_BY_ID } from '../game/expeditions';
 import { RESEARCH_BY_ID } from '../game/research';
-import { SINGULARITY_PERKS_BY_ID } from '../game/ascension';
+import { CORE_UPGRADES_BY_ID, SINGULARITY_PERKS_BY_ID } from '../game/ascension';
 import { CHALLENGES_BY_ID } from '../game/challenges';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
@@ -45,6 +45,7 @@ export function toPersisted(state: GameState): PersistedState {
     ascensionCount: state.ascensionCount,
     dmSinceAscension: state.dmSinceAscension,
     singularityPerks: state.singularityPerks,
+    coreUpgrades: state.coreUpgrades,
     activeChallenge: state.activeChallenge,
     challengesCompleted: state.challengesCompleted,
     lastDailyAt: state.lastDailyAt,
@@ -183,6 +184,15 @@ export function migrate(raw: string | null): SaveFile | null {
     typeof raw_.activeChallenge === 'string' && CHALLENGES_BY_ID[raw_.activeChallenge]
       ? raw_.activeChallenge
       : null;
+  const coreUpgrades: Record<string, number> = {};
+  if (typeof raw_.coreUpgrades === 'object' && raw_.coreUpgrades !== null) {
+    for (const id of Object.keys(raw_.coreUpgrades)) {
+      const def = CORE_UPGRADES_BY_ID[id];
+      if (!def) continue;
+      const level = Math.floor(finiteNumber((raw_.coreUpgrades as Record<string, unknown>)[id], 0));
+      if (level > 0) coreUpgrades[id] = Math.min(level, def.maxLevel);
+    }
+  }
   const singularityCores = Math.max(0, Math.floor(finiteNumber(raw_.singularityCores, 0)));
   const research: Record<string, true> = {};
   if (typeof raw_.research === 'object' && raw_.research !== null) {
@@ -241,6 +251,7 @@ export function migrate(raw: string | null): SaveFile | null {
     ascensionCount: Math.max(0, Math.floor(finiteNumber(raw_.ascensionCount, 0))),
     dmSinceAscension: Math.max(0, finiteNumber(raw_.dmSinceAscension, 0)),
     singularityPerks,
+    coreUpgrades,
     activeChallenge,
     challengesCompleted,
     lastDailyAt: Math.max(0, finiteNumber(raw_.lastDailyAt, 0)),

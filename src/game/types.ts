@@ -90,6 +90,8 @@ export interface PersistedState {
   dmSinceAscension: number;
   /** One-time Singularity perks bought with cores (survive everything). */
   singularityPerks: Record<string, true>;
+  /** Leveled Singularity Upgrades bought with cores (survive everything). */
+  coreUpgrades: Record<string, number>;
   /** Prestige challenge currently being attempted, if any. */
   activeChallenge: string | null;
   /** Completed challenge ids (permanent rewards, survive everything). */

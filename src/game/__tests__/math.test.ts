@@ -65,6 +65,7 @@ const baseState = {
   singularityCores: 0,
   totalSingularityCores: 0,
   singularityPerks: {} as Record<string, true>,
+  coreUpgrades: {} as Record<string, number>,
   activeChallenge: null as string | null,
   challengesCompleted: {} as Record<string, true>,
   sector: 0,
