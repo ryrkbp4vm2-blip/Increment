@@ -9,7 +9,7 @@ export const OFFLINE_EFFICIENCY = 1.0;
 export const OFFLINE_MIN_MS = 5_000;
 
 /** First Dark Matter is earned once a run's lifetime earnings reach this. */
-export const PRESTIGE_BASE = 1e9;
+export const PRESTIGE_BASE = 1e10;
 
 /** A generator row is revealed once lifetime earnings reach this fraction of its base cost. */
 export const REVEAL_FRACTION = 0.5;

@@ -1,7 +1,7 @@
 /** Ascension — the second prestige layer above Dark Matter. */
 
 /** Dark Matter (earned since the last ascension) needed for the first core. */
-export const ASCEND_BASE = 100;
+export const ASCEND_BASE = 1_000_000;
 
 /** Permanent global production bonus per Singularity Core. */
 export const SINGULARITY_BONUS = 0.5;

@@ -140,7 +140,7 @@ describe('gameStore', () => {
   it('prestige awards dark matter, resets the run, keeps shop and artifacts', () => {
     reset({
       minerals: 5e12,
-      lifetimeThisRun: 4e9, // sqrt(4e9/1e9) = 2 DM
+      lifetimeThisRun: 4e10, // sqrt(4e10/1e10) = 2 DM
       lifetimeAllTime: 6e12,
       generators: { ...initialPersistedState().generators, dyson: 5 },
       upgrades: { tap1: true },
@@ -184,9 +184,9 @@ describe('gameStore', () => {
   });
 
   it('prestige applies the DM-gain multiplier', () => {
-    reset({ lifetimeThisRun: 1e11, dmUpgrades: { dark_compression: 5 } }); // +20%*5 = x2
+    reset({ lifetimeThisRun: 1e12, dmUpgrades: { dark_compression: 5 } }); // +20%*5 = x2
     useGameStore.getState().doPrestige();
-    // pending = sqrt(1e11/1e9) = 10, x2 = 20
+    // pending = sqrt(1e12/1e10) = 10, x2 = 20
     expect(useGameStore.getState().darkMatter).toBe(20);
   });
 
@@ -291,14 +291,14 @@ describe('gameStore', () => {
   });
 
   it('prestige banks Dark Matter toward ascension', () => {
-    reset({ lifetimeThisRun: 1e11 }); // pending 10 DM
+    reset({ lifetimeThisRun: 1e12 }); // pending 10 DM
     useGameStore.getState().doPrestige();
     expect(useGameStore.getState().dmSinceAscension).toBe(10);
   });
 
   it('doAscend grants cores, resets the DM layer, keeps research/artifacts', () => {
     reset({
-      dmSinceAscension: 400, // sqrt(400/100) = 2 cores
+      dmSinceAscension: 4e6, // sqrt(4e6/1e6) = 2 cores
       darkMatter: 50,
       dmUpgrades: { stellar_density: 5 },
       research: { ex1: true },
@@ -358,7 +358,7 @@ describe('gameStore', () => {
   });
 
   it('doAscend keeps perks and accrues total cores; Belt Memory seeds the belt', () => {
-    reset({ dmSinceAscension: 400, singularityPerks: { belt_memory: true }, totalSingularityCores: 3 });
+    reset({ dmSinceAscension: 4e6, singularityPerks: { belt_memory: true }, totalSingularityCores: 3 });
     useGameStore.getState().doAscend();
     const s = useGameStore.getState();
     expect(s.singularityPerks.belt_memory).toBe(true);

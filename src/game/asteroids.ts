@@ -1,7 +1,7 @@
 /** Asteroid belt progression: finite rocks that shatter and get richer. */
 
 export const ASTEROID_BASE_HP = 400;
-export const ASTEROID_HP_GROWTH = 3.0;
+export const ASTEROID_HP_GROWTH = 5.0;
 /** Each asteroid deeper in the belt multiplies all production by this. */
 export const ASTEROID_RICHNESS_GROWTH = 1.15;
 /** Fraction of an asteroid's HP paid out as minerals when it shatters. */
