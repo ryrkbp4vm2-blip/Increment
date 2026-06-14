@@ -9,6 +9,7 @@ it all into **Dark Matter** for permanent production bonuses.
 
 **Core loop**
 - **Mine** — tap the asteroid to earn minerals and kick-start your empire.
+- **Drill Heat** — rapid tapping builds a combo meter that multiplies tap value up to ×3; it decays when you stop, rewarding bursts of active play.
 - **Shatter the belt** — every mineral earned damages the current asteroid. Break it for a
   bonus payout and fly to the next rock; each is permanently richer, and every 10th is a
   tougher **boss** with a huge reward and a victory frenzy.

@@ -7,6 +7,7 @@ import { CometArt } from '../components/art/CometArt';
 import { Icon } from '../components/art/Icon';
 import { asteroidHp, asteroidName, asteroidRichness, isBoss } from '../game/asteroids';
 import { CometReward } from '../game/events';
+import { decayHeat, heatMultiplier } from '../game/heat';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -18,6 +19,15 @@ export function MineScreen() {
   const totalTaps = useGameStore((s) => s.totalTaps);
   const asteroidIndex = useGameStore((s) => s.asteroidIndex);
   const asteroidDamage = useGameStore((s) => s.asteroidDamage);
+  const tapHeat = useGameStore((s) => s.tapHeat);
+  const lastTapAt = useGameStore((s) => s.lastTapAt);
+  // Local clock so the heat bar drains smoothly between taps.
+  const [clock, setClock] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClock(Date.now()), 120);
+    return () => clearInterval(id);
+  }, []);
+  const heat = decayHeat(tapHeat, clock - lastTapAt);
   const collectComet = useGameStore((s) => s.collectComet);
   const [banner, setBanner] = useState<Banner | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -98,6 +108,19 @@ export function MineScreen() {
       <View style={styles.spacer} />
       <Asteroid />
       <View style={styles.stats}>
+        {heat > 0.02 && (
+          <View style={styles.heatWrap}>
+            <View style={styles.heatTrack}>
+              <View
+                style={[
+                  styles.heatFill,
+                  { width: `${Math.min(heat, 1) * 100}%`, backgroundColor: heat > 0.66 ? colors.danger : colors.gold },
+                ]}
+              />
+            </View>
+            <Text style={styles.heatLabel}>DRILL HEAT ×{heatMultiplier(heat).toFixed(1)}</Text>
+          </View>
+        )}
         <View style={styles.tapRow}>
           <Icon name="mine" size={15} color={colors.text} accent={colors.text} />
           <Text style={styles.tapValue}>{formatNumber(tapValue)} per tap</Text>
@@ -142,6 +165,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+  },
+  heatWrap: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    width: 200,
+  },
+  heatTrack: {
+    height: 7,
+    width: '100%',
+    borderRadius: 4,
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  heatFill: {
+    height: '100%',
+  },
+  heatLabel: {
+    color: colors.gold,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 3,
+    letterSpacing: 1,
   },
   asteroidInfo: {
     alignItems: 'center',

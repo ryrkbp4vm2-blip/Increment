@@ -11,6 +11,18 @@ function reset(overrides: Partial<ReturnType<typeof initialPersistedState>> = {}
 describe('gameStore', () => {
   beforeEach(() => reset());
 
+  it('Drill Heat builds with rapid taps and boosts later taps', () => {
+    reset();
+    const e1 = useGameStore.getState().tap();
+    const h1 = useGameStore.getState().tapHeat;
+    const e2 = useGameStore.getState().tap();
+    const h2 = useGameStore.getState().tapHeat;
+    expect(h1).toBeCloseTo(0.1);
+    expect(h2).toBeGreaterThan(h1);
+    // The second tap is multiplied by higher heat, so it earns more.
+    expect(e2).toBeGreaterThan(e1);
+  });
+
   it('tap earns the cached tap value and counts taps', () => {
     const earned = useGameStore.getState().tap();
     expect(earned).toBe(1);

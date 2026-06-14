@@ -9,6 +9,8 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     cachedCps: 99,
     cachedTapValue: 5,
     newAchievements: [],
+    tapHeat: 0,
+    lastTapAt: 0,
     ...overrides,
   };
 }

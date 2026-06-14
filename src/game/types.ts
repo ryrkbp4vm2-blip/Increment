@@ -105,6 +105,9 @@ export interface GameState extends PersistedState {
   cachedTapValue: number;
   /** Transient queue of just-unlocked achievement ids for toasts. */
   newAchievements: string[];
+  /** Transient Drill Heat combo (0..1) and when it last changed. Not saved. */
+  tapHeat: number;
+  lastTapAt: number;
 }
 
 export interface SaveFile {

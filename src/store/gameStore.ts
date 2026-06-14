@@ -13,6 +13,7 @@ import {
   challengeModifiers,
 } from '../game/challenges';
 import { dailyAvailable, dailyReward, dailyStreakAfter } from '../game/daily';
+import { HEAT_PER_TAP, decayHeat, heatMultiplier } from '../game/heat';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -109,12 +110,13 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
   };
 }
 
-// Returns everything except the transient `newAchievements` queue, which is
-// preserved across these partial updates by zustand's shallow merge.
+// Returns everything except transient fields (newAchievements queue, Drill
+// Heat), which are preserved across these partial updates by zustand's shallow
+// merge.
 function withCaches(
   persisted: PersistedState,
   lastTickAt: number,
-): Omit<GameState, 'newAchievements'> {
+): Omit<GameState, 'newAchievements' | 'tapHeat' | 'lastTapAt'> {
   const cachedCps = cps(persisted);
   return {
     ...persisted,
@@ -192,6 +194,8 @@ let lastAutoFleetAt = 0;
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
   newAchievements: [],
+  tapHeat: 0,
+  lastTapAt: 0,
 
   hydrate(persisted, nowMs) {
     // Silently grant any achievements an existing save already qualifies for,
@@ -200,13 +204,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     for (const id of newlyCompleted(persisted.achievements, computeMetrics(persisted))) {
       achievements[id] = true;
     }
-    set({ ...withCaches({ ...persisted, achievements }, nowMs), newAchievements: [] });
+    set({ ...withCaches({ ...persisted, achievements }, nowMs), newAchievements: [], tapHeat: 0, lastTapAt: 0 });
   },
 
   tap() {
     const state = get();
-    const earned = state.cachedTapValue * frenzyFactor(state, Date.now());
-    set({ ...earn(state, earned), totalTaps: state.totalTaps + 1 });
+    const now = Date.now();
+    // Reward this tap by the heat already built (a cold first tap is ×1), then
+    // stoke the combo for the next tap.
+    const decayed = decayHeat(state.tapHeat, now - state.lastTapAt);
+    const earned = state.cachedTapValue * frenzyFactor(state, now) * heatMultiplier(decayed);
+    const heat = Math.min(1, decayed + HEAT_PER_TAP);
+    set({ ...earn(state, earned), totalTaps: state.totalTaps + 1, tapHeat: heat, lastTapAt: now });
     return earned;
   },
 
@@ -531,7 +540,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   resetGame() {
     const now = Date.now();
-    set({ ...withCaches(initialPersistedState(now), now), newAchievements: [] });
+    set({ ...withCaches(initialPersistedState(now), now), newAchievements: [], tapHeat: 0, lastTapAt: 0 });
   },
 }));
 
