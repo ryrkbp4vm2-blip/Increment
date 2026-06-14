@@ -17,21 +17,27 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 interface Props {
   active: Tab;
   onChange: (tab: Tab) => void;
+  /** Tabs that should show an attention marker (e.g. a claim is available). */
+  attention?: Partial<Record<Tab, boolean>>;
 }
 
-export function TabBar({ active, onChange }: Props) {
+export function TabBar({ active, onChange, attention }: Props) {
   return (
     <View style={styles.bar}>
       {TABS.map((tab) => {
         const isActive = tab.id === active;
+        const flagged = attention?.[tab.id] && !isActive;
         return (
           <Pressable key={tab.id} style={styles.tab} onPress={() => onChange(tab.id)}>
-            <Icon
-              name={tab.icon}
-              size={20}
-              color={isActive ? colors.accent : colors.textMuted}
-              accent={isActive ? colors.accent : colors.textMuted}
-            />
+            <View>
+              <Icon
+                name={tab.icon}
+                size={20}
+                color={isActive ? colors.accent : colors.textMuted}
+                accent={isActive ? colors.accent : colors.textMuted}
+              />
+              {flagged && <View style={styles.dot} />}
+            </View>
             <Text style={[styles.label, isActive && styles.labelActive]}>{tab.label}</Text>
           </Pressable>
         );
@@ -60,5 +66,16 @@ const styles = StyleSheet.create({
   },
   labelActive: {
     color: colors.accent,
+  },
+  dot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.gold,
+    borderWidth: 1,
+    borderColor: colors.panel,
   },
 });

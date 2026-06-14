@@ -2,6 +2,7 @@ import { costOfNext, globalMultiplier } from '../../game/math';
 import { singularityMult } from '../../game/ascension';
 import { GENERATORS_BY_ID } from '../../game/balance';
 import { achievementBonus } from '../../game/achievements';
+import { sectorMult, sectorTrait } from '../../game/zones';
 import { initialPersistedState, useGameStore } from '../gameStore';
 
 function reset(overrides: Partial<ReturnType<typeof initialPersistedState>> = {}) {
@@ -523,8 +524,10 @@ describe('gameStore', () => {
     expect(s.artifacts.pulsar_shard).toBe(true);
     expect(s.achievements.t_100).toBe(true);
     expect(s.singularityPerks.auto_driller).toBe(true);
-    // the ×50 sector bonus is live in production
-    expect(globalMultiplier(s)).toBeCloseTo(globalMultiplier({ ...s, sector: 0 }) * 50);
+    // the ×50 sector bonus and the sector-1 trait are both live in production
+    expect(globalMultiplier(s)).toBeCloseTo(
+      globalMultiplier({ ...s, sector: 0 }) * sectorMult(1) * sectorTrait(1).productionMult,
+    );
   });
 
   it('doWarp does nothing before the ascension gate is met', () => {

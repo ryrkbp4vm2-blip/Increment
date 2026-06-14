@@ -161,7 +161,7 @@ function challengeRunReset(state: GameState, activeChallenge: string | null): Pa
  * shatters the production caches are refreshed (richness changed).
  */
 function earn(state: GameState, amount: number): Partial<GameState> {
-  const result = applyDamage(state.asteroidIndex, state.asteroidDamage, amount);
+  const result = applyDamage(state.asteroidIndex, state.asteroidDamage, amount, state.sector);
   const total = amount + result.bonus;
   const delta: Partial<GameState> = {
     minerals: state.minerals + total,

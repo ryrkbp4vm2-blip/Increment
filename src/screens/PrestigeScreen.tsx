@@ -15,7 +15,6 @@ import {
   pendingSingularityCores,
   singularityMult,
 } from '../game/ascension';
-import { PRESTIGE_BASE } from '../game/balance';
 import {
   DM_UPGRADES,
   DarkMatterUpgradeDef,
@@ -24,7 +23,15 @@ import {
 } from '../game/darkmatter';
 import { effectivePowers } from '../game/powers';
 import { darkMatterGain, nextDarkMatterAt, pendingDarkMatter } from '../game/prestige';
-import { SECTOR_PRODUCTION_MULT, ZONE_WARP_ASCENSIONS, canWarp, sectorMult, sectorName } from '../game/zones';
+import { PRESTIGE_BASE } from '../game/balance';
+import {
+  SECTOR_PRODUCTION_MULT,
+  ZONE_WARP_ASCENSIONS,
+  canWarp,
+  sectorMult,
+  sectorName,
+  sectorTrait,
+} from '../game/zones';
 import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -274,10 +281,17 @@ export function PrestigeScreen() {
           </Text>
           <StatRow label="Current sector" value={sectorName(sector)} />
           <StatRow label="Sector bonus" value={`×${formatNumber(sectorMult(sector))}`} />
+          <StatRow label="Sector trait" value={sectorTrait(sector).trait} />
           <StatRow
             label="Ascensions toward warp"
             value={`${ascensionsSinceWarp} / ${ZONE_WARP_ASCENSIONS}`}
           />
+          <View style={styles.nextSectorBox}>
+            <Text style={styles.nextSectorLabel}>
+              Next: {sectorName(sector + 1)} — {sectorTrait(sector + 1).trait}
+            </Text>
+            <Text style={styles.nextSectorBlurb}>{sectorTrait(sector + 1).blurb}</Text>
+          </View>
           {!canWarp(ascensionsSinceWarp) ? (
             <View style={styles.progressTrack}>
               <View
@@ -517,6 +531,14 @@ const styles = StyleSheet.create({
     marginVertical: spacing.sm,
   },
   ascendButton: { marginTop: spacing.md },
+  nextSectorBox: {
+    backgroundColor: colors.panelLight,
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  nextSectorLabel: { color: colors.accent, fontSize: 12, fontWeight: '800' },
+  nextSectorBlurb: { color: colors.textMuted, fontSize: 12, lineHeight: 17, marginTop: 2 },
   perksTitle: {
     color: colors.gold,
     fontSize: 15,

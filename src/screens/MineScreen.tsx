@@ -8,7 +8,7 @@ import { Icon } from '../components/art/Icon';
 import { asteroidHp, asteroidName, asteroidRichness, isBoss } from '../game/asteroids';
 import { CometReward } from '../game/events';
 import { decayHeat, heatMultiplier } from '../game/heat';
-import { sectorName } from '../game/zones';
+import { sectorName, sectorTrait } from '../game/zones';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -70,9 +70,10 @@ export function MineScreen() {
     });
   };
 
-  const hp = asteroidHp(asteroidIndex);
+  const hp = asteroidHp(asteroidIndex, sector);
   const integrity = Math.max(0, 1 - asteroidDamage / hp);
   const boss = isBoss(asteroidIndex);
+  const trait = sectorTrait(sector);
 
   return (
     <View style={styles.screen}>
@@ -90,7 +91,11 @@ export function MineScreen() {
             <Text style={styles.bossTagText}>BOSS</Text>
           </View>
         )}
-        <Text style={styles.sectorLabel}>{sectorName(sector)}</Text>
+        <Text style={styles.sectorLabel}>
+          {sectorName(sector)}
+          <Text style={styles.sectorTrait}>  ·  {trait.trait}</Text>
+        </Text>
+        {sector > 0 && <Text style={styles.sectorBlurb}>{trait.blurb}</Text>}
         <Text style={[styles.asteroidName, boss && styles.bossName]}>{asteroidName(asteroidIndex)}</Text>
         <Text style={styles.richness}>
           Belt richness ×{asteroidRichness(asteroidIndex).toFixed(2)}
@@ -206,6 +211,17 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 2,
+  },
+  sectorTrait: {
+    color: colors.textMuted,
+    fontWeight: '700',
+  },
+  sectorBlurb: {
+    color: colors.textMuted,
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 4,
+    maxWidth: 280,
   },
   asteroidName: {
     color: colors.text,

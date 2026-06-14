@@ -1,5 +1,7 @@
 /** Asteroid belt progression: finite rocks that shatter and get richer. */
 
+import { sectorTrait } from './zones';
+
 export const ASTEROID_BASE_HP = 400;
 export const ASTEROID_HP_GROWTH = 5.0;
 /** Each asteroid deeper in the belt multiplies all production by this. */
@@ -45,8 +47,9 @@ export function asteroidName(index: number): string {
     : `${asteroidType(index).name} Asteroid #${index + 1}`;
 }
 
-export function asteroidHp(index: number): number {
-  const base = Math.ceil(ASTEROID_BASE_HP * ASTEROID_HP_GROWTH ** index);
+export function asteroidHp(index: number, sector: number = 0): number {
+  const raw = ASTEROID_BASE_HP * ASTEROID_HP_GROWTH ** index * sectorTrait(sector).hpMult;
+  const base = Math.ceil(raw);
   return isBoss(index) ? base * BOSS_HP_MULT : base;
 }
 
@@ -54,8 +57,8 @@ export function asteroidRichness(index: number): number {
   return ASTEROID_RICHNESS_GROWTH ** index;
 }
 
-export function shatterBonus(index: number): number {
-  const base = Math.ceil(asteroidHp(index) * SHATTER_BONUS_FRACTION);
+export function shatterBonus(index: number, sector: number = 0): number {
+  const base = Math.ceil(asteroidHp(index, sector) * SHATTER_BONUS_FRACTION);
   return isBoss(index) ? base * BOSS_REWARD_MULT : base;
 }
 
@@ -81,14 +84,15 @@ export function applyDamage(
   asteroidIndex: number,
   asteroidDamage: number,
   damage: number,
+  sector: number = 0,
 ): ShatterResult {
   let index = asteroidIndex;
   let accumulated = asteroidDamage + damage;
   let bonus = 0;
   let shattered = 0;
-  while (accumulated >= asteroidHp(index)) {
-    accumulated -= asteroidHp(index);
-    bonus += shatterBonus(index);
+  while (accumulated >= asteroidHp(index, sector)) {
+    accumulated -= asteroidHp(index, sector);
+    bonus += shatterBonus(index, sector);
     index++;
     shattered++;
   }

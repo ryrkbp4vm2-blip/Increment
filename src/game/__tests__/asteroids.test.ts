@@ -25,6 +25,13 @@ describe('asteroid curve', () => {
     expect(asteroidRichness(2)).toBeCloseTo(1.15 ** 2);
   });
 
+  it('scales HP by the sector trait (defaulting to the home belt)', () => {
+    expect(asteroidHp(0)).toBe(asteroidHp(0, 0)); // default sector is home
+    // Dense Spiral (sector 1) doubles HP; Brittle Shoals (sector 4) is ×0.4.
+    expect(asteroidHp(0, 1)).toBe(Math.ceil(ASTEROID_BASE_HP * 2));
+    expect(asteroidHp(0, 4)).toBe(Math.ceil(ASTEROID_BASE_HP * 0.4));
+  });
+
   it('cycles types and numbers names', () => {
     expect(asteroidType(0).name).toBe('Rocky');
     expect(asteroidType(6).name).toBe('Rocky'); // 6 types, wraps
