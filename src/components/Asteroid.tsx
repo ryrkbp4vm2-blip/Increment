@@ -22,6 +22,7 @@ const MAX_PARTICLES = 14;
 export function Asteroid() {
   const tap = useGameStore((s) => s.tap);
   const asteroidIndex = useGameStore((s) => s.asteroidIndex);
+  const sector = useGameStore((s) => s.sector);
   const scale = useRef(new Animated.Value(1)).current;
   const spin = useRef(new Animated.Value(0)).current;
   const [particles, setParticles] = useState<Particle[]>([]);
@@ -115,7 +116,7 @@ export function Asteroid() {
       <Pressable onPress={handlePress} hitSlop={20}>
         <Animated.View style={[styles.asteroid, { transform: [{ scale }] }]}>
           <Animated.View style={{ transform: [{ rotate }] }}>
-            <AsteroidArt typeIndex={asteroidIndex} size={210} boss={isBoss(asteroidIndex)} />
+            <AsteroidArt typeIndex={asteroidIndex + sector} size={210} boss={isBoss(asteroidIndex)} />
           </Animated.View>
         </Animated.View>
       </Pressable>

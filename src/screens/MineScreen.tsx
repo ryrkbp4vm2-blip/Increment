@@ -8,6 +8,7 @@ import { Icon } from '../components/art/Icon';
 import { asteroidHp, asteroidName, asteroidRichness, isBoss } from '../game/asteroids';
 import { CometReward } from '../game/events';
 import { decayHeat, heatMultiplier } from '../game/heat';
+import { sectorName } from '../game/zones';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -19,6 +20,7 @@ export function MineScreen() {
   const totalTaps = useGameStore((s) => s.totalTaps);
   const asteroidIndex = useGameStore((s) => s.asteroidIndex);
   const asteroidDamage = useGameStore((s) => s.asteroidDamage);
+  const sector = useGameStore((s) => s.sector);
   const tapHeat = useGameStore((s) => s.tapHeat);
   const lastTapAt = useGameStore((s) => s.lastTapAt);
   // Local clock so the heat bar drains smoothly between taps.
@@ -88,6 +90,7 @@ export function MineScreen() {
             <Text style={styles.bossTagText}>BOSS</Text>
           </View>
         )}
+        <Text style={styles.sectorLabel}>{sectorName(sector)}</Text>
         <Text style={[styles.asteroidName, boss && styles.bossName]}>{asteroidName(asteroidIndex)}</Text>
         <Text style={styles.richness}>
           Belt richness ×{asteroidRichness(asteroidIndex).toFixed(2)}
@@ -195,6 +198,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl + spacing.lg,
     paddingHorizontal: spacing.xl,
     width: '100%',
+  },
+  sectorLabel: {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 2,
   },
   asteroidName: {
     color: colors.text,

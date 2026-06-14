@@ -49,6 +49,8 @@ export function toPersisted(state: GameState): PersistedState {
     challengesCompleted: state.challengesCompleted,
     lastDailyAt: state.lastDailyAt,
     dailyStreak: state.dailyStreak,
+    sector: state.sector,
+    ascensionsSinceWarp: state.ascensionsSinceWarp,
   };
 }
 
@@ -243,6 +245,8 @@ export function migrate(raw: string | null): SaveFile | null {
     challengesCompleted,
     lastDailyAt: Math.max(0, finiteNumber(raw_.lastDailyAt, 0)),
     dailyStreak: Math.max(0, Math.floor(finiteNumber(raw_.dailyStreak, 0))),
+    sector: Math.max(0, Math.floor(finiteNumber(raw_.sector, 0))),
+    ascensionsSinceWarp: Math.max(0, Math.floor(finiteNumber(raw_.ascensionsSinceWarp, 0))),
   };
   return {
     version: SAVE_VERSION,

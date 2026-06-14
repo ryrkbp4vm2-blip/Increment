@@ -464,6 +464,51 @@ describe('gameStore', () => {
     expect(second!.streak).toBe(2);
   });
 
+  it('doAscend counts toward the sector warp gate', () => {
+    reset({ dmSinceAscension: 4e6, ascensionsSinceWarp: 2 });
+    useGameStore.getState().doAscend();
+    expect(useGameStore.getState().ascensionsSinceWarp).toBe(3);
+  });
+
+  it('doWarp advances the sector, resets the layers, keeps collections', () => {
+    reset({
+      ascensionsSinceWarp: 5, // meets ZONE_WARP_ASCENSIONS
+      sector: 0,
+      darkMatter: 99,
+      dmUpgrades: { stellar_density: 4 },
+      singularityCores: 7,
+      totalSingularityCores: 7,
+      generators: { ...initialPersistedState().generators, dyson: 4 },
+      research: { ex1: true },
+      artifacts: { pulsar_shard: true },
+      achievements: { t_100: true },
+      singularityPerks: { auto_driller: true },
+    });
+    useGameStore.getState().doWarp();
+    const s = useGameStore.getState();
+    expect(s.sector).toBe(1);
+    expect(s.ascensionsSinceWarp).toBe(0);
+    // sacrificed layers
+    expect(s.darkMatter).toBe(0);
+    expect(s.dmUpgrades).toEqual({});
+    expect(s.singularityCores).toBe(0);
+    expect(s.generators.dyson).toBe(0);
+    // carried over
+    expect(s.totalSingularityCores).toBe(7); // multiplier preserved
+    expect(s.research.ex1).toBe(true);
+    expect(s.artifacts.pulsar_shard).toBe(true);
+    expect(s.achievements.t_100).toBe(true);
+    expect(s.singularityPerks.auto_driller).toBe(true);
+    // the ×50 sector bonus is live in production
+    expect(globalMultiplier(s)).toBeCloseTo(globalMultiplier({ ...s, sector: 0 }) * 50);
+  });
+
+  it('doWarp does nothing before the ascension gate is met', () => {
+    reset({ ascensionsSinceWarp: 4, sector: 0 });
+    useGameStore.getState().doWarp();
+    expect(useGameStore.getState().sector).toBe(0);
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();

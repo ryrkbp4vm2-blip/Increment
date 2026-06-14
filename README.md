@@ -28,6 +28,9 @@ it all into **Dark Matter** for permanent production bonuses.
   shop (production, taps, comets, expeditions, head starts, offline cap, DM gain).
 - **Ascension** — sacrifice the Dark Matter layer for **Singularity Cores** (permanent
   multiplier) and **perks**, including automation: auto-tap, auto-buy, auto-expeditions.
+- **Sectors** — after 5 ascensions, **Warp** to the next sector for a ×50 permanent
+  production multiplier and a fresh, visually distinct belt. The run, Dark Matter and
+  spendable cores reset; collections, research, perks and the singularity bonus carry over.
 - **Challenges** — six constrained runs (no generators, no upgrades, throttled production…)
   that grant permanent rewards.
 - **Goals** — 41 achievements, each a permanent production bonus.

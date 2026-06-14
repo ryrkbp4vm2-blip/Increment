@@ -2,6 +2,7 @@ import { achievementBonus } from './achievements';
 import { singularityMult } from './ascension';
 import { asteroidRichness } from './asteroids';
 import { challengeModifiers, challengeRewardMult } from './challenges';
+import { sectorMult } from './zones';
 import { BASE_TAP_CPS_PCT, GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
 import { effectivePowers } from './powers';
 import { GameState, GeneratorDef, GeneratorId, PersistedState, UnlockCondition } from './types';
@@ -42,6 +43,7 @@ type MultState = Pick<
   | 'singularityPerks'
   | 'activeChallenge'
   | 'challengesCompleted'
+  | 'sector'
 >;
 
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
@@ -60,6 +62,7 @@ export function globalMultiplier(state: MultState): number {
     asteroidRichness(state.asteroidIndex) *
     achievementBonus(state.achievements) *
     singularityMult(state.totalSingularityCores, state.singularityPerks) *
+    sectorMult(state.sector) *
     challengeRewardMult(state.challengesCompleted).globalMult *
     challengeModifiers(state.activeChallenge).productionMult;
   for (const id of Object.keys(state.upgrades)) {
@@ -81,6 +84,7 @@ export function globalFactors(state: MultState): { label: string; value: number 
     { label: 'Belt richness', value: asteroidRichness(state.asteroidIndex) },
     { label: 'Achievements', value: achievementBonus(state.achievements) },
     { label: 'Singularity Cores', value: singularityMult(state.totalSingularityCores, state.singularityPerks) },
+    { label: 'Sector', value: sectorMult(state.sector) },
     { label: 'Artifacts · shop · research', value: powers.globalMult },
     { label: 'Mineral upgrades', value: upgradeMult },
   ];

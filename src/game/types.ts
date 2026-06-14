@@ -97,6 +97,9 @@ export interface PersistedState {
   /** Daily bonus: last claim time (ms epoch) and consecutive-day streak. */
   lastDailyAt: number;
   dailyStreak: number;
+  /** Sector (zone) layer: current sector and ascensions done since last warp. */
+  sector: number;
+  ascensionsSinceWarp: number;
 }
 
 export interface GameState extends PersistedState {

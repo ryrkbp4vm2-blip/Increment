@@ -14,6 +14,7 @@ import {
 } from '../game/challenges';
 import { dailyAvailable, dailyReward, dailyStreakAfter } from '../game/daily';
 import { HEAT_PER_TAP, decayHeat, heatMultiplier } from '../game/heat';
+import { canWarp } from '../game/zones';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -55,6 +56,7 @@ export interface GameActions {
   applyEventOutcome(outcome: EventOutcome, nowMs: number): void;
   doPrestige(): void;
   doAscend(): void;
+  doWarp(): void;
   buySingularityPerk(id: string): void;
   enterChallenge(id: string): void;
   abandonChallenge(): void;
@@ -107,6 +109,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     challengesCompleted: {},
     lastDailyAt: 0,
     dailyStreak: 0,
+    sector: 0,
+    ascensionsSinceWarp: 0,
   };
 }
 
@@ -393,6 +397,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           challengesCompleted: state.challengesCompleted,
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
+          sector: state.sector,
+          ascensionsSinceWarp: state.ascensionsSinceWarp,
           dmUpgrades: state.dmUpgrades,
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
@@ -443,6 +449,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
           challengesCompleted: state.challengesCompleted,
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
+          sector: state.sector,
+          ascensionsSinceWarp: state.ascensionsSinceWarp + 1,
+          asteroidIndex: perkStartAsteroid(state.singularityPerks),
+        },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  doWarp() {
+    const state = get();
+    if (!canWarp(state.ascensionsSinceWarp)) return;
+    set(
+      withCaches(
+        {
+          ...initialPersistedState(Date.now()),
+          // Warping advances to the next sector for a big permanent production
+          // multiplier. The run, Dark Matter layer and spendable cores reset;
+          // collections, research, perks and the singularity multiplier carry.
+          lifetimeAllTime: state.lifetimeAllTime,
+          totalTaps: state.totalTaps,
+          prestigeCount: state.prestigeCount,
+          ascensionCount: state.ascensionCount,
+          artifacts: state.artifacts,
+          achievements: state.achievements,
+          asteroidsShattered: state.asteroidsShattered,
+          cometsCaught: state.cometsCaught,
+          expeditionsCompleted: state.expeditionsCompleted,
+          researchPoints: state.researchPoints,
+          totalResearch: state.totalResearch,
+          research: state.research,
+          totalDarkMatter: state.totalDarkMatter,
+          totalSingularityCores: state.totalSingularityCores,
+          singularityPerks: state.singularityPerks,
+          challengesCompleted: state.challengesCompleted,
+          lastDailyAt: state.lastDailyAt,
+          dailyStreak: state.dailyStreak,
+          sector: state.sector + 1,
+          ascensionsSinceWarp: 0,
           asteroidIndex: perkStartAsteroid(state.singularityPerks),
         },
         state.lastTickAt,

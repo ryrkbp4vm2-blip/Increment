@@ -21,6 +21,7 @@ import {
 } from '../game/darkmatter';
 import { effectivePowers } from '../game/powers';
 import { darkMatterGain, nextDarkMatterAt, pendingDarkMatter } from '../game/prestige';
+import { SECTOR_PRODUCTION_MULT, ZONE_WARP_ASCENSIONS, canWarp, sectorMult, sectorName } from '../game/zones';
 import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -43,8 +44,12 @@ export function PrestigeScreen() {
   const dmSinceAscension = useGameStore((s) => s.dmSinceAscension);
   const doAscend = useGameStore((s) => s.doAscend);
   const buySingularityPerk = useGameStore((s) => s.buySingularityPerk);
+  const sector = useGameStore((s) => s.sector);
+  const ascensionsSinceWarp = useGameStore((s) => s.ascensionsSinceWarp);
+  const doWarp = useGameStore((s) => s.doWarp);
   const [confirming, setConfirming] = useState(false);
   const [confirmingAscend, setConfirmingAscend] = useState(false);
+  const [confirmingWarp, setConfirmingWarp] = useState(false);
 
   const pendingCores = pendingSingularityCores(dmSinceAscension);
   const ascendNextAt = nextAscensionAt(dmSinceAscension);
@@ -211,6 +216,62 @@ export function PrestigeScreen() {
               </View>
             );
           })}
+        </View>
+      )}
+
+      {(sector > 0 || ascensionsSinceWarp > 0) && (
+        <View style={styles.warpCard}>
+          <View style={styles.titleRow}>
+            <Icon name="fleet" size={18} color={colors.accent} accent={colors.accent} />
+            <Text style={styles.warpTitle}>Sector Warp</Text>
+          </View>
+          <Text style={styles.ascendBody}>
+            Ascend {ZONE_WARP_ASCENSIONS}× in a sector, then warp onward for ×{SECTOR_PRODUCTION_MULT}{' '}
+            permanent production. The run, Dark Matter and spendable cores reset; collections,
+            research, perks and your singularity bonus carry over.
+          </Text>
+          <StatRow label="Current sector" value={sectorName(sector)} />
+          <StatRow label="Sector bonus" value={`×${formatNumber(sectorMult(sector))}`} />
+          <StatRow
+            label="Ascensions toward warp"
+            value={`${ascensionsSinceWarp} / ${ZONE_WARP_ASCENSIONS}`}
+          />
+          {!canWarp(ascensionsSinceWarp) ? (
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${Math.min(ascensionsSinceWarp / ZONE_WARP_ASCENSIONS, 1) * 100}%`, backgroundColor: colors.accent },
+                ]}
+              />
+            </View>
+          ) : confirmingWarp ? (
+            <View style={styles.confirmButtons}>
+              <BigButton
+                label={`Warp to ${sectorName(sector + 1)}`}
+                color={colors.accent}
+                onPress={() => {
+                  doWarp();
+                  playSound('prestige');
+                  setConfirmingWarp(false);
+                }}
+                style={styles.confirmButton}
+              />
+              <BigButton
+                label="Cancel"
+                color={colors.panelLight}
+                onPress={() => setConfirmingWarp(false)}
+                style={styles.confirmButton}
+              />
+            </View>
+          ) : (
+            <BigButton
+              label={`Warp for ×${SECTOR_PRODUCTION_MULT} production`}
+              color={colors.accent}
+              onPress={() => setConfirmingWarp(true)}
+              style={styles.ascendButton}
+            />
+          )}
         </View>
       )}
 
@@ -397,6 +458,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   ascendTitle: { color: colors.gold, fontSize: 18, fontWeight: '800' },
+  warpCard: {
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.accent,
+    padding: spacing.lg,
+    marginTop: spacing.xl,
+  },
+  warpTitle: { color: colors.accent, fontSize: 18, fontWeight: '800' },
   ascendBody: {
     color: colors.textMuted,
     fontSize: 13,
