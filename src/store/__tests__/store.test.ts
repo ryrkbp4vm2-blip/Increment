@@ -628,10 +628,11 @@ describe('gameStore', () => {
     expect(s.frenzyMult).toBe(7);
     expect(s.frenzyUntil).toBe(32_000);
     // applyTick over 2s (lastTickAt was 1000) inside the frenzy → ×7 the base CPS.
+    // Formation 40 → depth bonus = 1 + 0.1 × floor(40/5) = 1.8.
     const before = useGameStore.getState().crystals;
     useGameStore.getState().applyTick(3000);
     const gained = useGameStore.getState().crystals - before;
-    expect(gained).toBeCloseTo(s.cachedCrystalCps * 2 * 7);
+    expect(gained).toBeCloseTo(s.cachedCrystalCps * 1.8 * 2 * 7);
   });
 
   it('Auto-Forge buys generators each tick once unlocked at the Resonance gate', () => {

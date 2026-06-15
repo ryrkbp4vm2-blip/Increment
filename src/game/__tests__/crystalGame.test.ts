@@ -13,6 +13,7 @@ import {
   crystalRunPowers,
   crystalTotalCps,
   crystalUpgradeUnlockMet,
+  formationDepthBonus,
   nextResonanceAt,
   pendingResonance,
   resonanceGain,
@@ -170,5 +171,24 @@ describe('forge run upgrades', () => {
     expect(
       crystalUpgradeUnlockMet(globalUp, { crystalGenerators: {}, lifetimeCrystals: 50_000 }),
     ).toBe(true);
+  });
+});
+
+describe('formationDepthBonus', () => {
+  it('is 1× with fewer than 5 formations shattered', () => {
+    expect(formationDepthBonus(0)).toBe(1);
+    expect(formationDepthBonus(4)).toBe(1);
+  });
+
+  it('adds +10% per 5 formations shattered this cascade', () => {
+    expect(formationDepthBonus(5)).toBeCloseTo(1.1);
+    expect(formationDepthBonus(10)).toBeCloseTo(1.2);
+    expect(formationDepthBonus(50)).toBeCloseTo(2.0);
+  });
+
+  it('is strictly increasing with depth', () => {
+    for (let i = 0; i < 5; i++) {
+      expect(formationDepthBonus((i + 1) * 5)).toBeGreaterThan(formationDepthBonus(i * 5));
+    }
   });
 });

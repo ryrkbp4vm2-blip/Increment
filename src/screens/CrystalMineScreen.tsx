@@ -5,6 +5,7 @@ import {
   crystalFormationBonus,
   crystalFormationHp,
   crystalFormationName,
+  formationDepthBonus,
 } from '../game/crystalGame';
 import { decayHeat, heatMultiplier } from '../game/heat';
 import { CometReward } from '../game/events';
@@ -150,12 +151,24 @@ export function CrystalMineScreen() {
       <View style={styles.stats}>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>✦ per tap</Text>
-          <Text style={styles.statValue}>{formatNumber(cachedCrystalTapValue)}</Text>
+          <Text style={styles.statValue}>
+            {formatNumber(cachedCrystalTapValue * formationDepthBonus(formationIndex))}
+          </Text>
         </View>
         {cachedCrystalCps > 0 && (
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>✦ per second</Text>
-            <Text style={styles.statValue}>{formatRate(cachedCrystalCps)}</Text>
+            <Text style={styles.statValue}>
+              {formatRate(cachedCrystalCps * formationDepthBonus(formationIndex))}
+            </Text>
+          </View>
+        )}
+        {formationIndex >= 5 && (
+          <View style={styles.statRow}>
+            <Text style={styles.statLabel}>Formation depth bonus</Text>
+            <Text style={[styles.statValue, styles.depthBonus]}>
+              +{Math.round((formationDepthBonus(formationIndex) - 1) * 100)}%
+            </Text>
           </View>
         )}
         <View style={styles.statRow}>
@@ -391,5 +404,8 @@ const styles = StyleSheet.create({
   },
   crystalBalance: {
     color: colors.darkMatter,
+  },
+  depthBonus: {
+    color: colors.accent,
   },
 });

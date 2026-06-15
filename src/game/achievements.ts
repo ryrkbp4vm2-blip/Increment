@@ -105,13 +105,18 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'cx_1k', name: 'Crystal Novice', description: 'Earn 1K crystals all-time', bonusPct: STD, metric: 'totalCrystals', threshold: 1e3 },
   { id: 'cx_1m', name: 'Crystal Magnate', description: 'Earn 1M crystals all-time', bonusPct: STD, metric: 'totalCrystals', threshold: 1e6 },
   { id: 'cx_1b', name: 'Crystal Titan', description: 'Earn 1B crystals all-time', bonusPct: BIG, metric: 'totalCrystals', threshold: 1e9 },
+  { id: 'cx_1t', name: 'Crystal Sovereign', description: 'Earn 1T crystals all-time', bonusPct: BIG, metric: 'totalCrystals', threshold: 1e12 },
   { id: 'r_1', name: 'Harmonic Collapse', description: 'Complete your first Resonance Cascade', bonusPct: STD, metric: 'resonance', threshold: 1 },
   { id: 'r_5', name: 'Crystal Resonator', description: 'Reach Resonance level 5', bonusPct: STD, metric: 'resonance', threshold: 5 },
   { id: 'r_10', name: 'Infinite Frequency', description: 'Reach Resonance level 10', bonusPct: BIG, metric: 'resonance', threshold: 10 },
   { id: 'r_25', name: 'Void Harmonist', description: 'Reach Resonance level 25', bonusPct: BIG, metric: 'resonance', threshold: 25 },
+  { id: 'r_50', name: 'Resonance Ascendant', description: 'Reach Resonance level 50', bonusPct: BIG, metric: 'resonance', threshold: 50 },
+  { id: 'r_100', name: 'Eternal Resonance', description: 'Reach Resonance level 100', bonusPct: BIG, metric: 'resonance', threshold: 100 },
   { id: 'cf_10', name: 'Shard Breaker', description: 'Shatter 10 crystal formations', bonusPct: STD, metric: 'formations', threshold: 10 },
   { id: 'cf_50', name: 'Crystal Crusher', description: 'Shatter 50 crystal formations', bonusPct: STD, metric: 'formations', threshold: 50 },
   { id: 'cf_200', name: 'Lattice Destroyer', description: 'Shatter 200 crystal formations', bonusPct: BIG, metric: 'formations', threshold: 200 },
+  { id: 'cf_500', name: 'Formation Master', description: 'Shatter 500 crystal formations', bonusPct: BIG, metric: 'formations', threshold: 500 },
+  { id: 'cf_1k', name: 'Crystal Annihilator', description: 'Shatter 1,000 crystal formations', bonusPct: BIG, metric: 'formations', threshold: 1000 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<string, AchievementDef> = Object.fromEntries(

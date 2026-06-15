@@ -55,9 +55,25 @@ export function StatsHeader({ onOpenSettings }: Props) {
             <Text style={styles.crystalGlyph}>✦</Text>
             <Text style={[styles.minerals, styles.crystalValue]}>{formatNumber(crystals)}</Text>
           </View>
-          <Text style={[styles.rate, styles.crystalRate]}>
-            {crystalCps > 0 ? `${formatRate(crystalCps)} ✦/s` : 'Tap to mine Crystals'}
-          </Text>
+          <View style={styles.rateRow}>
+            <Text style={[styles.rate, styles.crystalRate, frenzy > 1 && styles.rateFrenzy]}>
+              {crystalCps > 0 ? `${formatRate(crystalCps)} ✦/s` : 'Tap to mine Crystals'}
+            </Text>
+            {frenzy > 1 && (
+              <View style={styles.frenzyTag}>
+                <Text style={styles.crystalGlyph2}>✦</Text>
+                <Text style={styles.frenzyText}>×{frenzyMult} · {frenzySecondsLeft}s</Text>
+              </View>
+            )}
+          </View>
+          {dailyMsg ? (
+            <Text style={styles.dailyMsg}>{dailyMsg}</Text>
+          ) : dailyReady ? (
+            <Pressable style={[styles.dailyPill, styles.crystalDailyPill]} onPress={onClaimDaily}>
+              <Icon name="gift" size={15} color={colors.darkMatter} accent={colors.darkMatter} />
+              <Text style={styles.crystalDailyText}>Daily bonus — claim</Text>
+            </Pressable>
+          ) : null}
         </View>
         {resonance > 0 && (
           <View style={styles.dmBadge}>
@@ -207,11 +223,25 @@ const styles = StyleSheet.create({
     color: colors.darkMatter,
     lineHeight: 30,
   },
+  crystalGlyph2: {
+    fontSize: 14,
+    color: colors.darkMatter,
+    lineHeight: 18,
+  },
   crystalValue: {
     color: colors.darkMatter,
   },
   crystalRate: {
     color: colors.darkMatter,
     marginTop: 2,
+  },
+  crystalDailyPill: {
+    borderColor: colors.darkMatter,
+    backgroundColor: '#C084FC22',
+  },
+  crystalDailyText: {
+    color: colors.darkMatter,
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

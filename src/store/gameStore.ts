@@ -43,6 +43,7 @@ import {
   crystalRunPowers,
   crystalTotalCps,
   crystalUpgradeUnlockMet,
+  formationDepthBonus,
   resonanceGain,
   resonanceMult,
 } from '../game/crystalGame';
@@ -355,10 +356,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   crystalTap() {
     const state = get();
     const now = Date.now();
-    // Drill Heat combo + any active Resonance Surge frenzy, mirroring the mineral tap.
+    // Drill Heat combo + formation depth bonus + any active Resonance Surge frenzy.
     const decayed = decayHeat(state.tapHeat, now - state.lastTapAt);
     const earned =
-      state.cachedCrystalTapValue * frenzyFactor(state, now) * heatMultiplier(decayed);
+      state.cachedCrystalTapValue *
+      formationDepthBonus(state.crystalFormationIndex) *
+      frenzyFactor(state, now) *
+      heatMultiplier(decayed);
     const heat = Math.min(1, decayed + HEAT_PER_TAP);
     const delta = earnCrystals(state, earned);
     set({ ...delta, totalTaps: state.totalTaps + 1, tapHeat: heat, lastTapAt: now });
@@ -415,10 +419,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const deltaMs = Math.min(Math.max(nowMs - state.lastTickAt, 0), MAX_TICK_DELTA_MS);
     if (state.transcendCount > 0) {
-      // Crystal mode: passive generators earn crystals, boosted by any active
-      // Resonant Geode frenzy.
+      // Crystal mode: passive generators earn crystals, boosted by the active
+      // formation depth, any Resonant Geode frenzy, and achievementBonus.
       if (state.cachedCrystalCps > 0) {
-        const earned = state.cachedCrystalCps * (deltaMs / 1000) * frenzyFactor(state, nowMs);
+        const earned =
+          state.cachedCrystalCps *
+          formationDepthBonus(state.crystalFormationIndex) *
+          (deltaMs / 1000) *
+          frenzyFactor(state, nowMs);
         set({ ...earnCrystals(state, earned), lastTickAt: nowMs });
       } else {
         set({ lastTickAt: nowMs });
@@ -904,6 +912,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     if (!dailyAvailable(state.lastDailyAt, nowMs)) return null;
     const streak = dailyStreakAfter(state.lastDailyAt, state.dailyStreak, nowMs);
+    if (state.transcendCount > 0) {
+      // In crystal mode, the daily bonus is an hour of crystal production.
+      const reward = dailyReward(state.cachedCrystalCps, streak);
+      set({ ...earnCrystals(state, reward), lastDailyAt: nowMs, dailyStreak: streak });
+      return { reward, streak };
+    }
     const reward = dailyReward(state.cachedCps, streak);
     set({ ...earn(state, reward), lastDailyAt: nowMs, dailyStreak: streak });
     return { reward, streak };

@@ -567,3 +567,15 @@ export function attunementGain(lifetimeCrystalsRun: number): number {
   return Math.floor(Math.sqrt(lifetimeCrystalsRun / ATTUNEMENT_BASE));
 }
 
+/**
+ * Stacking bonus from how deep you've mined this cascade run. Every 5 formations
+ * shattered since the last Cascade adds +10% to all crystal production and tap,
+ * incentivising extended runs before triggering the next Cascade.
+ *
+ * `formationIndex` is the current crystal formation index (equals formations
+ * shattered since the last Cascade, since it resets to 0 on each Cascade).
+ */
+export function formationDepthBonus(formationIndex: number): number {
+  return 1 + 0.1 * Math.floor(formationIndex / 5);
+}
+
