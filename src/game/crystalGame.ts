@@ -183,3 +183,41 @@ export function applyCrystalFormationDamage(
 
   return { formationIndex: idx, formationDamage: dmg, bonus };
 }
+
+// ── Resonance Cascade — the permanent prestige inside crystal mode ────────────
+//
+// Crystal mode is a self-contained loop: mine crystals, push formation depth,
+// then Resonate to reset your crystal balance, generators and formation
+// progress in exchange for permanent Resonance. Each Resonance level grants a
+// permanent crystal-production multiplier, so every re-climb is faster. The
+// Crystal Matrix (bought with crystals before resonating) is the permanent
+// sink that survives the cascade.
+
+/** Lifetime crystals (this run) required to earn the first Resonance. */
+export const RESONANCE_BASE = 1e5;
+
+/** Permanent crystal-production multiplier granted per Resonance level. */
+export const RESONANCE_BONUS = 1;
+
+/** Resonance levels you'd earn by resonating now (square-root curve). */
+export function pendingResonance(lifetimeCrystalsRun: number): number {
+  if (lifetimeCrystalsRun < RESONANCE_BASE) return 0;
+  return Math.floor(Math.sqrt(lifetimeCrystalsRun / RESONANCE_BASE));
+}
+
+/** Whether a Resonance Cascade is available right now. */
+export function canResonate(lifetimeCrystalsRun: number): boolean {
+  return pendingResonance(lifetimeCrystalsRun) >= 1;
+}
+
+/** Lifetime crystals needed for the next Resonance level. */
+export function nextResonanceAt(lifetimeCrystalsRun: number): number {
+  const next = pendingResonance(lifetimeCrystalsRun) + 1;
+  return next * next * RESONANCE_BASE;
+}
+
+/** Permanent all-crystal-production multiplier from total Resonance. */
+export function resonanceMult(resonance: number): number {
+  return 1 + RESONANCE_BONUS * resonance;
+}
+

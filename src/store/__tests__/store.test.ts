@@ -580,6 +580,55 @@ describe('gameStore', () => {
     expect(useGameStore.getState().transcendCount).toBe(0);
   });
 
+  it('crystalTap mines crystals and tracks lifetime crystals', () => {
+    reset({ transcendCount: 1, crystals: 0, lifetimeCrystals: 0 });
+    const earned = useGameStore.getState().crystalTap();
+    const s = useGameStore.getState();
+    expect(earned).toBeGreaterThan(0);
+    expect(s.crystals).toBe(earned);
+    expect(s.lifetimeCrystals).toBe(earned);
+  });
+
+  it('buyCrystalGenerator spends crystals and raises crystal CPS', () => {
+    reset({ transcendCount: 1, crystals: 1000 });
+    const before = useGameStore.getState().cachedCrystalCps;
+    useGameStore.getState().buyCrystalGenerator('shard', 1);
+    const s = useGameStore.getState();
+    expect(s.crystalGenerators.shard).toBe(1);
+    expect(s.crystals).toBeLessThan(1000);
+    expect(s.cachedCrystalCps).toBeGreaterThan(before);
+  });
+
+  it('doResonate resets the crystal run for permanent Resonance', () => {
+    reset({
+      transcendCount: 1,
+      crystals: 50_000,
+      lifetimeCrystals: 400_000, // pendingResonance = floor(sqrt(4)) = 2
+      crystalGenerators: { shard: 20 },
+      crystalFormationIndex: 5,
+      crystalUpgrades: { crystal_resonance: 1 },
+      resonance: 0,
+    });
+    useGameStore.getState().doResonate();
+    const s = useGameStore.getState();
+    // Gains 2 Resonance levels.
+    expect(s.resonance).toBe(2);
+    // The crystal run resets.
+    expect(s.crystals).toBe(0);
+    expect(s.lifetimeCrystals).toBe(0);
+    expect(s.crystalGenerators).toEqual({});
+    expect(s.crystalFormationIndex).toBe(0);
+    // The Matrix and transcend state survive.
+    expect(s.crystalUpgrades).toEqual({ crystal_resonance: 1 });
+    expect(s.transcendCount).toBe(1);
+  });
+
+  it('doResonate does nothing below the lifetime-crystal gate', () => {
+    reset({ transcendCount: 1, lifetimeCrystals: 100, resonance: 0 });
+    useGameStore.getState().doResonate();
+    expect(useGameStore.getState().resonance).toBe(0);
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();

@@ -17,6 +17,7 @@ export function StatsHeader({ onOpenSettings }: Props) {
   const minerals = useGameStore((s) => s.minerals);
   const crystals = useGameStore((s) => s.crystals);
   const transcendCount = useGameStore((s) => s.transcendCount);
+  const resonance = useGameStore((s) => s.resonance);
   const cps = useGameStore((s) => s.cachedCps);
   const crystalCps = useGameStore((s) => s.cachedCrystalCps);
   const darkMatter = useGameStore((s) => s.darkMatter);
@@ -58,6 +59,15 @@ export function StatsHeader({ onOpenSettings }: Props) {
             {crystalCps > 0 ? `${formatRate(crystalCps)} ✦/s` : 'Tap to mine Crystals'}
           </Text>
         </View>
+        {resonance > 0 && (
+          <View style={styles.dmBadge}>
+            <View style={styles.dmRow}>
+              <Icon name="gem_outline" size={15} color={colors.darkMatter} accent={colors.darkMatter} />
+              <Text style={styles.dmText}>{formatNumber(resonance)}</Text>
+            </View>
+            <Text style={styles.dmBonus}>resonance</Text>
+          </View>
+        )}
       </View>
     );
   }

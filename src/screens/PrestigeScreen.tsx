@@ -44,6 +44,13 @@ import {
   pendingCrystals,
   transcendUnlocked,
 } from '../game/transcend';
+import {
+  RESONANCE_BASE,
+  canResonate,
+  nextResonanceAt,
+  pendingResonance,
+  resonanceMult,
+} from '../game/crystalGame';
 import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -78,6 +85,9 @@ export function PrestigeScreen() {
   const crystalUpgrades = useGameStore((s) => s.crystalUpgrades);
   const doTranscend = useGameStore((s) => s.doTranscend);
   const buyCrystalUpgrade = useGameStore((s) => s.buyCrystalUpgrade);
+  const resonance = useGameStore((s) => s.resonance);
+  const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
+  const doResonate = useGameStore((s) => s.doResonate);
   const [confirming, setConfirming] = useState(false);
   const [confirmingAscend, setConfirmingAscend] = useState(false);
   const [confirmingWarp, setConfirmingWarp] = useState(false);
@@ -102,11 +112,11 @@ export function PrestigeScreen() {
       <CrystalPrestigeScreen
         crystals={crystals}
         totalCrystals={totalCrystals}
-        transcendCount={transcendCount}
-        ascensionsSinceTranscend={ascensionsSinceTranscend}
+        resonance={resonance}
+        lifetimeCrystals={lifetimeCrystals}
         crystalUpgrades={crystalUpgrades}
         buyCrystalUpgrade={buyCrystalUpgrade}
-        doTranscend={doTranscend}
+        doResonate={doResonate}
         confirmingTranscend={confirmingTranscend}
         setConfirmingTranscend={setConfirmingTranscend}
       />
@@ -498,58 +508,67 @@ export function PrestigeScreen() {
 function CrystalPrestigeScreen({
   crystals,
   totalCrystals,
-  transcendCount,
-  ascensionsSinceTranscend,
+  resonance,
+  lifetimeCrystals,
   crystalUpgrades,
   buyCrystalUpgrade,
-  doTranscend,
+  doResonate,
   confirmingTranscend,
   setConfirmingTranscend,
 }: {
   crystals: number;
   totalCrystals: number;
-  transcendCount: number;
-  ascensionsSinceTranscend: number;
+  resonance: number;
+  lifetimeCrystals: number;
   crystalUpgrades: Record<string, number>;
   buyCrystalUpgrade: (id: string) => void;
-  doTranscend: () => void;
+  doResonate: () => void;
   confirmingTranscend: boolean;
   setConfirmingTranscend: (v: boolean) => void;
 }) {
+  const pending = pendingResonance(lifetimeCrystals);
+  const ready = canResonate(lifetimeCrystals);
+  const nextAt = nextResonanceAt(lifetimeCrystals);
+  const progress = Math.min(lifetimeCrystals / RESONANCE_BASE, 1);
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.titleRow}>
         <Icon name="gem_outline" size={22} color={colors.darkMatter} accent={colors.darkMatter} />
-        <Text style={[styles.title, { color: colors.darkMatter }]}>Crystal Realm</Text>
+        <Text style={[styles.title, { color: colors.darkMatter }]}>Resonance Cascade</Text>
       </View>
       <Text style={styles.body}>
-        You have transcended the mineral empire. Mine Crystals, build your Matrix, and Transcend
-        again when you've ascended enough times to grow even stronger.
+        Collapse your crystal harmonics into permanent Resonance — each level multiplies all
+        crystal production forever. Your crystal balance, generators and formation depth reset;
+        the Crystal Matrix stays. Spend your crystals on the Matrix below before you cascade!
       </Text>
 
       <View style={styles.statsCard}>
         <StatRow label="Crystals to spend" value={`${formatNumber(crystals)} ✦`} />
         <StatRow label="Total Crystals earned" value={`${formatNumber(totalCrystals)} ✦`} />
-        <StatRow label="Transcendences" value={formatNumber(transcendCount)} />
+        <StatRow label="Resonance" value={`Lv ${formatNumber(resonance)}`} />
+        <StatRow label="Production bonus" value={`×${formatNumber(resonanceMult(resonance))}`} />
         <StatRow
-          label="Ascensions toward Transcend"
-          value={`${Math.min(ascensionsSinceTranscend, TRANSCEND_ASCENSIONS)} / ${TRANSCEND_ASCENSIONS}`}
+          label={ready ? 'Next Resonance at' : 'First Resonance at'}
+          value={`${formatNumber(nextAt)} ✦ this run`}
         />
       </View>
 
-      {canTranscend(ascensionsSinceTranscend) ? (
+      {ready ? (
         confirmingTranscend ? (
           <View style={styles.confirmBox}>
             <Text style={styles.confirmText}>
-              Transcend for +{crystalGain(ascensionsSinceTranscend, crystalUpgrades)} ✦? Crystal
-              generators reset; the Matrix stays.
+              Cascade for +{formatNumber(pending)} Resonance (×{formatNumber(
+                resonanceMult(resonance + pending),
+              )}{' '}
+              production)? Your crystals and generators reset.
             </Text>
             <View style={styles.confirmButtons}>
               <BigButton
-                label={`Transcend +${crystalGain(ascensionsSinceTranscend, crystalUpgrades)} ✦`}
+                label={`Cascade +${formatNumber(pending)}`}
                 color={colors.darkMatter}
                 onPress={() => {
-                  doTranscend();
+                  doResonate();
                   playSound('prestige');
                   setConfirmingTranscend(false);
                 }}
@@ -565,7 +584,7 @@ function CrystalPrestigeScreen({
           </View>
         ) : (
           <BigButton
-            label={`Transcend for +${crystalGain(ascensionsSinceTranscend, crystalUpgrades)} ✦`}
+            label={`Cascade for +${formatNumber(pending)} Resonance`}
             color={colors.darkMatter}
             onPress={() => setConfirmingTranscend(true)}
           />
@@ -576,22 +595,18 @@ function CrystalPrestigeScreen({
             <View
               style={[
                 styles.progressFill,
-                {
-                  width: `${Math.min(ascensionsSinceTranscend / TRANSCEND_ASCENSIONS, 1) * 100}%`,
-                  backgroundColor: colors.darkMatter,
-                },
+                { width: `${progress * 100}%`, backgroundColor: colors.darkMatter },
               ]}
             />
           </View>
           <Text style={styles.transcendHint}>
-            Ascend {nextTranscendIn(ascensionsSinceTranscend)} more time
-            {nextTranscendIn(ascensionsSinceTranscend) === 1 ? '' : 's'} to Transcend again.
+            Mine {formatNumber(RESONANCE_BASE)} crystals this run to earn your first Resonance.
           </Text>
         </>
       )}
 
       <Text style={styles.perksTitle}>Crystal Matrix</Text>
-      <Text style={styles.perksHint}>Permanent upgrades. Survive every Transcend.</Text>
+      <Text style={styles.perksHint}>Permanent upgrades. Survive every Cascade.</Text>
       {CRYSTAL_UPGRADES.map((def) => {
         const level = crystalUpgrades[def.id] ?? 0;
         const maxed = level >= def.maxLevel;

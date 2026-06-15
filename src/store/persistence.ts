@@ -62,6 +62,8 @@ export function toPersisted(state: GameState): PersistedState {
     crystalGenerators: state.crystalGenerators,
     crystalFormationIndex: state.crystalFormationIndex,
     crystalFormationDamage: state.crystalFormationDamage,
+    resonance: state.resonance,
+    lifetimeCrystals: state.lifetimeCrystals,
   };
 }
 
@@ -295,6 +297,8 @@ export function migrate(raw: string | null): SaveFile | null {
     crystalGenerators,
     crystalFormationIndex: Math.max(0, Math.floor(finiteNumber(raw_.crystalFormationIndex, 0))),
     crystalFormationDamage: Math.max(0, finiteNumber(raw_.crystalFormationDamage, 0)),
+    resonance: Math.max(0, Math.floor(finiteNumber(raw_.resonance, 0))),
+    lifetimeCrystals: Math.max(0, finiteNumber(raw_.lifetimeCrystals, 0)),
   };
   return {
     version: SAVE_VERSION,

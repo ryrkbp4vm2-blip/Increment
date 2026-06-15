@@ -29,10 +29,13 @@ import {
   CRYSTAL_GENS_BY_ID,
   CRYSTAL_TAP_BASE,
   applyCrystalFormationDamage,
+  canResonate,
   crystalGenBulkCost,
   crystalGenCostOfNext,
   crystalGenMaxAffordable,
   crystalTotalCps,
+  pendingResonance,
+  resonanceMult,
 } from '../game/crystalGame';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
@@ -79,6 +82,7 @@ export interface GameActions {
   doAscend(): void;
   doWarp(): void;
   doTranscend(): void;
+  doResonate(): void;
   buySingularityPerk(id: string): void;
   buyCoreUpgrade(id: string): void;
   buyCrystalUpgrade(id: string): void;
@@ -146,6 +150,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     crystalGenerators: {},
     crystalFormationIndex: 0,
     crystalFormationDamage: 0,
+    resonance: 0,
+    lifetimeCrystals: 0,
   };
 }
 
@@ -158,13 +164,14 @@ function withCaches(
 ): Omit<GameState, 'newAchievements' | 'tapHeat' | 'lastTapAt'> {
   const cachedCps = cps(persisted);
   const cPowers = crystalPowers(persisted.crystalUpgrades);
+  const rMult = resonanceMult(persisted.resonance);
   return {
     ...persisted,
     lastTickAt,
     cachedCps,
     cachedTapValue: tapValue(persisted, cachedCps),
-    cachedCrystalCps: crystalTotalCps(persisted.crystalGenerators, cPowers.globalMult),
-    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult,
+    cachedCrystalCps: crystalTotalCps(persisted.crystalGenerators, cPowers.globalMult * rMult),
+    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult,
   };
 }
 
@@ -175,7 +182,12 @@ function withCaches(
  */
 function carryTranscend(state: GameState): Pick<
   PersistedState,
-  'crystals' | 'totalCrystals' | 'transcendCount' | 'ascensionsSinceTranscend' | 'crystalUpgrades'
+  | 'crystals'
+  | 'totalCrystals'
+  | 'transcendCount'
+  | 'ascensionsSinceTranscend'
+  | 'crystalUpgrades'
+  | 'resonance'
 > {
   return {
     crystals: state.crystals,
@@ -183,6 +195,7 @@ function carryTranscend(state: GameState): Pick<
     transcendCount: state.transcendCount,
     ascensionsSinceTranscend: state.ascensionsSinceTranscend,
     crystalUpgrades: state.crystalUpgrades,
+    resonance: state.resonance,
   };
 }
 
@@ -247,6 +260,26 @@ function earn(state: GameState, amount: number): Partial<GameState> {
   return delta;
 }
 
+/**
+ * Credit `amount` crystals, deal matching damage to the current Crystal
+ * Formation, and pay out any shatter bonus. Returns the state delta. Used by
+ * tapping, the passive tick and offline earnings in crystal mode.
+ */
+function earnCrystals(state: GameState, amount: number): Partial<GameState> {
+  const result = applyCrystalFormationDamage(
+    state.crystalFormationIndex,
+    state.crystalFormationDamage,
+    amount,
+  );
+  const total = amount + result.bonus;
+  return {
+    crystals: state.crystals + total,
+    lifetimeCrystals: state.lifetimeCrystals + total,
+    crystalFormationIndex: result.formationIndex,
+    crystalFormationDamage: result.formationDamage,
+  };
+}
+
 // Throttles for automation perks (module-level; not part of saved state).
 let lastAutoBuyAt = 0;
 let lastAutoFleetAt = 0;
@@ -282,18 +315,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   crystalTap() {
     const state = get();
     const earned = state.cachedCrystalTapValue;
-    const result = applyCrystalFormationDamage(
-      state.crystalFormationIndex,
-      state.crystalFormationDamage,
-      earned,
-    );
-    set({
-      crystals: state.crystals + earned + result.bonus,
-      crystalFormationIndex: result.formationIndex,
-      crystalFormationDamage: result.formationDamage,
-      totalTaps: state.totalTaps + 1,
-    });
-    return earned + result.bonus;
+    const delta = earnCrystals(state, earned);
+    set({ ...delta, totalTaps: state.totalTaps + 1 });
+    return (delta.crystals ?? state.crystals) - state.crystals;
   },
 
   buyGenerator(id, qty) {
@@ -340,17 +364,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Crystal mode: passive generators earn crystals.
       if (state.cachedCrystalCps > 0) {
         const earned = state.cachedCrystalCps * (deltaMs / 1000);
-        const result = applyCrystalFormationDamage(
-          state.crystalFormationIndex,
-          state.crystalFormationDamage,
-          earned,
-        );
-        set({
-          crystals: state.crystals + earned + result.bonus,
-          crystalFormationIndex: result.formationIndex,
-          crystalFormationDamage: result.formationDamage,
-          lastTickAt: nowMs,
-        });
+        set({ ...earnCrystals(state, earned), lastTickAt: nowMs });
       } else {
         set({ lastTickAt: nowMs });
       }
@@ -363,17 +377,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   applyOffline(earned, nowMs) {
     const state = get();
     if (state.transcendCount > 0) {
-      const result = applyCrystalFormationDamage(
-        state.crystalFormationIndex,
-        state.crystalFormationDamage,
-        earned,
-      );
-      set({
-        crystals: state.crystals + earned + result.bonus,
-        crystalFormationIndex: result.formationIndex,
-        crystalFormationDamage: result.formationDamage,
-        lastTickAt: nowMs,
-      });
+      set({ ...earnCrystals(state, earned), lastTickAt: nowMs });
     } else {
       set({ ...earn(state, earned), lastTickAt: nowMs });
     }
@@ -657,6 +661,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
     );
   },
 
+  doResonate() {
+    const state = get();
+    if (!canResonate(state.lifetimeCrystals)) return;
+    const gained = pendingResonance(state.lifetimeCrystals);
+    if (gained < 1) return;
+    set(
+      withCaches(
+        {
+          ...initialPersistedState(Date.now()),
+          // Resonance Cascade — the in-crystal prestige. Reset the crystal run
+          // (balance, generators, formation depth) for permanent Resonance,
+          // which multiplies all crystal production. The Matrix and records stay.
+          transcendCount: state.transcendCount,
+          ascensionCount: state.ascensionCount,
+          crystalUpgrades: state.crystalUpgrades,
+          resonance: state.resonance + gained,
+          totalCrystals: state.totalCrystals,
+          crystals: 0,
+          lifetimeCrystals: 0,
+          crystalGenerators: {},
+          crystalFormationIndex: 0,
+          crystalFormationDamage: 0,
+          lifetimeAllTime: state.lifetimeAllTime,
+          totalTaps: state.totalTaps,
+          achievements: state.achievements,
+          asteroidsShattered: state.asteroidsShattered,
+          cometsCaught: state.cometsCaught,
+          expeditionsCompleted: state.expeditionsCompleted,
+          lastDailyAt: state.lastDailyAt,
+          dailyStreak: state.dailyStreak,
+        },
+        state.lastTickAt,
+      ),
+    );
+  },
+
   buySingularityPerk(id) {
     const state = get();
     const def = SINGULARITY_PERKS_BY_ID[id];
@@ -796,10 +836,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
           lifetimeAllTime: 1e15,
           totalTaps: 5000,
           ascensionCount: 6,
-          // Crystal mode: already transcended once, plenty of crystals to spend.
+          // Crystal mode: already transcended once, plenty of crystals to spend
+          // and enough lifetime crystals this run to try a Resonance Cascade.
           transcendCount: 1,
-          crystals: 500,
-          totalCrystals: 500,
+          crystals: 200_000,
+          totalCrystals: 200_000,
+          lifetimeCrystals: 200_000,
           // A few generators pre-seeded so there's CPS from the start.
           crystalGenerators: { shard: 10, prism: 3 },
         },

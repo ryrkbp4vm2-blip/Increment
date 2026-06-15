@@ -109,12 +109,16 @@ export interface PersistedState {
   ascensionsSinceTranscend: number;
   /** Leveled Crystal Matrix upgrades bought with Crystals (survive everything). */
   crystalUpgrades: Record<string, number>;
-  /** Crystal Game: auto-generators bought with Crystals (reset each Transcend). */
+  /** Crystal Game: auto-generators bought with Crystals (reset each Resonance). */
   crystalGenerators: Record<string, number>;
-  /** Crystal Game: which formation we're cracking (resets each Transcend). */
+  /** Crystal Game: which formation we're cracking (resets each Resonance). */
   crystalFormationIndex: number;
-  /** Crystal Game: damage dealt to the current formation (resets each Transcend). */
+  /** Crystal Game: damage dealt to the current formation (resets each Resonance). */
   crystalFormationDamage: number;
+  /** Resonance Cascade: permanent levels (permanent crystal-production multiplier). */
+  resonance: number;
+  /** Crystals earned in the current crystal run (resets each Resonance). */
+  lifetimeCrystals: number;
 }
 
 export interface GameState extends PersistedState {
