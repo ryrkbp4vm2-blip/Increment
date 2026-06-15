@@ -13,6 +13,7 @@ import {
   crystalUpgradeUnlockMet,
   nextResonanceAt,
   pendingResonance,
+  resonanceGain,
   resonanceMult,
 } from '../crystalGame';
 
@@ -85,6 +86,14 @@ describe('resonance', () => {
   it('multiplies production by +100% per level', () => {
     expect(resonanceMult(0)).toBe(1);
     expect(resonanceMult(3)).toBe(4);
+  });
+
+  it('applies the Crystal Lattice yield bonus to the gain (not the gate)', () => {
+    // raw pending at 4× base = 2; Lattice 2 levels -> ×1.5 -> 3
+    expect(resonanceGain(4 * RESONANCE_BASE, {})).toBe(2);
+    expect(resonanceGain(4 * RESONANCE_BASE, { crystal_lattice: 2 })).toBe(3);
+    // below the gate, no Lattice can grant Resonance
+    expect(resonanceGain(RESONANCE_BASE - 1, { crystal_lattice: 9 })).toBe(0);
   });
 });
 

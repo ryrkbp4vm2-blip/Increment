@@ -19,6 +19,15 @@ import { pendingDarkMatter } from '../src/game/prestige';
 import { pendingSingularityCores } from '../src/game/ascension';
 import { canWarp, sectorName } from '../src/game/zones';
 import { CRYSTAL_UPGRADES, canTranscend, crystalUpgradeCost } from '../src/game/transcend';
+import {
+  CRYSTAL_GENS,
+  CRYSTAL_GEN_UPGRADES,
+  canResonate,
+  crystalGenCostOfNext,
+  crystalRunPowers,
+  crystalUpgradeUnlockMet,
+  resonanceGain,
+} from '../src/game/crystalGame';
 import { DM_UPGRADES, darkMatterUpgradeCost } from '../src/game/darkmatter';
 import { RESEARCH_NODES, isResearchUnlocked } from '../src/game/research';
 import { UPGRADES } from '../src/game/balance';
@@ -32,10 +41,11 @@ const TAPS_PER_SEC = envNum('TAPS_PER_SEC', 4); // active-player tap rate
 const MAX_STEP_SECONDS = 60 * 60 * 6; // cap on a single analytic time-skip
 const SIM_CAP_YEARS = envNum('SIM_CAP_YEARS', 50); // stop after this much game time
 const STOP_AT_ASCENSIONS = envNum('STOP_AT_ASCENSIONS', 30); // ...or this many ascensions
-const STOP_AT_TRANSCEND = envNum('STOP_AT_TRANSCEND', 2); // ...or this many transcends
-// Prestige/ascend when the pending gain both clears 1 and grows the bank ≥this.
+const STOP_AT_RESONANCE = envNum('STOP_AT_RESONANCE', 4); // ...or this much crystal-mode Resonance
+// Prestige/ascend/resonate when pending gain clears 1 and grows the bank ≥this.
 const PRESTIGE_GROWTH = envNum('PRESTIGE_GROWTH', 0.5);
 const ASCEND_GROWTH = envNum('ASCEND_GROWTH', 0.5);
+const RESONANCE_GROWTH = envNum('RESONANCE_GROWTH', 0.5);
 
 const out = (s = '') => process.stdout.write(s + '\n');
 
@@ -70,6 +80,7 @@ function runSimulation(tapsPerSec: number): Event[] {
   };
   const LIFETIME_MARKS = [1e3, 1e6, 1e9, 1e12, 1e15, 1e18, 1e21, 1e24];
   const BELT_MARKS = [1, 4, 9, 19, 49, 99];
+  const CRYSTAL_MARKS = [10, 1e3, 1e5, 1e7, 1e9, 1e12];
 
   const checkMilestones = () => {
     const s = get();
@@ -87,6 +98,14 @@ function runSimulation(tapsPerSec: number): Event[] {
     for (const n of [1, 2, 3]) if (s.sector >= n) record(`Warp to ${sectorName(n)} (sector ${n})`);
     for (const n of [1, 2, 3]) if (s.transcendCount >= n) record(`Transcend #${n}`);
     if (Object.keys(s.research).length >= RESEARCH_NODES.length) record('All research complete');
+    // Crystal-mode milestones (after the first Transcend).
+    for (const g of CRYSTAL_GENS) {
+      if ((s.crystalGenerators[g.id] ?? 0) > 0) record(`Unlock ${g.name}`);
+    }
+    for (const mark of CRYSTAL_MARKS) {
+      if (s.totalCrystals >= mark) record(`Earn ${formatNumber(mark)} crystals (all-time)`);
+    }
+    for (const n of [1, 2, 3, 5, 10]) if (s.resonance >= n) record(`Resonance #${n}`);
   };
 
   const effectiveRate = (): number => {
@@ -228,22 +247,107 @@ function runSimulation(tapsPerSec: number): Event[] {
     return true;
   };
 
+  // ── Crystal-mode phase (after the first Transcend) ──────────────────────────
+  // Crystal mode is a self-contained loop: buy Forge upgrades + crystal
+  // generators, then Resonance-Cascade for a permanent production multiplier.
+
+  const crystalTaps = (): number => {
+    const s = get();
+    const total = CRYSTAL_GENS.reduce((n, g) => n + (s.crystalGenerators[g.id] ?? 0), 0);
+    return total === 0 ? Math.max(tapsPerSec, 2) : tapsPerSec;
+  };
+
+  const crystalBuyPhase = () => {
+    for (let guard = 0; guard < 5000; guard++) {
+      let bought = false;
+      // Forge run upgrades (cheap, high value — always worth it).
+      for (const u of CRYSTAL_GEN_UPGRADES) {
+        const cur = get();
+        if (!cur.crystalRunUpgrades[u.id] && crystalUpgradeUnlockMet(u, cur) && cur.crystals >= u.cost) {
+          get().buyCrystalRunUpgrade(u.id);
+          bought = true;
+        }
+      }
+      // Best-payback affordable generator (payback = cost / boosted marginal prod).
+      const cur = get();
+      const genMult = crystalRunPowers(cur.crystalRunUpgrades).genMult;
+      let best: { id: string; payback: number } | null = null;
+      for (const g of CRYSTAL_GENS) {
+        const owned = cur.crystalGenerators[g.id] ?? 0;
+        const cost = crystalGenCostOfNext(g, owned);
+        if (cost > cur.crystals) continue;
+        const marginal = g.baseProd * (genMult[g.id] ?? 1);
+        const payback = marginal > 0 ? cost / marginal : Infinity;
+        if (!best || payback < best.payback) best = { id: g.id, payback };
+      }
+      if (best) {
+        get().buyCrystalGenerator(best.id, 1);
+        bought = true;
+      }
+      if (!bought) break;
+    }
+  };
+
+  const nextCrystalTarget = (): number => {
+    const s = get();
+    let min = Infinity;
+    for (const g of CRYSTAL_GENS) min = Math.min(min, crystalGenCostOfNext(g, s.crystalGenerators[g.id] ?? 0));
+    for (const u of CRYSTAL_GEN_UPGRADES) {
+      if (!s.crystalRunUpgrades[u.id] && crystalUpgradeUnlockMet(u, s)) min = Math.min(min, u.cost);
+    }
+    return min;
+  };
+
+  const maybeResonate = () => {
+    const s = get();
+    if (!canResonate(s.lifetimeCrystals)) return false;
+    const pending = resonanceGain(s.lifetimeCrystals, s.crystalUpgrades);
+    if (pending < 1) return false;
+    if (s.resonance > 0 && pending < RESONANCE_GROWTH * s.resonance) return false;
+    spendCrystals(); // dump remaining crystals into the permanent Matrix first
+    get().doResonate();
+    return true;
+  };
+
+  const crystalAdvance = (targetCost: number) => {
+    const s = get();
+    const rate = s.cachedCrystalCps + s.cachedCrystalTapValue * crystalTaps();
+    if (rate <= 0) return false;
+    const need = targetCost - s.crystals;
+    let dt = need > 0 ? need / rate : MAX_STEP_SECONDS;
+    if (!isFinite(dt) || dt <= 0) dt = MAX_STEP_SECONDS;
+    dt = Math.min(Math.max(dt, 0.001), MAX_STEP_SECONDS);
+    simMs += dt * 1000;
+    get().applyOffline(rate * dt, simMs); // crystal mode → earns crystals
+    return true;
+  };
+
   const capMs = SIM_CAP_YEARS * 31_536_000 * 1000;
+  const stop = () =>
+    get().resonance >= STOP_AT_RESONANCE ||
+    get().ascensionCount >= STOP_AT_ASCENSIONS ||
+    simMs >= capMs;
+
   checkMilestones();
   for (let iter = 0; iter < 5_000_000; iter++) {
-    buyPhase();
-    while (maybePrestige()) buyPhase();
-    if (maybeAscend()) buyPhase();
-    if (maybeWarp()) buyPhase();
-    if (maybeTranscend()) buyPhase();
-    checkMilestones();
-    if (
-      get().transcendCount >= STOP_AT_TRANSCEND ||
-      get().ascensionCount >= STOP_AT_ASCENSIONS ||
-      simMs >= capMs
-    )
-      break;
-    if (!advance(nextMineralTarget())) break;
+    if (get().transcendCount === 0) {
+      // Mineral phase: climb prestige → ascension → sectors → first Transcend.
+      buyPhase();
+      while (maybePrestige()) buyPhase();
+      if (maybeAscend()) buyPhase();
+      if (maybeWarp()) buyPhase();
+      if (maybeTranscend()) buyPhase();
+      checkMilestones();
+      if (stop()) break;
+      if (!advance(nextMineralTarget())) break;
+    } else {
+      // Crystal phase: mine crystals, build the Forge, Resonance-Cascade.
+      crystalBuyPhase();
+      if (maybeResonate()) crystalBuyPhase();
+      checkMilestones();
+      if (stop()) break;
+      if (!crystalAdvance(nextCrystalTarget())) break;
+    }
     checkMilestones();
   }
   return events;
@@ -291,14 +395,18 @@ function printReport(events: Event[], title: string) {
   const a5 = find(/Ascension #5/);
   const w1 = find(/Warp to .*sector 1/);
   const t1 = find(/Transcend #1/);
-  const t2 = find(/Transcend #2/);
-  out(`  First prestige:   ${p1 ? fmtDur(p1.t) : '—'}`);
-  out(`  First ascension:  ${a1 ? fmtDur(a1.t) : '—'}`);
-  out(`  Fifth ascension:  ${a5 ? fmtDur(a5.t) : '—'}`);
-  out(`  First warp:        ${w1 ? fmtDur(w1.t) : '—'}`);
-  out(`  First transcend:  ${t1 ? fmtDur(t1.t) : '—'}`);
-  out(`  Second transcend: ${t2 ? fmtDur(t2.t) : '—'}`);
-  out(`  Total simulated:  ${fmtDur(events.length ? events[events.length - 1].t : 0)}`);
+  const r1 = find(/Resonance #1/);
+  const r2 = find(/Resonance #2/);
+  const r3 = find(/Resonance #3/);
+  out(`  First prestige:    ${p1 ? fmtDur(p1.t) : '—'}`);
+  out(`  First ascension:   ${a1 ? fmtDur(a1.t) : '—'}`);
+  out(`  Fifth ascension:   ${a5 ? fmtDur(a5.t) : '—'}`);
+  out(`  First warp:         ${w1 ? fmtDur(w1.t) : '—'}`);
+  out(`  First transcend:   ${t1 ? fmtDur(t1.t) : '—'}`);
+  out(`  First resonance:   ${r1 ? fmtDur(r1.t) : '—'}  (${r1 && t1 ? '+' + fmtDur(r1.t - t1.t) + ' in crystal mode' : '—'})`);
+  out(`  Second resonance:  ${r2 ? fmtDur(r2.t) : '—'}`);
+  out(`  Third resonance:   ${r3 ? fmtDur(r3.t) : '—'}`);
+  out(`  Total simulated:   ${fmtDur(events.length ? events[events.length - 1].t : 0)}`);
   out('');
 }
 
@@ -314,7 +422,8 @@ function printComparison(active: Event[], idle: Event[]) {
     ['Fifth ascension', /Ascension #5/],
     ['First warp', /Warp to .*sector 1/],
     ['First transcend', /Transcend #1/],
-    ['Second transcend', /Transcend #2/],
+    ['First resonance', /Resonance #1/],
+    ['Third resonance', /Resonance #3/],
     ['Total simulated', /.*/],
   ];
   out('');

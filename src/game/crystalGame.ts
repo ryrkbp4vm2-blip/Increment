@@ -6,6 +6,7 @@
  * deals damage and shatters it for a bonus. The Crystal Matrix (in
  * transcend.ts) provides permanent upgrades bought with the same Crystals.
  */
+import { crystalYieldMult } from './transcend';
 
 export interface CrystalGenDef {
   id: string;
@@ -407,5 +408,17 @@ export function nextResonanceAt(lifetimeCrystalsRun: number): number {
 /** Permanent all-crystal-production multiplier from total Resonance. */
 export function resonanceMult(resonance: number): number {
   return 1 + RESONANCE_BONUS * resonance;
+}
+
+/**
+ * Resonance levels actually granted by a Cascade now, after the Crystal
+ * Lattice yield bonus from the Matrix. The raw gate (canResonate) is unaffected
+ * — the Lattice only increases the payout.
+ */
+export function resonanceGain(
+  lifetimeCrystalsRun: number,
+  crystalUpgrades: Record<string, number>,
+): number {
+  return Math.floor(pendingResonance(lifetimeCrystalsRun) * crystalYieldMult(crystalUpgrades));
 }
 

@@ -48,7 +48,7 @@ import {
   RESONANCE_BASE,
   canResonate,
   nextResonanceAt,
-  pendingResonance,
+  resonanceGain,
   resonanceMult,
 } from '../game/crystalGame';
 import { playSound } from '../audio/sound';
@@ -526,7 +526,7 @@ function CrystalPrestigeScreen({
   confirmingTranscend: boolean;
   setConfirmingTranscend: (v: boolean) => void;
 }) {
-  const pending = pendingResonance(lifetimeCrystals);
+  const pending = resonanceGain(lifetimeCrystals, crystalUpgrades);
   const ready = canResonate(lifetimeCrystals);
   const nextAt = nextResonanceAt(lifetimeCrystals);
   const progress = Math.min(lifetimeCrystals / RESONANCE_BASE, 1);

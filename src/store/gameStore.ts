@@ -37,7 +37,7 @@ import {
   crystalRunPowers,
   crystalTotalCps,
   crystalUpgradeUnlockMet,
-  pendingResonance,
+  resonanceGain,
   resonanceMult,
 } from '../game/crystalGame';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
@@ -285,6 +285,7 @@ function earnCrystals(state: GameState, amount: number): Partial<GameState> {
   return {
     crystals: state.crystals + total,
     lifetimeCrystals: state.lifetimeCrystals + total,
+    totalCrystals: state.totalCrystals + total,
     crystalFormationIndex: result.formationIndex,
     crystalFormationDamage: result.formationDamage,
   };
@@ -683,7 +684,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   doResonate() {
     const state = get();
     if (!canResonate(state.lifetimeCrystals)) return;
-    const gained = pendingResonance(state.lifetimeCrystals);
+    const gained = resonanceGain(state.lifetimeCrystals, state.crystalUpgrades);
     if (gained < 1) return;
     set(
       withCaches(

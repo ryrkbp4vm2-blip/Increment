@@ -76,7 +76,7 @@ export const CRYSTAL_UPGRADES: CrystalUpgradeDef[] = [
   {
     id: 'crystal_lattice',
     name: 'Crystal Lattice',
-    perLevel: '+25% Crystals from each Transcend',
+    perLevel: '+25% Resonance gained per Cascade',
     baseCost: 1,
     maxLevel: 50,
     kind: 'yield',
@@ -143,6 +143,6 @@ export function crystalPowers(levels: Record<string, number>): CrystalPowers {
 
 export function crystalTotalEffect(def: CrystalUpgradeDef, level: number): string {
   const pctTotal = Math.round(def.pct * level * 100);
-  if (def.kind === 'yield') return `+${pctTotal}% Crystals`;
+  if (def.kind === 'yield') return `+${pctTotal}% Resonance`;
   return `+${pctTotal}% ${def.kind === 'global' ? 'production' : 'tap'}`;
 }
