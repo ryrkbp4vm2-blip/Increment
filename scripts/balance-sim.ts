@@ -208,6 +208,7 @@ function runSimulation(tapsPerSec: number): Event[] {
       const s = get();
       let cheapest: { id: string; cost: number } | null = null;
       for (const def of CRYSTAL_UPGRADES) {
+        if (def.unlockResonance !== undefined && s.resonance < def.unlockResonance) continue;
         const lvl = s.crystalUpgrades[def.id] ?? 0;
         if (lvl >= def.maxLevel) continue;
         const cost = crystalUpgradeCost(def, lvl);

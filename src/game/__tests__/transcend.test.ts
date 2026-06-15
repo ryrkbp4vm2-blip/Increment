@@ -3,13 +3,16 @@ import {
   CRYSTAL_UPGRADES_BY_ID,
   TRANSCEND_ASCENSIONS,
   canTranscend,
+  crystalFormationBonusMult,
   crystalGain,
   crystalMult,
   crystalPowers,
+  crystalTotalEffect,
   crystalUpgradeCost,
   crystalYieldMult,
   nextTranscendIn,
   pendingCrystals,
+  resonancePowerMult,
   transcendUnlocked,
 } from '../transcend';
 
@@ -69,5 +72,38 @@ describe('crystal matrix upgrades', () => {
     const p = crystalPowers({ crystal_resonance: 2, crystal_clarity: 1, crystal_lattice: 5 });
     expect(p.globalMult).toBeCloseTo(1 + 1 * 2); // +100%/level
     expect(p.tapMult).toBeCloseTo(1 + 1.5 * 1); // +150%/level
+  });
+
+  it('Singularity Core (deep global) stacks multiplicatively', () => {
+    // crystal_singularity is +200%/level, multiplicative with other globals.
+    const p = crystalPowers({ crystal_resonance: 1, crystal_singularity: 1 });
+    expect(p.globalMult).toBeCloseTo((1 + 1) * (1 + 2));
+  });
+});
+
+describe('deep-tier Matrix upgrades', () => {
+  it('Resonance Amplifier raises the per-level Resonance bonus by 20%/level', () => {
+    expect(resonancePowerMult({})).toBe(1);
+    expect(resonancePowerMult({ crystal_amplifier: 3 })).toBeCloseTo(1.6);
+  });
+
+  it('Fracture Engine adds to the formation shatter bonus alongside Crystal Prism', () => {
+    // crystal_prism +50%/level, crystal_fracture +100%/level.
+    expect(crystalFormationBonusMult({ crystal_prism: 2, crystal_fracture: 1 })).toBeCloseTo(
+      1 + 0.5 * 2 + 1 * 1,
+    );
+  });
+
+  it('describes the resonancePower effect', () => {
+    const def = CRYSTAL_UPGRADES_BY_ID.crystal_amplifier;
+    expect(crystalTotalEffect(def, 2)).toBe('+40% Resonance power');
+  });
+
+  it('gates the deep tier behind Resonance milestones', () => {
+    expect(CRYSTAL_UPGRADES_BY_ID.crystal_amplifier.unlockResonance).toBe(3);
+    expect(CRYSTAL_UPGRADES_BY_ID.crystal_fracture.unlockResonance).toBe(5);
+    expect(CRYSTAL_UPGRADES_BY_ID.crystal_singularity.unlockResonance).toBe(8);
+    // The starter tier has no gate.
+    expect(CRYSTAL_UPGRADES_BY_ID.crystal_lattice.unlockResonance).toBeUndefined();
   });
 });

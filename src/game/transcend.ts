@@ -67,10 +67,12 @@ export interface CrystalUpgradeDef {
   /** Cost of the next level is baseCost * (currentLevel + 1), in Attunement. */
   baseCost: number;
   maxLevel: number;
-  kind: 'yield' | 'global' | 'tap' | 'formation';
+  kind: 'yield' | 'global' | 'tap' | 'formation' | 'resonancePower';
   pct: number;
   /** IconName from the art layer (kept as string to stay React-free). */
   icon: string;
+  /** Deep-tier gate: hidden/locked until Resonance reaches this level. */
+  unlockResonance?: number;
 }
 
 export const CRYSTAL_UPGRADES: CrystalUpgradeDef[] = [
@@ -124,6 +126,40 @@ export const CRYSTAL_UPGRADES: CrystalUpgradeDef[] = [
     pct: 0.5,
     icon: 'quantum_reserves',
   },
+  // ── Deep tier — unlocked by reaching Resonance milestones ──────────────────
+  {
+    id: 'crystal_amplifier',
+    name: 'Resonance Amplifier',
+    perLevel: '+20% to the production bonus from each Resonance level',
+    baseCost: 5,
+    maxLevel: 20,
+    kind: 'resonancePower',
+    pct: 0.2,
+    icon: 'belt_resonance',
+    unlockResonance: 3,
+  },
+  {
+    id: 'crystal_fracture',
+    name: 'Fracture Engine',
+    perLevel: '+100% bonus crystals per formation shatter',
+    baseCost: 6,
+    maxLevel: 20,
+    kind: 'formation',
+    pct: 1,
+    icon: 'shard',
+    unlockResonance: 5,
+  },
+  {
+    id: 'crystal_singularity',
+    name: 'Singularity Core',
+    perLevel: '+200% all crystal production (survives Transcend)',
+    baseCost: 8,
+    maxLevel: 25,
+    kind: 'global',
+    pct: 2,
+    icon: 'temporal_vault',
+    unlockResonance: 8,
+  },
 ];
 
 export const CRYSTAL_UPGRADES_BY_ID: Record<string, CrystalUpgradeDef> = Object.fromEntries(
@@ -154,6 +190,20 @@ export function crystalFormationBonusMult(levels: Record<string, number>): numbe
   return mult;
 }
 
+/**
+ * Multiplier applied to the per-Resonance-level production bonus, from the
+ * Resonance Amplifier. Pass `RESONANCE_BONUS × this` to resonanceMult so each
+ * Resonance level is worth proportionally more.
+ */
+export function resonancePowerMult(levels: Record<string, number>): number {
+  let mult = 1;
+  for (const def of CRYSTAL_UPGRADES) {
+    if (def.kind !== 'resonancePower') continue;
+    mult += def.pct * (levels[def.id] ?? 0);
+  }
+  return mult;
+}
+
 export interface CrystalPowers {
   globalMult: number;
   tapMult: number;
@@ -176,5 +226,6 @@ export function crystalTotalEffect(def: CrystalUpgradeDef, level: number): strin
   const pctTotal = Math.round(def.pct * level * 100);
   if (def.kind === 'yield') return `+${pctTotal}% Resonance`;
   if (def.kind === 'formation') return `+${pctTotal}% shatter bonus`;
+  if (def.kind === 'resonancePower') return `+${pctTotal}% Resonance power`;
   return `+${pctTotal}% ${def.kind === 'global' ? 'production' : 'tap'}`;
 }

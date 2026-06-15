@@ -42,10 +42,12 @@ import {
   crystalUpgradeCost,
   nextTranscendIn,
   pendingCrystals,
+  resonancePowerMult,
   transcendUnlocked,
 } from '../game/transcend';
 import {
   RESONANCE_BASE,
+  RESONANCE_BONUS,
   attunementGain,
   canResonate,
   nextResonanceAt,
@@ -544,6 +546,8 @@ function CrystalPrestigeScreen({
   const ready = canResonate(lifetimeCrystals, resonance);
   const nextAt = nextResonanceAt(resonance);
   const progress = Math.min(lifetimeCrystals / nextAt, 1);
+  // Per-Resonance-level production bonus, raised by the Resonance Amplifier.
+  const perLevelBonus = RESONANCE_BONUS * resonancePowerMult(crystalUpgrades);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -561,7 +565,7 @@ function CrystalPrestigeScreen({
       <View style={styles.statsCard}>
         <StatRow label="Attunement to spend" value={`${formatNumber(attunement)} ◈`} />
         <StatRow label="Resonance" value={`Lv ${formatNumber(resonance)}`} />
-        <StatRow label="Production bonus" value={`×${formatNumber(resonanceMult(resonance))}`} />
+        <StatRow label="Production bonus" value={`×${formatNumber(resonanceMult(resonance, perLevelBonus))}`} />
         <StatRow label="Crystals this run" value={`${formatNumber(crystals)} ✦`} />
         <StatRow label="Total Crystals earned" value={`${formatNumber(totalCrystals)} ✦`} />
         <StatRow
@@ -575,7 +579,7 @@ function CrystalPrestigeScreen({
           <View style={styles.confirmBox}>
             <Text style={styles.confirmText}>
               Cascade for +{formatNumber(pending)} Resonance (×{formatNumber(
-                resonanceMult(resonance + pending),
+                resonanceMult(resonance + pending, perLevelBonus),
               )}{' '}
               production) and +{formatNumber(pendingAttune)} ◈ Attunement? Your crystals and
               generators reset.
@@ -639,36 +643,49 @@ function CrystalPrestigeScreen({
       <Text style={styles.perksTitle}>Crystal Matrix</Text>
       <Text style={styles.perksHint}>Permanent upgrades bought with Attunement (◈). Survive every Cascade.</Text>
       {CRYSTAL_UPGRADES.map((def) => {
+        const locked = def.unlockResonance !== undefined && resonance < def.unlockResonance;
         const level = crystalUpgrades[def.id] ?? 0;
         const maxed = level >= def.maxLevel;
         const cost = crystalUpgradeCost(def, level);
-        const affordable = !maxed && attunement >= cost;
+        const affordable = !locked && !maxed && attunement >= cost;
         return (
-          <View key={def.id} style={styles.dmRow}>
+          <View key={def.id} style={[styles.dmRow, locked && styles.dmRowLocked]}>
             <View style={styles.dmIconBox}>
-              <Icon name={def.icon as IconName} size={26} color={colors.darkMatter} accent={colors.darkMatter} />
+              <Icon
+                name={(locked ? 'lock' : def.icon) as IconName}
+                size={26}
+                color={colors.darkMatter}
+                accent={colors.darkMatter}
+              />
             </View>
             <View style={styles.dmInfo}>
               <Text style={styles.dmName}>
-                {def.name} <Text style={styles.dmLevel}>Lv {level}/{def.maxLevel}</Text>
+                {def.name}{' '}
+                {!locked && <Text style={styles.dmLevel}>Lv {level}/{def.maxLevel}</Text>}
               </Text>
               <Text style={styles.dmDesc}>{def.perLevel}</Text>
-              {level > 0 && <Text style={styles.dmCurrent}>Now: {crystalTotalEffect(def, level)}</Text>}
-            </View>
-            <Pressable
-              onPress={() => {
-                buyCrystalUpgrade(def.id);
-                playSound('buy');
-              }}
-              disabled={!affordable}
-              style={[styles.dmBuy, maxed && styles.dmMaxed, !affordable && !maxed && styles.dmBuyDisabled]}
-            >
-              {maxed ? (
-                <Text style={styles.dmMaxedText}>MAX</Text>
+              {locked ? (
+                <Text style={styles.dmLocked}>Unlocks at Resonance {def.unlockResonance}</Text>
               ) : (
-                <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ◈</Text>
+                level > 0 && <Text style={styles.dmCurrent}>Now: {crystalTotalEffect(def, level)}</Text>
               )}
-            </Pressable>
+            </View>
+            {!locked && (
+              <Pressable
+                onPress={() => {
+                  buyCrystalUpgrade(def.id);
+                  playSound('buy');
+                }}
+                disabled={!affordable}
+                style={[styles.dmBuy, maxed && styles.dmMaxed, !affordable && !maxed && styles.dmBuyDisabled]}
+              >
+                {maxed ? (
+                  <Text style={styles.dmMaxedText}>MAX</Text>
+                ) : (
+                  <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ◈</Text>
+                )}
+              </Pressable>
+            )}
           </View>
         );
       })}
@@ -951,6 +968,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing.md,
     marginBottom: spacing.sm,
+  },
+  dmRowLocked: {
+    opacity: 0.55,
+    borderStyle: 'dashed',
+  },
+  dmLocked: {
+    color: colors.darkMatter,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
   },
   dmIconBox: {
     width: 34,

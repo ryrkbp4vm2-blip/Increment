@@ -471,9 +471,13 @@ export function nextResonanceAt(currentResonance: number): number {
   return next * next * RESONANCE_BASE;
 }
 
-/** Permanent all-crystal-production multiplier from total Resonance. */
-export function resonanceMult(resonance: number): number {
-  return 1 + RESONANCE_BONUS * resonance;
+/**
+ * Permanent all-crystal-production multiplier from total Resonance. The
+ * per-level bonus defaults to RESONANCE_BONUS but can be raised by the Resonance
+ * Amplifier Matrix upgrade (passed in by callers via resonancePowerMult).
+ */
+export function resonanceMult(resonance: number, perLevelBonus: number = RESONANCE_BONUS): number {
+  return 1 + perLevelBonus * resonance;
 }
 
 /**

@@ -666,6 +666,33 @@ describe('gameStore', () => {
     expect(useGameStore.getState().crystalUpgrades.crystal_resonance).toBeUndefined();
   });
 
+  it('buyCrystalUpgrade gates deep-tier upgrades behind Resonance', () => {
+    // crystal_amplifier unlocks at Resonance 3.
+    reset({ transcendCount: 1, attunement: 100, resonance: 2, crystalUpgrades: {} });
+    useGameStore.getState().buyCrystalUpgrade('crystal_amplifier');
+    expect(useGameStore.getState().crystalUpgrades.crystal_amplifier).toBeUndefined();
+    // At Resonance 3 it becomes buyable.
+    reset({ transcendCount: 1, attunement: 100, resonance: 3, crystalUpgrades: {} });
+    useGameStore.getState().buyCrystalUpgrade('crystal_amplifier');
+    expect(useGameStore.getState().crystalUpgrades.crystal_amplifier).toBe(1);
+  });
+
+  it('Resonance Amplifier raises the per-level production bonus in caches', () => {
+    reset({ transcendCount: 1, resonance: 2, crystalGenerators: { shard: 100 }, crystalUpgrades: {} });
+    const before = useGameStore.getState().cachedCrystalCps;
+    // +20%/level to the per-level bonus: at resonance 2, base mult ×3 → ×3.8.
+    reset({
+      transcendCount: 1,
+      resonance: 2,
+      crystalGenerators: { shard: 100 },
+      crystalUpgrades: { crystal_amplifier: 2 },
+    });
+    const after = useGameStore.getState().cachedCrystalCps;
+    expect(after).toBeGreaterThan(before);
+    // mult goes from (1+1*2)=3 to (1 + 1*1.4*2)=3.8 → ratio 3.8/3.
+    expect(after / before).toBeCloseTo(3.8 / 3);
+  });
+
   it('resetGame wipes all progress back to a fresh state', () => {
     reset({ minerals: 1e9, darkMatter: 50, prestigeCount: 3, achievements: { t_100: true } });
     useGameStore.getState().resetGame();

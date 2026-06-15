@@ -25,7 +25,9 @@ import {
   crystalGain,
   crystalPowers,
   crystalUpgradeCost,
+  resonancePowerMult,
 } from '../game/transcend';
+import { RESONANCE_BONUS } from '../game/crystalGame';
 import {
   CRYSTAL_GENS_BY_ID,
   CRYSTAL_GEN_UPGRADES_BY_ID,
@@ -176,7 +178,11 @@ function withCaches(
 ): Omit<GameState, 'newAchievements' | 'tapHeat' | 'lastTapAt'> {
   const cachedCps = cps(persisted);
   const cPowers = crystalPowers(persisted.crystalUpgrades);
-  const rMult = resonanceMult(persisted.resonance);
+  // The Resonance Amplifier raises the per-level production bonus each Resonance grants.
+  const rMult = resonanceMult(
+    persisted.resonance,
+    RESONANCE_BONUS * resonancePowerMult(persisted.crystalUpgrades),
+  );
   const runP = crystalRunPowers(persisted.crystalRunUpgrades);
   return {
     ...persisted,
@@ -786,6 +792,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const def = CRYSTAL_UPGRADES_BY_ID[id];
     if (!def) return;
+    // Deep-tier upgrades stay locked until Resonance reaches their gate.
+    if (def.unlockResonance && state.resonance < def.unlockResonance) return;
     const level = state.crystalUpgrades[id] ?? 0;
     if (level >= def.maxLevel) return;
     const cost = crystalUpgradeCost(def, level);

@@ -14,7 +14,8 @@ import {
   crystalUpgradeUnlockMet,
   resonanceMult,
 } from '../game/crystalGame';
-import { crystalPowers } from '../game/transcend';
+import { crystalPowers, resonancePowerMult } from '../game/transcend';
+import { RESONANCE_BONUS } from '../game/crystalGame';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
@@ -37,7 +38,9 @@ export function CrystalForgeScreen() {
   const runPowers = crystalRunPowers(crystalRunUpgrades);
   // Effective global multiplier shared by every generator line (matrix × resonance × run).
   const baseGlobalMult =
-    crystalPowers(crystalUpgrades).globalMult * resonanceMult(resonance) * runPowers.globalMult;
+    crystalPowers(crystalUpgrades).globalMult *
+    resonanceMult(resonance, RESONANCE_BONUS * resonancePowerMult(crystalUpgrades)) *
+    runPowers.globalMult;
 
   // Upgrades that are unlocked and not yet owned.
   const availableUpgrades = CRYSTAL_GEN_UPGRADES.filter(
