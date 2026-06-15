@@ -590,7 +590,7 @@ describe('gameStore', () => {
   });
 
   it('crystalTap builds Drill Heat that boosts later taps', () => {
-    reset({ transcendCount: 1, crystals: 0, lifetimeCrystals: 0, tapHeat: 0, lastTapAt: 0 });
+    reset({ transcendCount: 1, crystals: 0, lifetimeCrystals: 0 });
     useGameStore.getState().crystalTap();
     const heat = useGameStore.getState().tapHeat;
     expect(heat).toBeGreaterThan(0);
@@ -608,6 +608,30 @@ describe('gameStore', () => {
     expect(s.crystalGenerators.shard).toBe(1);
     expect(s.crystals).toBeLessThan(1000);
     expect(s.cachedCrystalCps).toBeGreaterThan(before);
+  });
+
+  it('a geode windfall pays out Crystals in crystal mode', () => {
+    // Deep formation so the windfall doesn't shatter it and add bonus crystals.
+    reset({ transcendCount: 1, crystals: 0, lifetimeCrystals: 0, crystalFormationIndex: 40 });
+    useGameStore.getState().collectComet({ kind: 'windfall', amount: 500 }, 2000);
+    const s = useGameStore.getState();
+    expect(s.crystals).toBe(500);
+    expect(s.lifetimeCrystals).toBe(500);
+    expect(s.cometsCaught).toBe(1);
+  });
+
+  it('a geode frenzy boosts crystal production via frenzyFactor', () => {
+    // A deep formation never shatters in the window, so the gain is clean.
+    reset({ transcendCount: 1, crystalGenerators: { shard: 100 }, crystalFormationIndex: 40 });
+    useGameStore.getState().collectComet({ kind: 'frenzy', mult: 7, durationMs: 30_000 }, 2000);
+    const s = useGameStore.getState();
+    expect(s.frenzyMult).toBe(7);
+    expect(s.frenzyUntil).toBe(32_000);
+    // applyTick over 2s (lastTickAt was 1000) inside the frenzy → ×7 the base CPS.
+    const before = useGameStore.getState().crystals;
+    useGameStore.getState().applyTick(3000);
+    const gained = useGameStore.getState().crystals - before;
+    expect(gained).toBeCloseTo(s.cachedCrystalCps * 2 * 7);
   });
 
   it('buyCrystalRunUpgrade spends crystals and applies its multiplier', () => {

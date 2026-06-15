@@ -350,9 +350,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   crystalTap() {
     const state = get();
     const now = Date.now();
-    // Drill Heat combo: reward fast tapping, mirroring the mineral tap.
+    // Drill Heat combo + any active Resonance Surge frenzy, mirroring the mineral tap.
     const decayed = decayHeat(state.tapHeat, now - state.lastTapAt);
-    const earned = state.cachedCrystalTapValue * heatMultiplier(decayed);
+    const earned =
+      state.cachedCrystalTapValue * frenzyFactor(state, now) * heatMultiplier(decayed);
     const heat = Math.min(1, decayed + HEAT_PER_TAP);
     const delta = earnCrystals(state, earned);
     set({ ...delta, totalTaps: state.totalTaps + 1, tapHeat: heat, lastTapAt: now });
@@ -409,9 +410,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const deltaMs = Math.min(Math.max(nowMs - state.lastTickAt, 0), MAX_TICK_DELTA_MS);
     if (state.transcendCount > 0) {
-      // Crystal mode: passive generators earn crystals.
+      // Crystal mode: passive generators earn crystals, boosted by any active
+      // Resonant Geode frenzy.
       if (state.cachedCrystalCps > 0) {
-        const earned = state.cachedCrystalCps * (deltaMs / 1000);
+        const earned = state.cachedCrystalCps * (deltaMs / 1000) * frenzyFactor(state, nowMs);
         set({ ...earnCrystals(state, earned), lastTickAt: nowMs });
       } else {
         set({ lastTickAt: nowMs });
@@ -441,6 +443,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const cometsCaught = state.cometsCaught + 1;
     if (reward.kind === 'frenzy') {
       set({ frenzyUntil: nowMs + reward.durationMs, frenzyMult: reward.mult, cometsCaught });
+    } else if (state.transcendCount > 0) {
+      // Crystal mode: a windfall pays out Crystals (and damages the formation).
+      set({ ...earnCrystals(state, reward.amount), cometsCaught });
     } else {
       set({ ...earn(state, reward.amount), cometsCaught });
     }

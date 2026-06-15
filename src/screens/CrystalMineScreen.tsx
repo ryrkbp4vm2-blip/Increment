@@ -7,6 +7,8 @@ import {
   crystalFormationName,
 } from '../game/crystalGame';
 import { decayHeat, heatMultiplier } from '../game/heat';
+import { CometReward } from '../game/events';
+import { CrystalComet } from '../components/CrystalComet';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
@@ -16,12 +18,30 @@ type FloatId = { id: number; text: string; x: number };
 export function CrystalMineScreen() {
   const crystals = useGameStore((s) => s.crystals);
   const crystalTap = useGameStore((s) => s.crystalTap);
+  const collectComet = useGameStore((s) => s.collectComet);
   const formationIndex = useGameStore((s) => s.crystalFormationIndex);
   const formationDamage = useGameStore((s) => s.crystalFormationDamage);
   const cachedCrystalCps = useGameStore((s) => s.cachedCrystalCps);
   const cachedCrystalTapValue = useGameStore((s) => s.cachedCrystalTapValue);
   const tapHeat = useGameStore((s) => s.tapHeat);
   const lastTapAt = useGameStore((s) => s.lastTapAt);
+
+  const [banner, setBanner] = useState<string | null>(null);
+  const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (bannerTimer.current) clearTimeout(bannerTimer.current);
+  }, []);
+
+  const handleGeode = (reward: CometReward) => {
+    collectComet(reward, Date.now());
+    setBanner(
+      reward.kind === 'frenzy'
+        ? `RESONANCE SURGE! ×${reward.mult} production for ${Math.round(reward.durationMs / 1000)}s`
+        : `Geode windfall! +${formatNumber(reward.amount)} ✦`,
+    );
+    if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    bannerTimer.current = setTimeout(() => setBanner(null), 4000);
+  };
 
   const hp = crystalFormationHp(formationIndex);
   const integrity = Math.max(0, 1 - formationDamage / hp);
@@ -68,6 +88,13 @@ export function CrystalMineScreen() {
 
   return (
     <View style={styles.screen}>
+      <CrystalComet onCollect={handleGeode} />
+      {banner && (
+        <View style={styles.banner}>
+          <Text style={styles.bannerGlyph}>✦</Text>
+          <Text style={styles.bannerText}>{banner}</Text>
+        </View>
+      )}
       <View style={styles.formationInfo}>
         <Text style={styles.formationName}>{crystalFormationName(formationIndex)}</Text>
         <Text style={styles.formationSub}>Shatter for +{formatNumber(bonus)} ✦ bonus</Text>
@@ -157,6 +184,33 @@ const styles = StyleSheet.create({
     color: colors.darkMatter,
     fontSize: 20,
     fontWeight: '800',
+  },
+  banner: {
+    position: 'absolute',
+    top: spacing.md,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    maxWidth: '92%',
+    backgroundColor: colors.panelLight,
+    borderColor: colors.darkMatter,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    zIndex: 30,
+  },
+  bannerGlyph: {
+    color: colors.darkMatter,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  bannerText: {
+    color: colors.darkMatter,
+    fontSize: 13,
+    fontWeight: '800',
+    flexShrink: 1,
   },
   heatWrap: {
     alignItems: 'center',
