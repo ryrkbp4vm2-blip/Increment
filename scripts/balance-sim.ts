@@ -20,6 +20,13 @@ import { pendingSingularityCores } from '../src/game/ascension';
 import { canWarp, sectorName } from '../src/game/zones';
 import { CRYSTAL_UPGRADES, canTranscend, crystalUpgradeCost } from '../src/game/transcend';
 import {
+  CONVERGENCE_RESONANCE,
+  EON_UPGRADES,
+  canConverge,
+  eonUpgradeCost,
+  pendingEons,
+} from '../src/game/convergence';
+import {
   CRYSTAL_GENS,
   CRYSTAL_GEN_UPGRADES,
   canResonate,
@@ -108,6 +115,11 @@ function runSimulation(tapsPerSec: number): Event[] {
     for (const n of [1, 2, 3, 5, 10, 15, 20, 30, 50]) if (s.resonance >= n) record(`Resonance #${n}`);
     for (const mark of [10, 50, 200, 1000]) {
       if (s.totalAttunement >= mark) record(`Earn ${mark} Attunement (all-time)`);
+    }
+    // Convergence — the endgame layer (Resonance ≥ CONVERGENCE_RESONANCE).
+    for (const n of [1, 2, 3, 5, 10]) if (s.convergenceCount >= n) record(`Convergence #${n}`);
+    for (const mark of [1, 10, 50]) {
+      if (s.totalEons >= mark) record(`Earn ${mark} Eons (all-time)`);
     }
   };
 
@@ -313,6 +325,31 @@ function runSimulation(tapsPerSec: number): Event[] {
     return true;
   };
 
+  // Spend banked Eons on the Convergence tree, cheapest first.
+  const spendEons = () => {
+    for (let guard = 0; guard < 500; guard++) {
+      const s = get();
+      let cheapest: { id: string; cost: number } | null = null;
+      for (const def of EON_UPGRADES) {
+        const lvl = s.eonUpgrades[def.id] ?? 0;
+        if (lvl >= def.maxLevel) continue;
+        const cost = eonUpgradeCost(def, lvl);
+        if (cost <= s.eons && (!cheapest || cost < cheapest.cost)) cheapest = { id: def.id, cost };
+      }
+      if (!cheapest) break;
+      get().buyEonUpgrade(cheapest.id);
+    }
+  };
+
+  const maybeConverge = () => {
+    const s = get();
+    if (!canConverge(s.resonance)) return false;
+    if (pendingEons(s.resonance, s.eonUpgrades) < 1) return false;
+    get().doConverge();
+    spendEons();
+    return true;
+  };
+
   const crystalAdvance = (targetCost: number) => {
     const s = get();
     const rate = s.cachedCrystalCps + s.cachedCrystalTapValue * crystalTaps();
@@ -345,9 +382,11 @@ function runSimulation(tapsPerSec: number): Event[] {
       if (stop()) break;
       if (!advance(nextMineralTarget())) break;
     } else {
-      // Crystal phase: mine crystals, build the Forge, Resonance-Cascade.
+      // Crystal phase: mine crystals, build the Forge, Resonance-Cascade, and
+      // eventually Converge for Eons once Resonance clears the gate.
       crystalBuyPhase();
       if (maybeResonate()) crystalBuyPhase();
+      if (maybeConverge()) crystalBuyPhase();
       checkMilestones();
       if (stop()) break;
       if (!crystalAdvance(nextCrystalTarget())) break;

@@ -7,6 +7,7 @@ import { EXPEDITIONS_BY_ID } from '../game/expeditions';
 import { RESEARCH_BY_ID } from '../game/research';
 import { CORE_UPGRADES_BY_ID, SINGULARITY_PERKS_BY_ID } from '../game/ascension';
 import { CRYSTAL_UPGRADES_BY_ID } from '../game/transcend';
+import { EON_UPGRADES_BY_ID } from '../game/convergence';
 import { CRYSTAL_GENS_BY_ID, CRYSTAL_GEN_UPGRADES_BY_ID } from '../game/crystalGame';
 import { CHALLENGES_BY_ID } from '../game/challenges';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
@@ -72,6 +73,10 @@ export function toPersisted(state: GameState): PersistedState {
     autoCrystalUpgrade: state.autoCrystalUpgrade,
     attunement: state.attunement,
     totalAttunement: state.totalAttunement,
+    eons: state.eons,
+    totalEons: state.totalEons,
+    convergenceCount: state.convergenceCount,
+    eonUpgrades: state.eonUpgrades,
     buyQty: state.buyQty,
   };
 }
@@ -223,6 +228,15 @@ export function migrate(raw: string | null): SaveFile | null {
       if (level > 0) crystalUpgrades[id] = Math.min(level, def.maxLevel);
     }
   }
+  const eonUpgrades: Record<string, number> = {};
+  if (typeof raw_.eonUpgrades === 'object' && raw_.eonUpgrades !== null) {
+    for (const id of Object.keys(raw_.eonUpgrades)) {
+      const def = EON_UPGRADES_BY_ID[id];
+      if (!def) continue;
+      const level = Math.floor(finiteNumber((raw_.eonUpgrades as Record<string, unknown>)[id], 0));
+      if (level > 0) eonUpgrades[id] = Math.min(level, def.maxLevel);
+    }
+  }
   const crystalGenerators: Record<string, number> = {};
   if (typeof raw_.crystalGenerators === 'object' && raw_.crystalGenerators !== null) {
     for (const id of Object.keys(raw_.crystalGenerators)) {
@@ -322,6 +336,10 @@ export function migrate(raw: string | null): SaveFile | null {
     autoCrystalUpgrade: raw_.autoCrystalUpgrade === true,
     attunement: Math.max(0, finiteNumber(raw_.attunement, 0)),
     totalAttunement: Math.max(0, finiteNumber(raw_.totalAttunement, 0)),
+    eons: Math.max(0, finiteNumber(raw_.eons, 0)),
+    totalEons: Math.max(0, finiteNumber(raw_.totalEons, 0)),
+    convergenceCount: Math.max(0, Math.floor(finiteNumber(raw_.convergenceCount, 0))),
+    eonUpgrades,
     buyQty:
       raw_.buyQty === 10 || raw_.buyQty === 'max' ? raw_.buyQty : 1,
   };

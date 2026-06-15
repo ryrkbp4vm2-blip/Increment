@@ -135,6 +135,14 @@ export interface PersistedState {
   attunement: number;
   /** Attunement earned all-time (for stats; never spent down). */
   totalAttunement: number;
+  /** Eons (∞): the Convergence meta-currency, above the Crystal Matrix. */
+  eons: number;
+  /** Eons earned all-time (drives the permanent eonMult; never spent down). */
+  totalEons: number;
+  /** Number of Convergences performed. */
+  convergenceCount: number;
+  /** Leveled Convergence-tree upgrades bought with Eons (survive every Convergence). */
+  eonUpgrades: Record<string, number>;
   /** Remembered buy-quantity preference for generator shops (×1 / ×10 / Max). */
   buyQty: BuyQty;
 }

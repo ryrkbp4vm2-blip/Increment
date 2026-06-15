@@ -11,6 +11,7 @@ import { OfflineReport, useAppLifecycle } from '../hooks/useAppLifecycle';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { prestigeAttention } from '../game/onboarding';
 import { canResonate } from '../game/crystalGame';
+import { canConverge } from '../game/convergence';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { CrystalForgeScreen } from './CrystalForgeScreen';
@@ -43,7 +44,7 @@ export function GameRoot({ initialOfflineReport }: Props) {
 
   const prestigeDot = useGameStore((s) =>
     s.transcendCount > 0
-      ? canResonate(s.lifetimeCrystals, s.resonance)
+      ? canResonate(s.lifetimeCrystals, s.resonance) || canConverge(s.resonance)
       : prestigeAttention({
           lifetimeThisRun: s.lifetimeThisRun,
           dmSinceAscension: s.dmSinceAscension,

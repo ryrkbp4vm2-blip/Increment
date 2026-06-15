@@ -749,6 +749,62 @@ describe('gameStore', () => {
     expect(useGameStore.getState().resonance).toBe(0);
   });
 
+  it('doConverge collapses the crystal layer into Eons', () => {
+    reset({
+      transcendCount: 1,
+      resonance: 100, // pendingEons = sqrt(100/25) = 2
+      crystals: 5000,
+      lifetimeCrystals: 9000,
+      crystalGenerators: { shard: 30 },
+      crystalRunUpgrades: { c_tap1: true },
+      crystalUpgrades: { crystal_resonance: 3 },
+      attunement: 40,
+    });
+    useGameStore.getState().doConverge();
+    const s = useGameStore.getState();
+    // Gains 2 Eons and a Convergence.
+    expect(s.eons).toBe(2);
+    expect(s.totalEons).toBe(2);
+    expect(s.convergenceCount).toBe(1);
+    // The whole crystal layer — including Resonance and the Matrix — resets.
+    expect(s.resonance).toBe(0);
+    expect(s.crystals).toBe(0);
+    expect(s.lifetimeCrystals).toBe(0);
+    expect(s.crystalGenerators).toEqual({});
+    expect(s.crystalUpgrades).toEqual({});
+    expect(s.attunement).toBe(0);
+    // Crystal mode and records persist.
+    expect(s.transcendCount).toBe(1);
+  });
+
+  it('doConverge does nothing below the Resonance gate', () => {
+    reset({ transcendCount: 1, resonance: 10 });
+    useGameStore.getState().doConverge();
+    expect(useGameStore.getState().convergenceCount).toBe(0);
+  });
+
+  it('eonMult permanently boosts crystal production', () => {
+    reset({ transcendCount: 1, resonance: 0, crystalGenerators: { shard: 100 } });
+    const before = useGameStore.getState().cachedCrystalCps;
+    // 2 Eons ever earned -> ×(1 + 1*2) = ×3 crystal production in the caches.
+    reset({ transcendCount: 1, resonance: 0, totalEons: 2, crystalGenerators: { shard: 100 } });
+    expect(useGameStore.getState().cachedCrystalCps).toBeCloseTo(before * 3);
+  });
+
+  it('buyEonUpgrade spends Eons and levels the Convergence tree', () => {
+    reset({ transcendCount: 1, eons: 10 });
+    useGameStore.getState().buyEonUpgrade('eon_flux');
+    const s = useGameStore.getState();
+    expect(s.eonUpgrades.eon_flux).toBe(1);
+    expect(s.eons).toBeLessThan(10);
+  });
+
+  it('buyEonUpgrade is blocked without enough Eons', () => {
+    reset({ transcendCount: 1, eons: 0 });
+    useGameStore.getState().buyEonUpgrade('eon_flux');
+    expect(useGameStore.getState().eonUpgrades.eon_flux).toBeUndefined();
+  });
+
   it('keeps remembered preferences (buy qty, auto toggles) through a Cascade', () => {
     reset({
       transcendCount: 1,

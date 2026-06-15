@@ -50,6 +50,17 @@ import {
   resonanceGain,
   resonanceMult,
 } from '../game/crystalGame';
+import {
+  EON_UPGRADES_BY_ID,
+  canConverge,
+  eonAttuneMult,
+  eonCrystalMult,
+  eonMult,
+  eonResonanceMult,
+  eonUpgradeCost,
+  eonYieldMult,
+  pendingEons,
+} from '../game/convergence';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -97,6 +108,8 @@ export interface GameActions {
   doWarp(): void;
   doTranscend(): void;
   doResonate(): void;
+  doConverge(): void;
+  buyEonUpgrade(id: string): void;
   toggleAutoResonate(): void;
   toggleAutoForge(): void;
   toggleAutoUpgrade(): void;
@@ -179,6 +192,10 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     autoCrystalUpgrade: false,
     attunement: 0,
     totalAttunement: 0,
+    eons: 0,
+    totalEons: 0,
+    convergenceCount: 0,
+    eonUpgrades: {},
     buyQty: 1,
   };
 }
@@ -198,6 +215,9 @@ function withCaches(
     RESONANCE_BONUS * resonancePowerMult(persisted.crystalUpgrades),
   );
   const runP = crystalRunPowers(persisted.crystalRunUpgrades);
+  // Convergence layer: a permanent crystal-production boost that survives every
+  // Convergence (eonMult per Eon ever earned, plus the Stellar Flux tree).
+  const eMult = eonMult(persisted.totalEons) * eonCrystalMult(persisted.eonUpgrades);
   return {
     ...persisted,
     lastTickAt,
@@ -205,10 +225,10 @@ function withCaches(
     cachedTapValue: tapValue(persisted, cachedCps),
     cachedCrystalCps: crystalTotalCps(
       persisted.crystalGenerators,
-      cPowers.globalMult * rMult * runP.globalMult * achievementBonus(persisted.achievements),
+      cPowers.globalMult * rMult * runP.globalMult * eMult * achievementBonus(persisted.achievements),
       runP.genMult,
     ),
-    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult
+    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult * eMult
       * achievementBonus(persisted.achievements),
   };
 }
@@ -228,6 +248,10 @@ function carryTranscend(state: GameState): Pick<
   | 'resonance'
   | 'attunement'
   | 'totalAttunement'
+  | 'eons'
+  | 'totalEons'
+  | 'convergenceCount'
+  | 'eonUpgrades'
   | 'buyQty'
   | 'autoUpgrade'
   | 'autoCrystalUpgrade'
@@ -240,6 +264,10 @@ function carryTranscend(state: GameState): Pick<
     crystalUpgrades: state.crystalUpgrades,
     attunement: state.attunement,
     totalAttunement: state.totalAttunement,
+    eons: state.eons,
+    totalEons: state.totalEons,
+    convergenceCount: state.convergenceCount,
+    eonUpgrades: state.eonUpgrades,
     resonance: state.resonance,
     buyQty: state.buyQty,
     autoUpgrade: state.autoUpgrade,
@@ -746,6 +774,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           buyQty: state.buyQty,
           autoUpgrade: state.autoUpgrade,
           autoCrystalUpgrade: state.autoCrystalUpgrade,
+          eons: state.eons,
+          totalEons: state.totalEons,
+          convergenceCount: state.convergenceCount,
+          eonUpgrades: state.eonUpgrades,
         },
         state.lastTickAt,
       ),
@@ -755,10 +787,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   doResonate() {
     const state = get();
     if (!canResonate(state.lifetimeCrystals, state.resonance)) return;
-    const gained = resonanceGain(state.lifetimeCrystals, state.crystalUpgrades, state.resonance);
+    // The Convergence tree boosts both Cascade payouts (Resonant Echo, Deep Attunement).
+    const gained = Math.floor(
+      resonanceGain(state.lifetimeCrystals, state.crystalUpgrades, state.resonance) *
+        eonResonanceMult(state.eonUpgrades),
+    );
     if (gained < 1) return;
     // A Cascade also pays out Attunement — the permanent Crystal-Matrix currency.
-    const attune = attunementGain(state.lifetimeCrystals);
+    const attune = Math.floor(attunementGain(state.lifetimeCrystals) * eonAttuneMult(state.eonUpgrades));
     set(
       withCaches(
         {
@@ -792,12 +828,73 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // would disable itself the instant it fired.
           autoResonate: state.autoResonate,
           autoForge: state.autoForge,
+          autoUpgrade: state.autoUpgrade,
+          autoCrystalUpgrade: state.autoCrystalUpgrade,
+          buyQty: state.buyQty,
+          // Convergence layer sits above the Cascade — Eons and tree survive.
+          eons: state.eons,
+          totalEons: state.totalEons,
+          convergenceCount: state.convergenceCount,
+          eonUpgrades: state.eonUpgrades,
+        },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  doConverge() {
+    const state = get();
+    if (!canConverge(state.resonance)) return;
+    const gained = pendingEons(state.resonance, state.eonUpgrades);
+    if (gained < 1) return;
+    set(
+      withCaches(
+        {
+          ...initialPersistedState(Date.now()),
+          // Convergence — the deepest reset. The entire crystal layer collapses:
+          // balance, generators, Forge upgrades, Resonance, Attunement and the
+          // whole Crystal Matrix all reset. Only Eons, the Convergence tree and
+          // the permanent records survive.
+          transcendCount: state.transcendCount,
+          ascensionCount: state.ascensionCount,
+          eons: state.eons + gained,
+          totalEons: state.totalEons + gained,
+          convergenceCount: state.convergenceCount + 1,
+          eonUpgrades: state.eonUpgrades,
+          // Records and all-time stats persist.
+          totalCrystals: state.totalCrystals,
+          totalAttunement: state.totalAttunement,
+          lifetimeAllTime: state.lifetimeAllTime,
+          totalTaps: state.totalTaps,
+          achievements: state.achievements,
+          asteroidsShattered: state.asteroidsShattered,
+          crystalFormationsShattered: state.crystalFormationsShattered,
+          cometsCaught: state.cometsCaught,
+          expeditionsCompleted: state.expeditionsCompleted,
+          lastDailyAt: state.lastDailyAt,
+          dailyStreak: state.dailyStreak,
+          // Remembered preferences survive.
+          autoResonate: state.autoResonate,
+          autoForge: state.autoForge,
+          autoUpgrade: state.autoUpgrade,
           autoCrystalUpgrade: state.autoCrystalUpgrade,
           buyQty: state.buyQty,
         },
         state.lastTickAt,
       ),
     );
+  },
+
+  buyEonUpgrade(id) {
+    const state = get();
+    const def = EON_UPGRADES_BY_ID[id];
+    if (!def) return;
+    const level = state.eonUpgrades[id] ?? 0;
+    if (level >= def.maxLevel) return;
+    const cost = eonUpgradeCost(def, level);
+    if (state.eons < cost) return;
+    const eonUpgrades = { ...state.eonUpgrades, [id]: level + 1 };
+    set(withCaches({ ...state, eons: state.eons - cost, eonUpgrades }, state.lastTickAt));
   },
 
   toggleAutoResonate() {

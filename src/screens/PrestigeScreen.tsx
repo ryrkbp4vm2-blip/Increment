@@ -54,6 +54,15 @@ import {
   resonanceGain,
   resonanceMult,
 } from '../game/crystalGame';
+import {
+  CONVERGENCE_RESONANCE,
+  EON_UPGRADES,
+  canConverge,
+  eonMult,
+  eonTotalEffect,
+  eonUpgradeCost,
+  pendingEons,
+} from '../game/convergence';
 import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -94,6 +103,12 @@ export function PrestigeScreen() {
   const doResonate = useGameStore((s) => s.doResonate);
   const autoResonate = useGameStore((s) => s.autoResonate);
   const toggleAutoResonate = useGameStore((s) => s.toggleAutoResonate);
+  const eons = useGameStore((s) => s.eons);
+  const totalEons = useGameStore((s) => s.totalEons);
+  const convergenceCount = useGameStore((s) => s.convergenceCount);
+  const eonUpgrades = useGameStore((s) => s.eonUpgrades);
+  const doConverge = useGameStore((s) => s.doConverge);
+  const buyEonUpgrade = useGameStore((s) => s.buyEonUpgrade);
   const [confirming, setConfirming] = useState(false);
   const [confirmingAscend, setConfirmingAscend] = useState(false);
   const [confirmingWarp, setConfirmingWarp] = useState(false);
@@ -128,6 +143,12 @@ export function PrestigeScreen() {
         toggleAutoResonate={toggleAutoResonate}
         confirmingTranscend={confirmingTranscend}
         setConfirmingTranscend={setConfirmingTranscend}
+        eons={eons}
+        totalEons={totalEons}
+        convergenceCount={convergenceCount}
+        eonUpgrades={eonUpgrades}
+        doConverge={doConverge}
+        buyEonUpgrade={buyEonUpgrade}
       />
     );
   }
@@ -527,6 +548,12 @@ function CrystalPrestigeScreen({
   toggleAutoResonate,
   confirmingTranscend,
   setConfirmingTranscend,
+  eons,
+  totalEons,
+  convergenceCount,
+  eonUpgrades,
+  doConverge,
+  buyEonUpgrade,
 }: {
   crystals: number;
   totalCrystals: number;
@@ -540,7 +567,18 @@ function CrystalPrestigeScreen({
   toggleAutoResonate: () => void;
   confirmingTranscend: boolean;
   setConfirmingTranscend: (v: boolean) => void;
+  eons: number;
+  totalEons: number;
+  convergenceCount: number;
+  eonUpgrades: Record<string, number>;
+  doConverge: () => void;
+  buyEonUpgrade: (id: string) => void;
 }) {
+  const [confirmingConverge, setConfirmingConverge] = useState(false);
+  const pendingEon = pendingEons(resonance, eonUpgrades);
+  const convergeReady = canConverge(resonance);
+  // Reveal the Convergence layer as the player approaches the Resonance gate.
+  const convergeRevealed = totalEons > 0 || convergenceCount > 0 || resonance >= CONVERGENCE_RESONANCE * 0.4;
   const pending = resonanceGain(lifetimeCrystals, crystalUpgrades, resonance);
   const pendingAttune = attunementGain(lifetimeCrystals);
   const ready = canResonate(lifetimeCrystals, resonance);
@@ -689,6 +727,110 @@ function CrystalPrestigeScreen({
           </View>
         );
       })}
+
+      {convergeRevealed && (
+        <View style={styles.convergeCard}>
+          <View style={styles.titleRow}>
+            <Text style={styles.eonGlyph}>∞</Text>
+            <Text style={styles.convergeTitle}>Convergence</Text>
+          </View>
+          <Text style={styles.ascendBody}>
+            Collapse the entire crystal cosmos — your crystals, generators, Forge upgrades,
+            Resonance, Attunement and the whole Crystal Matrix all reset — into Eons (∞). Each
+            Eon permanently boosts all crystal production, so every re-climb is faster, and the
+            Convergence tree below survives forever.
+          </Text>
+          <StatRow label="Eons to spend" value={`${formatNumber(eons)} ∞`} />
+          <StatRow label="Crystal bonus" value={`×${formatNumber(eonMult(totalEons))}`} />
+          <StatRow label="Convergences" value={formatNumber(convergenceCount)} />
+          <StatRow
+            label="Resonance toward Convergence"
+            value={`${formatNumber(Math.min(resonance, CONVERGENCE_RESONANCE))} / ${CONVERGENCE_RESONANCE}`}
+          />
+
+          {!convergeReady ? (
+            <>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.min(resonance / CONVERGENCE_RESONANCE, 1) * 100}%`,
+                      backgroundColor: colors.gold,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.transcendHint}>
+                Reach Resonance {CONVERGENCE_RESONANCE} to Converge for your first Eon.
+              </Text>
+            </>
+          ) : confirmingConverge ? (
+            <View style={styles.confirmButtons}>
+              <BigButton
+                label={`Converge +${formatNumber(pendingEon)} ∞`}
+                color={colors.gold}
+                onPress={() => {
+                  doConverge();
+                  playSound('prestige');
+                  setConfirmingConverge(false);
+                }}
+                style={styles.confirmButton}
+              />
+              <BigButton
+                label="Cancel"
+                color={colors.panelLight}
+                onPress={() => setConfirmingConverge(false)}
+                style={styles.confirmButton}
+              />
+            </View>
+          ) : (
+            <BigButton
+              label={`Converge for +${formatNumber(pendingEon)} Eons`}
+              color={colors.gold}
+              onPress={() => setConfirmingConverge(true)}
+              style={styles.ascendButton}
+            />
+          )}
+
+          <Text style={[styles.perksTitle, styles.eonPerksTitle]}>Convergence Tree</Text>
+          <Text style={styles.perksHint}>Leveled upgrades bought with Eons (∞). Survive every Convergence.</Text>
+          {EON_UPGRADES.map((def) => {
+            const level = eonUpgrades[def.id] ?? 0;
+            const maxed = level >= def.maxLevel;
+            const cost = eonUpgradeCost(def, level);
+            const affordable = !maxed && eons >= cost;
+            return (
+              <View key={def.id} style={styles.dmRow}>
+                <View style={styles.dmIconBox}>
+                  <Icon name={def.icon as IconName} size={26} color={colors.gold} accent={colors.gold} />
+                </View>
+                <View style={styles.dmInfo}>
+                  <Text style={styles.dmName}>
+                    {def.name} <Text style={styles.eonLevel}>Lv {level}/{def.maxLevel}</Text>
+                  </Text>
+                  <Text style={styles.dmDesc}>{def.perLevel}</Text>
+                  {level > 0 && <Text style={styles.dmCurrent}>Now: {eonTotalEffect(def, level)}</Text>}
+                </View>
+                <Pressable
+                  onPress={() => {
+                    buyEonUpgrade(def.id);
+                    playSound('buy');
+                  }}
+                  disabled={!affordable}
+                  style={[styles.eonBuy, maxed && styles.dmMaxed, !affordable && !maxed && styles.dmBuyDisabled]}
+                >
+                  {maxed ? (
+                    <Text style={styles.dmMaxedText}>MAX</Text>
+                  ) : (
+                    <Text style={[styles.eonBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ∞</Text>
+                  )}
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -879,6 +1021,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: spacing.sm,
+  },
+  convergeCard: {
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    padding: spacing.lg,
+    marginTop: spacing.xl,
+  },
+  convergeTitle: { color: colors.gold, fontSize: 18, fontWeight: '800' },
+  eonGlyph: { color: colors.gold, fontSize: 22, fontWeight: '800' },
+  eonPerksTitle: { color: colors.gold },
+  eonLevel: { color: colors.gold, fontWeight: '700' },
+  eonBuy: {
+    backgroundColor: '#FACC1522',
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 10,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    minWidth: 76,
+  },
+  eonBuyText: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
   },
   ascendBody: {
     color: colors.textMuted,

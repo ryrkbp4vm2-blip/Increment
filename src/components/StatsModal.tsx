@@ -60,6 +60,13 @@ export function StatsModal({ visible, onClose }: Props) {
                 <Row label="Crystals all-time" value={`${formatNumber(s.totalCrystals)} ✦`} />
                 <Row label="Formations shattered" value={formatNumber(s.crystalFormationsShattered)} />
                 <Row label="Transcendences" value={formatNumber(s.transcendCount)} />
+                {(s.totalEons > 0 || s.convergenceCount > 0) && (
+                  <>
+                    <Row label="Eons" value={`${formatNumber(s.eons)} ∞`} />
+                    <Row label="Eons all-time" value={`${formatNumber(s.totalEons)} ∞`} />
+                    <Row label="Convergences" value={formatNumber(s.convergenceCount)} />
+                  </>
+                )}
               </>
             )}
 

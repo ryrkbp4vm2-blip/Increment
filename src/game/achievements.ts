@@ -14,7 +14,9 @@ export type MetricKey =
   | 'gen'
   | 'resonance'
   | 'totalCrystals'
-  | 'formations';
+  | 'formations'
+  | 'convergences'
+  | 'eons';
 
 export interface AchievementDef {
   id: string;
@@ -42,6 +44,8 @@ export interface AchievementMetrics {
   resonance: number;
   totalCrystals: number;
   formations: number;
+  convergences: number;
+  eons: number;
 }
 
 const BIG = 0.05;
@@ -117,6 +121,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'cf_200', name: 'Lattice Destroyer', description: 'Shatter 200 crystal formations', bonusPct: BIG, metric: 'formations', threshold: 200 },
   { id: 'cf_500', name: 'Formation Master', description: 'Shatter 500 crystal formations', bonusPct: BIG, metric: 'formations', threshold: 500 },
   { id: 'cf_1k', name: 'Crystal Annihilator', description: 'Shatter 1,000 crystal formations', bonusPct: BIG, metric: 'formations', threshold: 1000 },
+
+  // Convergence — the endgame layer
+  { id: 'cv_1', name: 'Singularity', description: 'Converge for the first time', bonusPct: BIG, metric: 'convergences', threshold: 1 },
+  { id: 'cv_5', name: 'Eternal Recurrence', description: 'Converge 5 times', bonusPct: BIG, metric: 'convergences', threshold: 5 },
+  { id: 'eon_10', name: 'Eonbound', description: 'Earn 10 Eons all-time', bonusPct: BIG, metric: 'eons', threshold: 10 },
+  { id: 'eon_50', name: 'Beyond Eternity', description: 'Earn 50 Eons all-time', bonusPct: BIG, metric: 'eons', threshold: 50 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<string, AchievementDef> = Object.fromEntries(
@@ -139,6 +149,8 @@ export function computeMetrics(
     | 'resonance'
     | 'totalCrystals'
     | 'crystalFormationsShattered'
+    | 'convergenceCount'
+    | 'totalEons'
   >,
 ): AchievementMetrics {
   const gen = s.generators;
@@ -158,6 +170,8 @@ export function computeMetrics(
     resonance: s.resonance,
     totalCrystals: s.totalCrystals,
     formations: s.crystalFormationsShattered,
+    convergences: s.convergenceCount,
+    eons: s.totalEons,
   };
 }
 

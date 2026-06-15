@@ -29,6 +29,8 @@ export function GoalsScreen() {
   const resonance = useGameStore((s) => s.resonance);
   const totalCrystals = useGameStore((s) => s.totalCrystals);
   const crystalFormationsShattered = useGameStore((s) => s.crystalFormationsShattered);
+  const convergenceCount = useGameStore((s) => s.convergenceCount);
+  const totalEons = useGameStore((s) => s.totalEons);
 
   const metrics = computeMetrics({
     lifetimeAllTime,
@@ -44,6 +46,8 @@ export function GoalsScreen() {
     resonance,
     totalCrystals,
     crystalFormationsShattered,
+    convergenceCount,
+    totalEons,
   });
 
   const doneCount = Object.keys(completed).length;
