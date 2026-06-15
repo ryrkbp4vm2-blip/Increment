@@ -349,9 +349,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   crystalTap() {
     const state = get();
-    const earned = state.cachedCrystalTapValue;
+    const now = Date.now();
+    // Drill Heat combo: reward fast tapping, mirroring the mineral tap.
+    const decayed = decayHeat(state.tapHeat, now - state.lastTapAt);
+    const earned = state.cachedCrystalTapValue * heatMultiplier(decayed);
+    const heat = Math.min(1, decayed + HEAT_PER_TAP);
     const delta = earnCrystals(state, earned);
-    set({ ...delta, totalTaps: state.totalTaps + 1 });
+    set({ ...delta, totalTaps: state.totalTaps + 1, tapHeat: heat, lastTapAt: now });
     return (delta.crystals ?? state.crystals) - state.crystals;
   },
 

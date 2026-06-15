@@ -589,6 +589,17 @@ describe('gameStore', () => {
     expect(s.lifetimeCrystals).toBe(earned);
   });
 
+  it('crystalTap builds Drill Heat that boosts later taps', () => {
+    reset({ transcendCount: 1, crystals: 0, lifetimeCrystals: 0, tapHeat: 0, lastTapAt: 0 });
+    useGameStore.getState().crystalTap();
+    const heat = useGameStore.getState().tapHeat;
+    expect(heat).toBeGreaterThan(0);
+    // A rapid second tap (heat still high) yields more than the cold first tap.
+    const first = useGameStore.getState().crystals;
+    const gained2 = useGameStore.getState().crystalTap();
+    expect(gained2).toBeGreaterThan(first);
+  });
+
   it('buyCrystalGenerator spends crystals and raises crystal CPS', () => {
     reset({ transcendCount: 1, crystals: 1000 });
     const before = useGameStore.getState().cachedCrystalCps;

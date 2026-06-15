@@ -6,9 +6,12 @@ import {
   crystalFormationHp,
   crystalFormationName,
 } from '../game/crystalGame';
+import { decayHeat, heatMultiplier } from '../game/heat';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
+
+type FloatId = { id: number; text: string; x: number };
 
 export function CrystalMineScreen() {
   const crystals = useGameStore((s) => s.crystals);
@@ -17,13 +20,25 @@ export function CrystalMineScreen() {
   const formationDamage = useGameStore((s) => s.crystalFormationDamage);
   const cachedCrystalCps = useGameStore((s) => s.cachedCrystalCps);
   const cachedCrystalTapValue = useGameStore((s) => s.cachedCrystalTapValue);
+  const tapHeat = useGameStore((s) => s.tapHeat);
+  const lastTapAt = useGameStore((s) => s.lastTapAt);
 
   const hp = crystalFormationHp(formationIndex);
   const integrity = Math.max(0, 1 - formationDamage / hp);
   const bonus = crystalFormationBonus(formationIndex);
 
+  // Local clock so the Drill Heat bar drains smoothly between taps.
+  const [clock, setClock] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClock(Date.now()), 120);
+    return () => clearInterval(id);
+  }, []);
+  const heat = decayHeat(tapHeat, clock - lastTapAt);
+
   const scale = useRef(new Animated.Value(1)).current;
   const [lastShatter, setLastShatter] = useState(-1);
+  const [floats, setFloats] = useState<FloatId[]>([]);
+  const floatSeq = useRef(0);
 
   // Detect shatter (formation index increased).
   useEffect(() => {
@@ -38,12 +53,17 @@ export function CrystalMineScreen() {
   }, [formationIndex]);
 
   const handleTap = () => {
-    crystalTap();
+    const gained = crystalTap();
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.sequence([
       Animated.timing(scale, { toValue: 0.93, duration: 60, useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1, duration: 80, useNativeDriver: true }),
     ]).start();
+    // Floating "+N" feedback, jittered horizontally so rapid taps don't stack.
+    const id = floatSeq.current++;
+    const x = (Math.random() - 0.5) * 80;
+    setFloats((f) => [...f.slice(-6), { id, text: `+${formatNumber(gained)}`, x }]);
+    setTimeout(() => setFloats((f) => f.filter((fl) => fl.id !== id)), 900);
   };
 
   return (
@@ -67,7 +87,27 @@ export function CrystalMineScreen() {
             </View>
           </Animated.View>
         </Pressable>
+        {floats.map((f) => (
+          <FloatingGain key={f.id} text={f.text} x={f.x} />
+        ))}
       </View>
+
+      {heat > 0.02 && (
+        <View style={styles.heatWrap}>
+          <View style={styles.heatTrack}>
+            <View
+              style={[
+                styles.heatFill,
+                {
+                  width: `${Math.min(heat, 1) * 100}%`,
+                  backgroundColor: heat > 0.66 ? colors.gold : colors.darkMatter,
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.heatLabel}>RESONANCE HEAT ×{heatMultiplier(heat).toFixed(1)}</Text>
+        </View>
+      )}
 
       <View style={styles.stats}>
         <View style={styles.statRow}>
@@ -89,10 +129,59 @@ export function CrystalMineScreen() {
   );
 }
 
+/** A "+N" that rises and fades after a tap. */
+function FloatingGain({ text, x }: { text: string; x: number }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(t, { toValue: 1, duration: 900, useNativeDriver: true }).start();
+  }, [t]);
+  const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [0, -70] });
+  const opacity = t.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 0] });
+  return (
+    <Animated.Text
+      style={[styles.float, { opacity, transform: [{ translateX: x }, { translateY }] }]}
+      pointerEvents="none"
+    >
+      {text}
+    </Animated.Text>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     alignItems: 'center',
+  },
+  float: {
+    position: 'absolute',
+    color: colors.darkMatter,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  heatWrap: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    width: 200,
+    alignSelf: 'center',
+  },
+  heatTrack: {
+    height: 7,
+    width: '100%',
+    borderRadius: 4,
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  heatFill: {
+    height: '100%',
+  },
+  heatLabel: {
+    color: colors.darkMatter,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 3,
+    letterSpacing: 1,
   },
   formationInfo: {
     alignItems: 'center',
