@@ -59,6 +59,8 @@ export function CrystalMineScreen() {
   const [lastShatter, setLastShatter] = useState(-1);
   const [floats, setFloats] = useState<FloatId[]>([]);
   const floatSeq = useRef(0);
+  // Bumps on each shatter so the burst remounts and replays.
+  const [burstKey, setBurstKey] = useState(0);
 
   // Detect shatter (formation index increased).
   useEffect(() => {
@@ -67,6 +69,12 @@ export function CrystalMineScreen() {
         Animated.timing(scale, { toValue: 1.2, duration: 80, useNativeDriver: true }),
         Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
       ]).start();
+      setBurstKey((k) => k + 1);
+      try {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        // Haptics unavailable (e.g. web); ignore.
+      }
     }
     setLastShatter(formationIndex);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -114,6 +122,7 @@ export function CrystalMineScreen() {
             </View>
           </Animated.View>
         </Pressable>
+        {burstKey > 0 && <ShatterBurst key={burstKey} />}
         {floats.map((f) => (
           <FloatingGain key={f.id} text={f.text} x={f.x} />
         ))}
@@ -156,6 +165,35 @@ export function CrystalMineScreen() {
   );
 }
 
+/** A radial burst of shards thrown out when a formation shatters. */
+const SHARD_COUNT = 10;
+function ShatterBurst() {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(t, { toValue: 1, duration: 650, useNativeDriver: true }).start();
+  }, [t]);
+  const opacity = t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 1, 0] });
+  return (
+    <View style={styles.burst} pointerEvents="none">
+      {Array.from({ length: SHARD_COUNT }).map((_, i) => {
+        const angle = (i / SHARD_COUNT) * Math.PI * 2;
+        const dist = 70 + (i % 3) * 18;
+        const translateX = t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(angle) * dist] });
+        const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(angle) * dist] });
+        const scale = t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.3] });
+        return (
+          <Animated.Text
+            key={i}
+            style={[styles.shard, { opacity, transform: [{ translateX }, { translateY }, { scale }] }]}
+          >
+            ✦
+          </Animated.Text>
+        );
+      })}
+    </View>
+  );
+}
+
 /** A "+N" that rises and fades after a tap. */
 function FloatingGain({ text, x }: { text: string; x: number }) {
   const t = useRef(new Animated.Value(0)).current;
@@ -184,6 +222,20 @@ const styles = StyleSheet.create({
     color: colors.darkMatter,
     fontSize: 20,
     fontWeight: '800',
+  },
+  burst: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shard: {
+    position: 'absolute',
+    color: colors.darkMatter,
+    fontSize: 18,
   },
   banner: {
     position: 'absolute',
