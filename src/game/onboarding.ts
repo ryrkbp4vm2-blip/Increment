@@ -11,7 +11,7 @@ import { GENERATORS, GENERATORS_BY_ID, PRESTIGE_BASE } from './balance';
 import { pendingDarkMatter } from './prestige';
 import { ASCEND_BASE, pendingSingularityCores } from './ascension';
 import { canWarp } from './zones';
-import { CRYSTAL_UPGRADES, canTranscend, crystalUpgradeCost, transcendUnlocked } from './transcend';
+import { canTranscend, transcendUnlocked } from './transcend';
 import {
   CRYSTAL_GENS,
   CRYSTAL_GENS_BY_ID,
@@ -65,59 +65,65 @@ function generatorsOwned(generators: Record<string, number>): number {
  * The single highest-priority next step for the player, or null once they're
  * established enough to steer themselves. Ordered from the very first tap up
  * through the deepest unlocked layer.
+ *
+ * The basic tutorial (tap → automate → shatter → Lab → Fleet → first Collapse)
+ * plays only on the very first run. Once the player has Collapsed for the first
+ * time (`prestigeCount > 0`) they know the core loop, so those teaching hints
+ * never reappear after a reset — only the one-off "new layer unlocked" nudges
+ * (ascend / transcend / warp) remain.
  */
 export function nextObjective(state: ObjectiveState): Objective | null {
   const droneCost = GENERATORS_BY_ID.drone.baseCost;
 
-  // 1. The very first thing: tap the rock.
-  if (state.totalTaps < 5) {
-    return { id: 'tap', text: 'Tap the asteroid to mine your first minerals.', tab: 'mine' };
-  }
-
-  // 2. Automate: buy the first generator.
-  if (generatorsOwned(state.generators) === 0) {
-    return state.minerals >= droneCost
-      ? {
-          id: 'buy_drone',
-          text: 'Open the Empire tab and buy a Mining Drone to automate mining.',
-          tab: 'shop',
-        }
-      : {
-          id: 'save_drone',
-          text: `Keep tapping — a Mining Drone costs ${droneCost} minerals.`,
-          tab: 'mine',
-        };
-  }
-
-  // 3. Break the belt open.
-  if (state.asteroidsShattered === 0) {
-    return {
-      id: 'shatter',
-      text: 'Mine through the asteroid to shatter it — deeper rocks are far richer.',
-      tab: 'mine',
-    };
-  }
-
-  // 4. Introduce the Lab once shattering has minted Research Points.
-  if (state.researchPoints > 0 && Object.keys(state.research).length === 0) {
-    return {
-      id: 'research',
-      text: 'You earned Research Points! Spend them in the Lab for permanent upgrades.',
-      tab: 'lab',
-    };
-  }
-
-  // 5. Introduce the Fleet once the player has some momentum.
-  if (state.asteroidsShattered >= 3 && state.expeditionsCompleted === 0) {
-    return {
-      id: 'fleet',
-      text: 'Send a Fleet expedition to hunt for powerful Artifacts.',
-      tab: 'fleet',
-    };
-  }
-
-  // 6. The first prestige: collapse for Dark Matter.
   if (state.prestigeCount === 0) {
+    // 1. The very first thing: tap the rock.
+    if (state.totalTaps < 5) {
+      return { id: 'tap', text: 'Tap the asteroid to mine your first minerals.', tab: 'mine' };
+    }
+
+    // 2. Automate: buy the first generator.
+    if (generatorsOwned(state.generators) === 0) {
+      return state.minerals >= droneCost
+        ? {
+            id: 'buy_drone',
+            text: 'Open the Empire tab and buy a Mining Drone to automate mining.',
+            tab: 'shop',
+          }
+        : {
+            id: 'save_drone',
+            text: `Keep tapping — a Mining Drone costs ${droneCost} minerals.`,
+            tab: 'mine',
+          };
+    }
+
+    // 3. Break the belt open.
+    if (state.asteroidsShattered === 0) {
+      return {
+        id: 'shatter',
+        text: 'Mine through the asteroid to shatter it — deeper rocks are far richer.',
+        tab: 'mine',
+      };
+    }
+
+    // 4. Introduce the Lab once shattering has minted Research Points.
+    if (state.researchPoints > 0 && Object.keys(state.research).length === 0) {
+      return {
+        id: 'research',
+        text: 'You earned Research Points! Spend them in the Lab for permanent upgrades.',
+        tab: 'lab',
+      };
+    }
+
+    // 5. Introduce the Fleet once the player has some momentum.
+    if (state.asteroidsShattered >= 3 && state.expeditionsCompleted === 0) {
+      return {
+        id: 'fleet',
+        text: 'Send a Fleet expedition to hunt for powerful Artifacts.',
+        tab: 'fleet',
+      };
+    }
+
+    // 6. The first prestige: collapse for Dark Matter.
     if (pendingDarkMatter(state.lifetimeThisRun) >= 1) {
       return {
         id: 'collapse_ready',
@@ -170,16 +176,20 @@ type CrystalObjectiveState = {
   crystalRunUpgrades: Record<string, true>;
   lifetimeCrystals: number;
   resonance: number;
-  attunement: number;
-  crystalUpgrades: Record<string, number>;
 };
 
 /**
- * The next step for a crystal-mode player, mirroring nextObjective for the
- * post-Transcend loop: bootstrap a generator, build the Forge, reach the first
- * Resonance Cascade, then sink the Attunement it pays out into the Matrix.
+ * The one-time crystal intro, mirroring nextObjective for the post-Transcend
+ * loop: bootstrap a generator, build the Forge, then reach the first Resonance
+ * Cascade. It plays only on the first crystal run — once the player has
+ * Cascaded for the first time (`resonance > 0`) the card never reappears, even
+ * after later Cascades. The Prestige tab's attention dot then signals when the
+ * next Cascade is ready.
  */
 export function nextCrystalObjective(state: CrystalObjectiveState): Objective | null {
+  // Intro is over once the first Cascade has happened.
+  if (state.resonance > 0) return null;
+
   const shardCost = CRYSTAL_GENS_BY_ID.shard.baseCost;
   const totalGens = CRYSTAL_GENS.reduce((n, g) => n + (state.crystalGenerators[g.id] ?? 0), 0);
 
@@ -213,42 +223,17 @@ export function nextCrystalObjective(state: CrystalObjectiveState): Objective | 
   }
 
   // 3. The first Resonance Cascade.
-  if (state.resonance === 0) {
-    if (canResonate(state.lifetimeCrystals, 0)) {
-      return {
-        id: 'c_cascade_ready',
-        text: 'You can Resonance Cascade — earn permanent Resonance and Attunement in the Prestige tab.',
-        tab: 'prestige',
-      };
-    }
-    if (state.lifetimeCrystals >= RESONANCE_BASE * 0.25) {
-      return {
-        id: 'c_cascade_soon',
-        text: 'Keep mining — the Resonance Cascade unlocks soon in the Prestige tab.',
-        tab: 'prestige',
-      };
-    }
-    return null;
-  }
-
-  // 4. Spend the Attunement a Cascade paid out on the permanent Matrix.
-  const matrixAffordable = CRYSTAL_UPGRADES.some((def) => {
-    const lvl = state.crystalUpgrades[def.id] ?? 0;
-    return lvl < def.maxLevel && state.attunement >= crystalUpgradeCost(def, lvl);
-  });
-  if (matrixAffordable) {
+  if (canResonate(state.lifetimeCrystals, 0)) {
     return {
-      id: 'c_matrix',
-      text: 'Spend your Attunement (◈) on the permanent Crystal Matrix in the Prestige tab.',
+      id: 'c_cascade_ready',
+      text: 'You can Resonance Cascade — earn permanent Resonance and Attunement in the Prestige tab.',
       tab: 'prestige',
     };
   }
-
-  // 5. Subsequent Cascades, once the scaling gate is met again.
-  if (canResonate(state.lifetimeCrystals, state.resonance)) {
+  if (state.lifetimeCrystals >= RESONANCE_BASE * 0.25) {
     return {
-      id: 'c_cascade_again',
-      text: 'Another Resonance Cascade is ready — claim it in the Prestige tab.',
+      id: 'c_cascade_soon',
+      text: 'Keep mining — the Resonance Cascade unlocks soon in the Prestige tab.',
       tab: 'prestige',
     };
   }

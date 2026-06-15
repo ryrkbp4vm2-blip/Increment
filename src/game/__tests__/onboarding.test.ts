@@ -123,6 +123,21 @@ describe('nextObjective', () => {
       }),
     ).toBeNull();
   });
+
+  it('never re-teaches the basics after the first Collapse', () => {
+    // A fresh post-prestige run has no generators, but the player already knows
+    // the loop, so the "buy a drone" tutorial must not reappear.
+    expect(
+      nextObjective({
+        ...base,
+        totalTaps: 500,
+        minerals: 1e6,
+        generators: {},
+        asteroidsShattered: 0,
+        prestigeCount: 1,
+      }),
+    ).toBeNull();
+  });
 });
 
 describe('nextCrystalObjective', () => {
@@ -132,8 +147,6 @@ describe('nextCrystalObjective', () => {
     crystalRunUpgrades: {} as Record<string, true>,
     lifetimeCrystals: 0,
     resonance: 0,
-    attunement: 0,
-    crystalUpgrades: {} as Record<string, number>,
   };
 
   it('teaches tapping the formation before the first generator is affordable', () => {
@@ -179,16 +192,18 @@ describe('nextCrystalObjective', () => {
     ).toBe('c_cascade_soon');
   });
 
-  it('guides spending Attunement on the Matrix after the first Cascade', () => {
-    const o = nextCrystalObjective({
-      ...cbase,
-      crystalGenerators: { shard: 10 },
-      crystalRunUpgrades: { c_tap1: true },
-      resonance: 2,
-      attunement: 10,
-    });
-    expect(o?.id).toBe('c_matrix');
-    expect(o?.tab).toBe('prestige');
+  it('stops the intro entirely once the first Cascade has happened', () => {
+    // After the first Cascade (resonance > 0) the card never reappears, even on
+    // a fresh crystal run with no generators that would otherwise re-teach.
+    expect(
+      nextCrystalObjective({
+        ...cbase,
+        crystalGenerators: {},
+        crystalRunUpgrades: {},
+        resonance: 1,
+        crystals: 1e6,
+      }),
+    ).toBeNull();
   });
 
   it('returns nothing for an established crystal player mid-run', () => {
@@ -198,7 +213,6 @@ describe('nextCrystalObjective', () => {
         crystalGenerators: { shard: 20 },
         crystalRunUpgrades: { c_tap1: true },
         resonance: 3,
-        attunement: 0,
         lifetimeCrystals: 1000,
       }),
     ).toBeNull();
