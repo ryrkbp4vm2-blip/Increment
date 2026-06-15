@@ -13,10 +13,11 @@
  * toolchain; it asserts nothing — the output is the deliverable.
  */
 import { GENERATORS } from '../src/game/balance';
-import { asteroidHp, asteroidName, isBoss } from '../src/game/asteroids';
+import { asteroidName, isBoss } from '../src/game/asteroids';
 import { costOfNext, generatorProduction } from '../src/game/math';
 import { pendingDarkMatter } from '../src/game/prestige';
 import { pendingSingularityCores } from '../src/game/ascension';
+import { canWarp, sectorName } from '../src/game/zones';
 import { DM_UPGRADES, darkMatterUpgradeCost } from '../src/game/darkmatter';
 import { RESEARCH_NODES, isResearchUnlocked } from '../src/game/research';
 import { UPGRADES } from '../src/game/balance';
@@ -29,7 +30,8 @@ const envNum = (k: string, d: number) => (process.env[k] ? Number(process.env[k]
 const TAPS_PER_SEC = envNum('TAPS_PER_SEC', 4); // active-player tap rate
 const MAX_STEP_SECONDS = 60 * 60 * 6; // cap on a single analytic time-skip
 const SIM_CAP_YEARS = envNum('SIM_CAP_YEARS', 50); // stop after this much game time
-const STOP_AT_ASCENSIONS = envNum('STOP_AT_ASCENSIONS', 3); // ...or this many ascensions
+const STOP_AT_ASCENSIONS = envNum('STOP_AT_ASCENSIONS', 12); // ...or this many ascensions
+const STOP_AT_SECTOR = envNum('STOP_AT_SECTOR', 2); // ...or reaching this sector (warps)
 // Prestige/ascend when the pending gain both clears 1 and grows the bank ≥this.
 const PRESTIGE_GROWTH = envNum('PRESTIGE_GROWTH', 0.5);
 const ASCEND_GROWTH = envNum('ASCEND_GROWTH', 0.5);
@@ -79,8 +81,9 @@ function runSimulation(tapsPerSec: number): Event[] {
     for (const idx of BELT_MARKS) {
       if (s.asteroidIndex >= idx) record(`Reach ${asteroidName(idx)}${isBoss(idx) ? ' (boss)' : ''}`);
     }
-    for (const n of [1, 3, 5, 10, 25]) if (s.prestigeCount >= n) record(`Prestige #${n}`);
-    for (const n of [1, 2, 3]) if (s.ascensionCount >= n) record(`Ascension #${n}`);
+    for (const n of [1, 3, 5, 10, 25, 50, 100]) if (s.prestigeCount >= n) record(`Prestige #${n}`);
+    for (const n of [1, 2, 3, 4, 5, 7, 10]) if (s.ascensionCount >= n) record(`Ascension #${n}`);
+    for (const n of [1, 2, 3]) if (s.sector >= n) record(`Warp to ${sectorName(n)} (sector ${n})`);
     if (Object.keys(s.research).length >= RESEARCH_NODES.length) record('All research complete');
   };
 
@@ -166,6 +169,14 @@ function runSimulation(tapsPerSec: number): Event[] {
     return true;
   };
 
+  // Warp to the next sector as soon as the ascension gate allows; the sector's
+  // ×50 production gain is always worth taking.
+  const maybeWarp = () => {
+    if (!canWarp(get().ascensionsSinceWarp)) return false;
+    get().doWarp();
+    return true;
+  };
+
   const nextMineralTarget = (): number => {
     const s = get();
     let min = Infinity;
@@ -180,12 +191,12 @@ function runSimulation(tapsPerSec: number): Event[] {
     const s = get();
     const rate = effectiveRate();
     if (rate <= 0) return false;
+    // Step straight to the next purchase; the offline path chain-shatters the
+    // belt within that step, so the sim measures macro pacing (buy-to-buy)
+    // instead of crawling one asteroid at a time.
     const need = targetCost - s.minerals;
-    const tAfford = need > 0 ? need / rate : 0;
-    const hpLeft = asteroidHp(s.asteroidIndex) - s.asteroidDamage;
-    const tShatter = hpLeft / rate;
-    let dt = Math.min(tAfford > 0 ? tAfford : tShatter, tShatter);
-    if (!isFinite(dt) || dt <= 0) dt = tShatter;
+    let dt = need > 0 ? need / rate : MAX_STEP_SECONDS;
+    if (!isFinite(dt) || dt <= 0) dt = MAX_STEP_SECONDS;
     dt = Math.min(Math.max(dt, 0.001), MAX_STEP_SECONDS);
     simMs += dt * 1000;
     get().applyOffline(rate * dt, simMs);
@@ -198,8 +209,14 @@ function runSimulation(tapsPerSec: number): Event[] {
     buyPhase();
     while (maybePrestige()) buyPhase();
     if (maybeAscend()) buyPhase();
+    if (maybeWarp()) buyPhase();
     checkMilestones();
-    if (get().ascensionCount >= STOP_AT_ASCENSIONS || simMs >= capMs) break;
+    if (
+      get().ascensionCount >= STOP_AT_ASCENSIONS ||
+      get().sector >= STOP_AT_SECTOR ||
+      simMs >= capMs
+    )
+      break;
     if (!advance(nextMineralTarget())) break;
     checkMilestones();
   }
@@ -244,11 +261,15 @@ function printReport(events: Event[], title: string) {
   out('  SUMMARY');
   out('  ───────────────────────────────────────────────────────────');
   const p1 = find(/Prestige #1/);
-  const p5 = find(/Prestige #5/);
   const a1 = find(/Ascension #1/);
+  const a5 = find(/Ascension #5/);
+  const w1 = find(/Warp to .*sector 1/);
+  const w2 = find(/Warp to .*sector 2/);
   out(`  First prestige:   ${p1 ? fmtDur(p1.t) : '—'}`);
-  out(`  Fifth prestige:   ${p5 ? fmtDur(p5.t) : '—'}`);
   out(`  First ascension:  ${a1 ? fmtDur(a1.t) : '—'}`);
+  out(`  Fifth ascension:  ${a5 ? fmtDur(a5.t) : '—'}`);
+  out(`  First warp:       ${w1 ? fmtDur(w1.t) : '—'}`);
+  out(`  Second warp:      ${w2 ? fmtDur(w2.t) : '—'}`);
   out(`  Total simulated:  ${fmtDur(events.length ? events[events.length - 1].t : 0)}`);
   out('');
 }
@@ -260,10 +281,11 @@ function printComparison(active: Event[], idle: Event[]) {
   };
   const rows: [string, RegExp][] = [
     ['First prestige', /Prestige #1/],
-    ['Fifth prestige', /Prestige #5/],
     ['First ascension', /Ascension #1/],
-    ['Second ascension', /Ascension #2/],
-    ['All research', /All research/],
+    ['Third ascension', /Ascension #3/],
+    ['Fifth ascension', /Ascension #5/],
+    ['First warp', /Warp to .*sector 1/],
+    ['Second warp', /Warp to .*sector 2/],
     ['Total simulated', /.*/],
   ];
   out('');

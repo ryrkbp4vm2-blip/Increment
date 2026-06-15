@@ -7,7 +7,7 @@
  */
 
 /** Ascensions required (since the last warp) to unlock the next sector. */
-export const ZONE_WARP_ASCENSIONS = 5;
+export const ZONE_WARP_ASCENSIONS = 3;
 /** Permanent all-production multiplier granted per sector reached. */
 export const SECTOR_PRODUCTION_MULT = 50;
 

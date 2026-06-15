@@ -2,7 +2,7 @@ import { costOfNext, globalMultiplier } from '../../game/math';
 import { singularityMult } from '../../game/ascension';
 import { GENERATORS_BY_ID } from '../../game/balance';
 import { achievementBonus } from '../../game/achievements';
-import { sectorMult, sectorTrait } from '../../game/zones';
+import { ZONE_WARP_ASCENSIONS, sectorMult, sectorTrait } from '../../game/zones';
 import { initialPersistedState, useGameStore } from '../gameStore';
 
 function reset(overrides: Partial<ReturnType<typeof initialPersistedState>> = {}) {
@@ -497,7 +497,7 @@ describe('gameStore', () => {
 
   it('doWarp advances the sector, resets the layers, keeps collections', () => {
     reset({
-      ascensionsSinceWarp: 5, // meets ZONE_WARP_ASCENSIONS
+      ascensionsSinceWarp: ZONE_WARP_ASCENSIONS, // meets the warp gate
       sector: 0,
       darkMatter: 99,
       dmUpgrades: { stellar_density: 4 },
@@ -531,7 +531,7 @@ describe('gameStore', () => {
   });
 
   it('doWarp does nothing before the ascension gate is met', () => {
-    reset({ ascensionsSinceWarp: 4, sector: 0 });
+    reset({ ascensionsSinceWarp: ZONE_WARP_ASCENSIONS - 1, sector: 0 });
     useGameStore.getState().doWarp();
     expect(useGameStore.getState().sector).toBe(0);
   });
