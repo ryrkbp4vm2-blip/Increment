@@ -22,8 +22,18 @@ import {
   TRANSCEND_ASCENSIONS,
   canTranscend,
   crystalGain,
+  crystalPowers,
   crystalUpgradeCost,
 } from '../game/transcend';
+import {
+  CRYSTAL_GENS_BY_ID,
+  CRYSTAL_TAP_BASE,
+  applyCrystalFormationDamage,
+  crystalGenBulkCost,
+  crystalGenCostOfNext,
+  crystalGenMaxAffordable,
+  crystalTotalCps,
+} from '../game/crystalGame';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -53,8 +63,10 @@ import { BuyQty, GameState, GeneratorId, PersistedState } from '../game/types';
 export interface GameActions {
   hydrate(persisted: PersistedState, nowMs: number): void;
   tap(): number;
+  crystalTap(): number;
   buyGenerator(id: GeneratorId, qty: BuyQty): void;
   buyUpgrade(id: string): void;
+  buyCrystalGenerator(id: string, qty: 1 | 10 | 'max'): void;
   applyTick(nowMs: number): void;
   applyOffline(earned: number, nowMs: number): void;
   collectComet(reward: CometReward, nowMs: number): void;
@@ -131,6 +143,9 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     transcendCount: 0,
     ascensionsSinceTranscend: 0,
     crystalUpgrades: {},
+    crystalGenerators: {},
+    crystalFormationIndex: 0,
+    crystalFormationDamage: 0,
   };
 }
 
@@ -142,11 +157,14 @@ function withCaches(
   lastTickAt: number,
 ): Omit<GameState, 'newAchievements' | 'tapHeat' | 'lastTapAt'> {
   const cachedCps = cps(persisted);
+  const cPowers = crystalPowers(persisted.crystalUpgrades);
   return {
     ...persisted,
     lastTickAt,
     cachedCps,
     cachedTapValue: tapValue(persisted, cachedCps),
+    cachedCrystalCps: crystalTotalCps(persisted.crystalGenerators, cPowers.globalMult),
+    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult,
   };
 }
 
@@ -261,6 +279,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return earned;
   },
 
+  crystalTap() {
+    const state = get();
+    const earned = state.cachedCrystalTapValue;
+    const result = applyCrystalFormationDamage(
+      state.crystalFormationIndex,
+      state.crystalFormationDamage,
+      earned,
+    );
+    set({
+      crystals: state.crystals + earned + result.bonus,
+      crystalFormationIndex: result.formationIndex,
+      crystalFormationDamage: result.formationDamage,
+      totalTaps: state.totalTaps + 1,
+    });
+    return earned + result.bonus;
+  },
+
   buyGenerator(id, qty) {
     const state = get();
     if (challengeModifiers(state.activeChallenge).disableGenerators) return;
@@ -285,16 +320,63 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(withCaches({ ...state, minerals: state.minerals - def.cost, upgrades }, state.lastTickAt));
   },
 
+  buyCrystalGenerator(id, qty) {
+    const state = get();
+    const def = CRYSTAL_GENS_BY_ID[id];
+    if (!def) return;
+    const owned = state.crystalGenerators[id] ?? 0;
+    const count = qty === 'max' ? crystalGenMaxAffordable(def, owned, state.crystals) : qty;
+    if (count <= 0) return;
+    const cost = crystalGenBulkCost(def, owned, count);
+    if (cost > state.crystals) return;
+    const crystalGenerators = { ...state.crystalGenerators, [id]: owned + count };
+    set(withCaches({ ...state, crystals: state.crystals - cost, crystalGenerators }, state.lastTickAt));
+  },
+
   applyTick(nowMs) {
     const state = get();
     const deltaMs = Math.min(Math.max(nowMs - state.lastTickAt, 0), MAX_TICK_DELTA_MS);
-    const earned = state.cachedCps * (deltaMs / 1000) * frenzyFactor(state, nowMs);
-    set({ ...earn(state, earned), lastTickAt: nowMs });
+    if (state.transcendCount > 0) {
+      // Crystal mode: passive generators earn crystals.
+      if (state.cachedCrystalCps > 0) {
+        const earned = state.cachedCrystalCps * (deltaMs / 1000);
+        const result = applyCrystalFormationDamage(
+          state.crystalFormationIndex,
+          state.crystalFormationDamage,
+          earned,
+        );
+        set({
+          crystals: state.crystals + earned + result.bonus,
+          crystalFormationIndex: result.formationIndex,
+          crystalFormationDamage: result.formationDamage,
+          lastTickAt: nowMs,
+        });
+      } else {
+        set({ lastTickAt: nowMs });
+      }
+    } else {
+      const earned = state.cachedCps * (deltaMs / 1000) * frenzyFactor(state, nowMs);
+      set({ ...earn(state, earned), lastTickAt: nowMs });
+    }
   },
 
   applyOffline(earned, nowMs) {
     const state = get();
-    set({ ...earn(state, earned), lastTickAt: nowMs });
+    if (state.transcendCount > 0) {
+      const result = applyCrystalFormationDamage(
+        state.crystalFormationIndex,
+        state.crystalFormationDamage,
+        earned,
+      );
+      set({
+        crystals: state.crystals + earned + result.bonus,
+        crystalFormationIndex: result.formationIndex,
+        crystalFormationDamage: result.formationDamage,
+        lastTickAt: nowMs,
+      });
+    } else {
+      set({ ...earn(state, earned), lastTickAt: nowMs });
+    }
   },
 
   collectComet(reward, nowMs) {
@@ -702,36 +784,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ ...withCaches(initialPersistedState(now), now), newAchievements: [], tapHeat: 0, lastTapAt: 0 });
   },
 
-  // TEMPORARY: drop into a thriving late-game empire with Transcendence ready
-  // and Crystals to spend, so the Crystal layer can be tried without a multi-day
-  // climb. Remove before release.
+  // TEMPORARY: jump directly into crystal mode with crystals to spend so the
+  // new mining loop can be tried without a multi-day climb. Remove before release.
   devUnlockCrystals() {
     const now = Date.now();
     const base = initialPersistedState(now);
-    const generators = { ...base.generators };
-    for (const g of GENERATORS) generators[g.id] = 75;
     set({
       ...withCaches(
         {
           ...base,
-          generators,
-          minerals: 1e12,
-          lifetimeThisRun: 1e12,
           lifetimeAllTime: 1e15,
           totalTaps: 5000,
-          // Top prestige/ascension layers so production is meaningful.
-          darkMatter: 200,
-          totalDarkMatter: 5000,
-          prestigeCount: 20,
-          singularityCores: 5,
-          totalSingularityCores: 40,
-          sector: 2,
-          // Transcendence: unlocked (ascensionCount ≥ 5) and available now.
           ascensionCount: 6,
-          ascensionsSinceTranscend: TRANSCEND_ASCENSIONS,
-          // A handful of Crystals to immediately try the Crystal Matrix.
-          crystals: 25,
-          totalCrystals: 5,
+          // Crystal mode: already transcended once, plenty of crystals to spend.
+          transcendCount: 1,
+          crystals: 500,
+          totalCrystals: 500,
+          // A few generators pre-seeded so there's CPS from the start.
+          crystalGenerators: { shard: 10, prism: 3 },
         },
         now,
       ),

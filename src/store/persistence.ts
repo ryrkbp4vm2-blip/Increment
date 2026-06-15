@@ -7,6 +7,7 @@ import { EXPEDITIONS_BY_ID } from '../game/expeditions';
 import { RESEARCH_BY_ID } from '../game/research';
 import { CORE_UPGRADES_BY_ID, SINGULARITY_PERKS_BY_ID } from '../game/ascension';
 import { CRYSTAL_UPGRADES_BY_ID } from '../game/transcend';
+import { CRYSTAL_GENS_BY_ID } from '../game/crystalGame';
 import { CHALLENGES_BY_ID } from '../game/challenges';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
@@ -58,6 +59,9 @@ export function toPersisted(state: GameState): PersistedState {
     transcendCount: state.transcendCount,
     ascensionsSinceTranscend: state.ascensionsSinceTranscend,
     crystalUpgrades: state.crystalUpgrades,
+    crystalGenerators: state.crystalGenerators,
+    crystalFormationIndex: state.crystalFormationIndex,
+    crystalFormationDamage: state.crystalFormationDamage,
   };
 }
 
@@ -208,6 +212,14 @@ export function migrate(raw: string | null): SaveFile | null {
       if (level > 0) crystalUpgrades[id] = Math.min(level, def.maxLevel);
     }
   }
+  const crystalGenerators: Record<string, number> = {};
+  if (typeof raw_.crystalGenerators === 'object' && raw_.crystalGenerators !== null) {
+    for (const id of Object.keys(raw_.crystalGenerators)) {
+      if (!CRYSTAL_GENS_BY_ID[id]) continue;
+      const count = Math.max(0, Math.floor(finiteNumber((raw_.crystalGenerators as Record<string, unknown>)[id], 0)));
+      if (count > 0) crystalGenerators[id] = count;
+    }
+  }
   const singularityCores = Math.max(0, Math.floor(finiteNumber(raw_.singularityCores, 0)));
   const crystals = Math.max(0, Math.floor(finiteNumber(raw_.crystals, 0)));
   const research: Record<string, true> = {};
@@ -280,6 +292,9 @@ export function migrate(raw: string | null): SaveFile | null {
     transcendCount: Math.max(0, Math.floor(finiteNumber(raw_.transcendCount, 0))),
     ascensionsSinceTranscend: Math.max(0, Math.floor(finiteNumber(raw_.ascensionsSinceTranscend, 0))),
     crystalUpgrades,
+    crystalGenerators,
+    crystalFormationIndex: Math.max(0, Math.floor(finiteNumber(raw_.crystalFormationIndex, 0))),
+    crystalFormationDamage: Math.max(0, finiteNumber(raw_.crystalFormationDamage, 0)),
   };
   return {
     version: SAVE_VERSION,

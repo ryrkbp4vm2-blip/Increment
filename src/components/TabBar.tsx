@@ -3,13 +3,23 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing } from '../theme';
 import { Icon, IconName } from './art/Icon';
 
-export type Tab = 'mine' | 'shop' | 'fleet' | 'lab' | 'goals' | 'prestige';
+export type Tab =
+  | 'mine'
+  | 'shop'
+  | 'fleet'
+  | 'lab'
+  | 'goals'
+  | 'prestige'
+  | 'crystal_mine'
+  | 'crystal_forge';
 
-const TABS: { id: Tab; label: string; icon: IconName }[] = [
+const ALL_TABS: { id: Tab; label: string; icon: IconName }[] = [
   { id: 'mine', label: 'Mine', icon: 'mine' },
   { id: 'shop', label: 'Empire', icon: 'empire' },
   { id: 'fleet', label: 'Fleet', icon: 'fleet' },
   { id: 'lab', label: 'Lab', icon: 'lab' },
+  { id: 'crystal_mine', label: 'Mine', icon: 'shard' },
+  { id: 'crystal_forge', label: 'Forge', icon: 'gem_outline' },
   { id: 'goals', label: 'Goals', icon: 'goals' },
   { id: 'prestige', label: 'Prestige', icon: 'prestige' },
 ];
@@ -17,14 +27,16 @@ const TABS: { id: Tab; label: string; icon: IconName }[] = [
 interface Props {
   active: Tab;
   onChange: (tab: Tab) => void;
+  tabs: Tab[];
   /** Tabs that should show an attention marker (e.g. a claim is available). */
   attention?: Partial<Record<Tab, boolean>>;
 }
 
-export function TabBar({ active, onChange, attention }: Props) {
+export function TabBar({ active, onChange, tabs, attention }: Props) {
+  const visible = ALL_TABS.filter((t) => tabs.includes(t.id));
   return (
     <View style={styles.bar}>
-      {TABS.map((tab) => {
+      {visible.map((tab) => {
         const isActive = tab.id === active;
         const flagged = attention?.[tab.id] && !isActive;
         return (

@@ -28,16 +28,27 @@ export default function App() {
         useGameStore.getState().hydrate(save.state, now);
         const elapsedMs = now - save.savedAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
-          const capBonus = effectivePowers(save.state.artifacts, save.state.dmUpgrades, save.state.research)
-            .offlineCapBonusMs;
-          const earned = computeOfflineEarnings(
-            elapsedMs,
-            cps(save.state),
-            capBonus,
-            offlineEfficiency(save.state.singularityPerks),
-          );
-          useGameStore.getState().applyOffline(earned, now);
-          if (earned > 0) setOfflineReport({ earned, elapsedMs });
+          if (save.state.transcendCount > 0) {
+            // Crystal mode: offline earnings are crystal CPS × elapsed (8h cap).
+            const store = useGameStore.getState();
+            const crystalEarned = Math.min(
+              store.cachedCrystalCps * (elapsedMs / 1000),
+              store.cachedCrystalCps * 8 * 3600,
+            );
+            store.applyOffline(crystalEarned, now);
+            if (crystalEarned > 0) setOfflineReport({ earned: crystalEarned, elapsedMs, crystal: true });
+          } else {
+            const capBonus = effectivePowers(save.state.artifacts, save.state.dmUpgrades, save.state.research)
+              .offlineCapBonusMs;
+            const earned = computeOfflineEarnings(
+              elapsedMs,
+              cps(save.state),
+              capBonus,
+              offlineEfficiency(save.state.singularityPerks),
+            );
+            useGameStore.getState().applyOffline(earned, now);
+            if (earned > 0) setOfflineReport({ earned, elapsedMs });
+          }
         }
       }
       setReady(true);

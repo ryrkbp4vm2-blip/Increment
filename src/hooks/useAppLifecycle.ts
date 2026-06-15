@@ -10,6 +10,7 @@ import { writeSave } from '../store/persistence';
 export interface OfflineReport {
   earned: number;
   elapsedMs: number;
+  crystal?: boolean;
 }
 
 /**
@@ -28,16 +29,25 @@ export function useAppLifecycle() {
       if (nowActive) {
         const elapsedMs = Date.now() - state.lastTickAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
-          const capBonus = effectivePowers(state.artifacts, state.dmUpgrades, state.research)
-            .offlineCapBonusMs;
-          const earned = computeOfflineEarnings(
-            elapsedMs,
-            state.cachedCps,
-            capBonus,
-            offlineEfficiency(state.singularityPerks),
-          );
-          state.applyOffline(earned, Date.now());
-          if (earned > 0) setOfflineReport({ earned, elapsedMs });
+          if (state.transcendCount > 0) {
+            const earned = Math.min(
+              state.cachedCrystalCps * (elapsedMs / 1000),
+              state.cachedCrystalCps * 8 * 3600,
+            );
+            state.applyOffline(earned, Date.now());
+            if (earned > 0) setOfflineReport({ earned, elapsedMs, crystal: true });
+          } else {
+            const capBonus = effectivePowers(state.artifacts, state.dmUpgrades, state.research)
+              .offlineCapBonusMs;
+            const earned = computeOfflineEarnings(
+              elapsedMs,
+              state.cachedCps,
+              capBonus,
+              offlineEfficiency(state.singularityPerks),
+            );
+            state.applyOffline(earned, Date.now());
+            if (earned > 0) setOfflineReport({ earned, elapsedMs });
+          }
         }
       } else {
         void writeSave(state);

@@ -8,6 +8,8 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     lastTickAt: 456,
     cachedCps: 99,
     cachedTapValue: 5,
+    cachedCrystalCps: 0,
+    cachedCrystalTapValue: 0.5,
     newAchievements: [],
     tapHeat: 0,
     lastTapAt: 0,

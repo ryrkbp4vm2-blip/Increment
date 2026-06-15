@@ -83,6 +83,8 @@ export function PrestigeScreen() {
   const [confirmingWarp, setConfirmingWarp] = useState(false);
   const [confirmingTranscend, setConfirmingTranscend] = useState(false);
 
+  const isCrystalMode = transcendCount > 0;
+
   const pendingCores = pendingSingularityCores(dmSinceAscension);
   const ascendNextAt = nextAscensionAt(dmSinceAscension);
   // Reveal the ascension layer once the player is at least halfway to it.
@@ -93,6 +95,23 @@ export function PrestigeScreen() {
   const gain = darkMatterGain(lifetimeThisRun, powers.dmGainMult);
   const nextAt = nextDarkMatterAt(lifetimeThisRun);
   const progress = Math.min(lifetimeThisRun / PRESTIGE_BASE, 1);
+
+  // In crystal mode, show a focused crystal-game prestige screen.
+  if (isCrystalMode) {
+    return (
+      <CrystalPrestigeScreen
+        crystals={crystals}
+        totalCrystals={totalCrystals}
+        transcendCount={transcendCount}
+        ascensionsSinceTranscend={ascensionsSinceTranscend}
+        crystalUpgrades={crystalUpgrades}
+        buyCrystalUpgrade={buyCrystalUpgrade}
+        doTranscend={doTranscend}
+        confirmingTranscend={confirmingTranscend}
+        setConfirmingTranscend={setConfirmingTranscend}
+      />
+    );
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -472,6 +491,141 @@ export function PrestigeScreen() {
       ))}
 
       {(prestigeCount > 0 || activeChallenge !== null) && <ChallengesSection />}
+    </ScrollView>
+  );
+}
+
+function CrystalPrestigeScreen({
+  crystals,
+  totalCrystals,
+  transcendCount,
+  ascensionsSinceTranscend,
+  crystalUpgrades,
+  buyCrystalUpgrade,
+  doTranscend,
+  confirmingTranscend,
+  setConfirmingTranscend,
+}: {
+  crystals: number;
+  totalCrystals: number;
+  transcendCount: number;
+  ascensionsSinceTranscend: number;
+  crystalUpgrades: Record<string, number>;
+  buyCrystalUpgrade: (id: string) => void;
+  doTranscend: () => void;
+  confirmingTranscend: boolean;
+  setConfirmingTranscend: (v: boolean) => void;
+}) {
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <View style={styles.titleRow}>
+        <Icon name="gem_outline" size={22} color={colors.darkMatter} accent={colors.darkMatter} />
+        <Text style={[styles.title, { color: colors.darkMatter }]}>Crystal Realm</Text>
+      </View>
+      <Text style={styles.body}>
+        You have transcended the mineral empire. Mine Crystals, build your Matrix, and Transcend
+        again when you've ascended enough times to grow even stronger.
+      </Text>
+
+      <View style={styles.statsCard}>
+        <StatRow label="Crystals to spend" value={`${formatNumber(crystals)} ✦`} />
+        <StatRow label="Total Crystals earned" value={`${formatNumber(totalCrystals)} ✦`} />
+        <StatRow label="Transcendences" value={formatNumber(transcendCount)} />
+        <StatRow
+          label="Ascensions toward Transcend"
+          value={`${Math.min(ascensionsSinceTranscend, TRANSCEND_ASCENSIONS)} / ${TRANSCEND_ASCENSIONS}`}
+        />
+      </View>
+
+      {canTranscend(ascensionsSinceTranscend) ? (
+        confirmingTranscend ? (
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmText}>
+              Transcend for +{crystalGain(ascensionsSinceTranscend, crystalUpgrades)} ✦? Crystal
+              generators reset; the Matrix stays.
+            </Text>
+            <View style={styles.confirmButtons}>
+              <BigButton
+                label={`Transcend +${crystalGain(ascensionsSinceTranscend, crystalUpgrades)} ✦`}
+                color={colors.darkMatter}
+                onPress={() => {
+                  doTranscend();
+                  playSound('prestige');
+                  setConfirmingTranscend(false);
+                }}
+                style={styles.confirmButton}
+              />
+              <BigButton
+                label="Cancel"
+                color={colors.panelLight}
+                onPress={() => setConfirmingTranscend(false)}
+                style={styles.confirmButton}
+              />
+            </View>
+          </View>
+        ) : (
+          <BigButton
+            label={`Transcend for +${crystalGain(ascensionsSinceTranscend, crystalUpgrades)} ✦`}
+            color={colors.darkMatter}
+            onPress={() => setConfirmingTranscend(true)}
+          />
+        )
+      ) : (
+        <>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${Math.min(ascensionsSinceTranscend / TRANSCEND_ASCENSIONS, 1) * 100}%`,
+                  backgroundColor: colors.darkMatter,
+                },
+              ]}
+            />
+          </View>
+          <Text style={styles.transcendHint}>
+            Ascend {nextTranscendIn(ascensionsSinceTranscend)} more time
+            {nextTranscendIn(ascensionsSinceTranscend) === 1 ? '' : 's'} to Transcend again.
+          </Text>
+        </>
+      )}
+
+      <Text style={styles.perksTitle}>Crystal Matrix</Text>
+      <Text style={styles.perksHint}>Permanent upgrades. Survive every Transcend.</Text>
+      {CRYSTAL_UPGRADES.map((def) => {
+        const level = crystalUpgrades[def.id] ?? 0;
+        const maxed = level >= def.maxLevel;
+        const cost = crystalUpgradeCost(def, level);
+        const affordable = !maxed && crystals >= cost;
+        return (
+          <View key={def.id} style={styles.dmRow}>
+            <View style={styles.dmIconBox}>
+              <Icon name={def.icon as IconName} size={26} color={colors.darkMatter} accent={colors.darkMatter} />
+            </View>
+            <View style={styles.dmInfo}>
+              <Text style={styles.dmName}>
+                {def.name} <Text style={styles.dmLevel}>Lv {level}/{def.maxLevel}</Text>
+              </Text>
+              <Text style={styles.dmDesc}>{def.perLevel}</Text>
+              {level > 0 && <Text style={styles.dmCurrent}>Now: {crystalTotalEffect(def, level)}</Text>}
+            </View>
+            <Pressable
+              onPress={() => {
+                buyCrystalUpgrade(def.id);
+                playSound('buy');
+              }}
+              disabled={!affordable}
+              style={[styles.dmBuy, maxed && styles.dmMaxed, !affordable && !maxed && styles.dmBuyDisabled]}
+            >
+              {maxed ? (
+                <Text style={styles.dmMaxedText}>MAX</Text>
+              ) : (
+                <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ✦</Text>
+              )}
+            </Pressable>
+          </View>
+        );
+      })}
     </ScrollView>
   );
 }

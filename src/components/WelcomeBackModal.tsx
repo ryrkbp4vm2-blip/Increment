@@ -12,22 +12,31 @@ interface Props {
 }
 
 export function WelcomeBackModal({ report, onDismiss }: Props) {
+  const isCrystal = report?.crystal ?? false;
   return (
     <Modal visible={report !== null} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>Welcome back, Commander!</Text>
+          <Text style={styles.title}>Welcome back!</Text>
           <Text style={styles.subtitle}>
-            Your empire kept mining for {formatDuration(report?.elapsedMs ?? 0)}
+            {isCrystal
+              ? `The Crystal Realm kept humming for ${formatDuration(report?.elapsedMs ?? 0)}`
+              : `Your empire kept mining for ${formatDuration(report?.elapsedMs ?? 0)}`}
           </Text>
-          <Amount
-            kind="mineral"
-            value={report?.earned ?? 0}
-            size={26}
-            textStyle={styles.earned}
-            prefix="+"
-            style={styles.earnedRow}
-          />
+          {isCrystal ? (
+            <Text style={[styles.earned, styles.earnedRow, styles.crystalEarned]}>
+              +{report?.earned.toFixed(1)} ✦
+            </Text>
+          ) : (
+            <Amount
+              kind="mineral"
+              value={report?.earned ?? 0}
+              size={26}
+              textStyle={styles.earned}
+              prefix="+"
+              style={styles.earnedRow}
+            />
+          )}
           <BigButton label="Collect" onPress={onDismiss} />
         </View>
       </View>
@@ -71,5 +80,8 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 28,
     fontWeight: '800',
+  },
+  crystalEarned: {
+    color: '#C084FC',
   },
 });

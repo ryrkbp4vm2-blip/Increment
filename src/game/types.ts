@@ -109,12 +109,21 @@ export interface PersistedState {
   ascensionsSinceTranscend: number;
   /** Leveled Crystal Matrix upgrades bought with Crystals (survive everything). */
   crystalUpgrades: Record<string, number>;
+  /** Crystal Game: auto-generators bought with Crystals (reset each Transcend). */
+  crystalGenerators: Record<string, number>;
+  /** Crystal Game: which formation we're cracking (resets each Transcend). */
+  crystalFormationIndex: number;
+  /** Crystal Game: damage dealt to the current formation (resets each Transcend). */
+  crystalFormationDamage: number;
 }
 
 export interface GameState extends PersistedState {
   lastTickAt: number;
   cachedCps: number;
   cachedTapValue: number;
+  /** Crystal game production caches (derived from crystalGenerators + matrix). */
+  cachedCrystalCps: number;
+  cachedCrystalTapValue: number;
   /** Transient queue of just-unlocked achievement ids for toasts. */
   newAchievements: string[];
   /** Transient Drill Heat combo (0..1) and when it last changed. Not saved. */

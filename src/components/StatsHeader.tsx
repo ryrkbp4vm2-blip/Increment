@@ -15,7 +15,10 @@ interface Props {
 
 export function StatsHeader({ onOpenSettings }: Props) {
   const minerals = useGameStore((s) => s.minerals);
+  const crystals = useGameStore((s) => s.crystals);
+  const transcendCount = useGameStore((s) => s.transcendCount);
   const cps = useGameStore((s) => s.cachedCps);
+  const crystalCps = useGameStore((s) => s.cachedCrystalCps);
   const darkMatter = useGameStore((s) => s.darkMatter);
   const frenzyUntil = useGameStore((s) => s.frenzyUntil);
   const frenzyMult = useGameStore((s) => s.frenzyMult);
@@ -23,8 +26,10 @@ export function StatsHeader({ onOpenSettings }: Props) {
   const claimDaily = useGameStore((s) => s.claimDaily);
   const [dailyMsg, setDailyMsg] = useState<string | null>(null);
 
-  // The header re-renders every tick (minerals changes), so reading the
-  // clock during render keeps the frenzy countdown fresh.
+  const isCrystalMode = transcendCount > 0;
+
+  // The header re-renders every tick (minerals/crystals change), so reading
+  // the clock during render keeps the frenzy countdown fresh.
   const now = Date.now();
   const frenzy = frenzyFactor({ frenzyUntil, frenzyMult }, now);
   const frenzySecondsLeft = Math.ceil((frenzyUntil - now) / 1000);
@@ -37,6 +42,25 @@ export function StatsHeader({ onOpenSettings }: Props) {
     setDailyMsg(`+${formatNumber(result.reward)} · day ${result.streak} streak`);
     setTimeout(() => setDailyMsg(null), 3500);
   };
+
+  if (isCrystalMode) {
+    return (
+      <View style={styles.header}>
+        <Pressable style={styles.settingsButton} onPress={onOpenSettings} hitSlop={12}>
+          <Icon name="settings" size={20} color={colors.textMuted} accent={colors.textMuted} />
+        </Pressable>
+        <View style={styles.center}>
+          <View style={styles.mineralRow}>
+            <Text style={styles.crystalGlyph}>✦</Text>
+            <Text style={[styles.minerals, styles.crystalValue]}>{formatNumber(crystals)}</Text>
+          </View>
+          <Text style={[styles.rate, styles.crystalRate]}>
+            {crystalCps > 0 ? `${formatRate(crystalCps)} ✦/s` : 'Tap to mine Crystals'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.header}>
@@ -167,5 +191,17 @@ const styles = StyleSheet.create({
   dmBonus: {
     color: colors.textMuted,
     fontSize: 11,
+  },
+  crystalGlyph: {
+    fontSize: 24,
+    color: colors.darkMatter,
+    lineHeight: 30,
+  },
+  crystalValue: {
+    color: colors.darkMatter,
+  },
+  crystalRate: {
+    color: colors.darkMatter,
+    marginTop: 2,
   },
 });
