@@ -35,6 +35,7 @@ export function GameRoot({ initialOfflineReport }: Props) {
       lifetimeThisRun: s.lifetimeThisRun,
       dmSinceAscension: s.dmSinceAscension,
       ascensionsSinceWarp: s.ascensionsSinceWarp,
+      ascensionsSinceTranscend: s.ascensionsSinceTranscend,
     }),
   );
 

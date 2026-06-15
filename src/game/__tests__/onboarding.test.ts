@@ -2,6 +2,7 @@ import { nextObjective, prestigeAttention } from '../onboarding';
 import { PRESTIGE_BASE } from '../balance';
 import { ASCEND_BASE } from '../ascension';
 import { ZONE_WARP_ASCENSIONS } from '../zones';
+import { TRANSCEND_ASCENSIONS } from '../transcend';
 
 const base = {
   totalTaps: 0,
@@ -16,6 +17,7 @@ const base = {
   dmSinceAscension: 0,
   ascensionCount: 0,
   ascensionsSinceWarp: 0,
+  ascensionsSinceTranscend: 0,
 };
 
 describe('nextObjective', () => {
@@ -91,6 +93,21 @@ describe('nextObjective', () => {
     expect(o?.id).toBe('warp_ready');
   });
 
+  it('flags an available transcend once the layer is unlocked', () => {
+    const o = nextObjective({
+      ...base,
+      totalTaps: 20,
+      generators: { drone: 5 },
+      asteroidsShattered: 4,
+      expeditionsCompleted: 1,
+      prestigeCount: 6,
+      ascensionCount: 6,
+      ascensionsSinceTranscend: TRANSCEND_ASCENSIONS,
+    });
+    expect(o?.id).toBe('transcend_ready');
+    expect(o?.tab).toBe('prestige');
+  });
+
   it('returns nothing for an established player with no pending action', () => {
     expect(
       nextObjective({
@@ -108,31 +125,30 @@ describe('nextObjective', () => {
 });
 
 describe('prestigeAttention', () => {
+  const calm = {
+    lifetimeThisRun: 0,
+    dmSinceAscension: 0,
+    ascensionsSinceWarp: 0,
+    ascensionsSinceTranscend: 0,
+  };
+
   it('is false with nothing to claim', () => {
-    expect(
-      prestigeAttention({ lifetimeThisRun: 0, dmSinceAscension: 0, ascensionsSinceWarp: 0 }),
-    ).toBe(false);
+    expect(prestigeAttention(calm)).toBe(false);
   });
 
   it('is true when a collapse is available', () => {
-    expect(
-      prestigeAttention({ lifetimeThisRun: PRESTIGE_BASE, dmSinceAscension: 0, ascensionsSinceWarp: 0 }),
-    ).toBe(true);
+    expect(prestigeAttention({ ...calm, lifetimeThisRun: PRESTIGE_BASE })).toBe(true);
   });
 
   it('is true when an ascension is available', () => {
-    expect(
-      prestigeAttention({ lifetimeThisRun: 0, dmSinceAscension: ASCEND_BASE, ascensionsSinceWarp: 0 }),
-    ).toBe(true);
+    expect(prestigeAttention({ ...calm, dmSinceAscension: ASCEND_BASE })).toBe(true);
   });
 
   it('is true when a warp is available', () => {
-    expect(
-      prestigeAttention({
-        lifetimeThisRun: 0,
-        dmSinceAscension: 0,
-        ascensionsSinceWarp: ZONE_WARP_ASCENSIONS,
-      }),
-    ).toBe(true);
+    expect(prestigeAttention({ ...calm, ascensionsSinceWarp: ZONE_WARP_ASCENSIONS })).toBe(true);
+  });
+
+  it('is true when a transcend is available', () => {
+    expect(prestigeAttention({ ...calm, ascensionsSinceTranscend: TRANSCEND_ASCENSIONS })).toBe(true);
   });
 });

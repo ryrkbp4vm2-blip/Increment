@@ -32,6 +32,18 @@ import {
   sectorName,
   sectorTrait,
 } from '../game/zones';
+import {
+  CRYSTAL_UPGRADES,
+  TRANSCEND_ASCENSIONS,
+  canTranscend,
+  crystalGain,
+  crystalMult,
+  crystalTotalEffect,
+  crystalUpgradeCost,
+  nextTranscendIn,
+  pendingCrystals,
+  transcendUnlocked,
+} from '../game/transcend';
 import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
@@ -59,9 +71,17 @@ export function PrestigeScreen() {
   const sector = useGameStore((s) => s.sector);
   const ascensionsSinceWarp = useGameStore((s) => s.ascensionsSinceWarp);
   const doWarp = useGameStore((s) => s.doWarp);
+  const crystals = useGameStore((s) => s.crystals);
+  const totalCrystals = useGameStore((s) => s.totalCrystals);
+  const transcendCount = useGameStore((s) => s.transcendCount);
+  const ascensionsSinceTranscend = useGameStore((s) => s.ascensionsSinceTranscend);
+  const crystalUpgrades = useGameStore((s) => s.crystalUpgrades);
+  const doTranscend = useGameStore((s) => s.doTranscend);
+  const buyCrystalUpgrade = useGameStore((s) => s.buyCrystalUpgrade);
   const [confirming, setConfirming] = useState(false);
   const [confirmingAscend, setConfirmingAscend] = useState(false);
   const [confirmingWarp, setConfirmingWarp] = useState(false);
+  const [confirmingTranscend, setConfirmingTranscend] = useState(false);
 
   const pendingCores = pendingSingularityCores(dmSinceAscension);
   const ascendNextAt = nextAscensionAt(dmSinceAscension);
@@ -331,6 +351,111 @@ export function PrestigeScreen() {
         </View>
       )}
 
+      {transcendUnlocked(ascensionCount) && (
+        <View style={styles.transcendCard}>
+          <View style={styles.titleRow}>
+            <Icon name="gem_outline" size={20} color={colors.darkMatter} accent={colors.darkMatter} />
+            <Text style={styles.transcendTitle}>Transcendence</Text>
+          </View>
+          <Text style={styles.ascendBody}>
+            Shatter the entire empire — minerals, Dark Matter, Cores, sectors, research and
+            artifacts all reset — and crystallise your depth into Crystals. The Crystal Matrix you
+            build with them is permanent and powers every future climb.
+          </Text>
+          <StatRow label="Crystals" value={`${formatNumber(crystals)} ✦`} />
+          <StatRow label="Crystal bonus" value={`×${formatNumber(crystalMult(totalCrystals))}`} />
+          <StatRow label="Transcends" value={formatNumber(transcendCount)} />
+          <StatRow
+            label="Ascensions toward Transcend"
+            value={`${Math.min(ascensionsSinceTranscend, TRANSCEND_ASCENSIONS)} / ${TRANSCEND_ASCENSIONS}`}
+          />
+          {!canTranscend(ascensionsSinceTranscend) ? (
+            <>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.min(ascensionsSinceTranscend / TRANSCEND_ASCENSIONS, 1) * 100}%`,
+                      backgroundColor: colors.darkMatter,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.transcendHint}>
+                Ascend {nextTranscendIn(ascensionsSinceTranscend)} more time
+                {nextTranscendIn(ascensionsSinceTranscend) === 1 ? '' : 's'} to Transcend.
+              </Text>
+            </>
+          ) : confirmingTranscend ? (
+            <View style={styles.confirmButtons}>
+              <BigButton
+                label={`Transcend for ${crystalGain(ascensionsSinceTranscend, crystalUpgrades)} ✦`}
+                color={colors.darkMatter}
+                onPress={() => {
+                  doTranscend();
+                  playSound('prestige');
+                  setConfirmingTranscend(false);
+                }}
+                style={styles.confirmButton}
+              />
+              <BigButton
+                label="Cancel"
+                color={colors.panelLight}
+                onPress={() => setConfirmingTranscend(false)}
+                style={styles.confirmButton}
+              />
+            </View>
+          ) : (
+            <BigButton
+              label={`Transcend for ${crystalGain(ascensionsSinceTranscend, crystalUpgrades)} Crystals`}
+              color={colors.darkMatter}
+              onPress={() => setConfirmingTranscend(true)}
+              style={styles.ascendButton}
+            />
+          )}
+
+          <Text style={styles.perksTitle}>Crystal Matrix</Text>
+          <Text style={styles.perksHint}>
+            Leveled upgrades bought with Crystals. Permanent — survive every Transcend.
+          </Text>
+          {CRYSTAL_UPGRADES.map((def) => {
+            const level = crystalUpgrades[def.id] ?? 0;
+            const maxed = level >= def.maxLevel;
+            const cost = crystalUpgradeCost(def, level);
+            const affordable = !maxed && crystals >= cost;
+            return (
+              <View key={def.id} style={styles.dmRow}>
+                <View style={styles.dmIconBox}>
+                  <Icon name={def.icon as IconName} size={26} color={colors.darkMatter} accent={colors.darkMatter} />
+                </View>
+                <View style={styles.dmInfo}>
+                  <Text style={styles.dmName}>
+                    {def.name} <Text style={styles.dmLevel}>Lv {level}/{def.maxLevel}</Text>
+                  </Text>
+                  <Text style={styles.dmDesc}>{def.perLevel}</Text>
+                  {level > 0 && <Text style={styles.dmCurrent}>Now: {crystalTotalEffect(def, level)}</Text>}
+                </View>
+                <Pressable
+                  onPress={() => {
+                    buyCrystalUpgrade(def.id);
+                    playSound('buy');
+                  }}
+                  disabled={!affordable}
+                  style={[styles.dmBuy, maxed && styles.dmMaxed, !affordable && !maxed && styles.dmBuyDisabled]}
+                >
+                  {maxed ? (
+                    <Text style={styles.dmMaxedText}>MAX</Text>
+                  ) : (
+                    <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ✦</Text>
+                  )}
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       <View style={styles.shopTitleRow}>
         <Icon name="darkmatter" size={18} />
         <Text style={styles.shopTitle}>Dark Matter Shop</Text>
@@ -523,6 +648,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   warpTitle: { color: colors.accent, fontSize: 18, fontWeight: '800' },
+  transcendCard: {
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.darkMatter,
+    padding: spacing.lg,
+    marginTop: spacing.xl,
+  },
+  transcendTitle: { color: colors.darkMatter, fontSize: 18, fontWeight: '800' },
+  transcendHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
   ascendBody: {
     color: colors.textMuted,
     fontSize: 13,

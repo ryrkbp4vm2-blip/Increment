@@ -102,6 +102,13 @@ export interface PersistedState {
   /** Sector (zone) layer: current sector and ascensions done since last warp. */
   sector: number;
   ascensionsSinceWarp: number;
+  /** Transcendence layer: Crystals (spendable + lifetime), count, gate progress. */
+  crystals: number;
+  totalCrystals: number;
+  transcendCount: number;
+  ascensionsSinceTranscend: number;
+  /** Leveled Crystal Matrix upgrades bought with Crystals (survive everything). */
+  crystalUpgrades: Record<string, number>;
 }
 
 export interface GameState extends PersistedState {

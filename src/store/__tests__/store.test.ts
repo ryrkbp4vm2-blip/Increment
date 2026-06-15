@@ -3,6 +3,7 @@ import { singularityMult } from '../../game/ascension';
 import { GENERATORS_BY_ID } from '../../game/balance';
 import { achievementBonus } from '../../game/achievements';
 import { ZONE_WARP_ASCENSIONS, sectorMult, sectorTrait } from '../../game/zones';
+import { TRANSCEND_ASCENSIONS } from '../../game/transcend';
 import { initialPersistedState, useGameStore } from '../gameStore';
 
 function reset(overrides: Partial<ReturnType<typeof initialPersistedState>> = {}) {
@@ -534,6 +535,49 @@ describe('gameStore', () => {
     reset({ ascensionsSinceWarp: ZONE_WARP_ASCENSIONS - 1, sector: 0 });
     useGameStore.getState().doWarp();
     expect(useGameStore.getState().sector).toBe(0);
+  });
+
+  it('doTranscend wipes the empire for Crystals, keeping the Matrix and records', () => {
+    reset({
+      ascensionsSinceTranscend: TRANSCEND_ASCENSIONS + 1, // 6 -> 2 crystals
+      ascensionCount: 8,
+      sector: 3,
+      darkMatter: 500,
+      dmUpgrades: { stellar_density: 4 },
+      singularityCores: 9,
+      totalSingularityCores: 12,
+      research: { ex1: true },
+      artifacts: { pulsar_shard: true },
+      achievements: { t_100: true },
+      crystalUpgrades: { crystal_resonance: 2 },
+      generators: { ...initialPersistedState().generators, dyson: 5 },
+    });
+    useGameStore.getState().doTranscend();
+    const s = useGameStore.getState();
+    // gained pendingCrystals(6) = 2 crystals
+    expect(s.crystals).toBe(2);
+    expect(s.totalCrystals).toBe(2);
+    expect(s.transcendCount).toBe(1);
+    expect(s.ascensionsSinceTranscend).toBe(0);
+    // the whole empire below is wiped
+    expect(s.sector).toBe(0);
+    expect(s.darkMatter).toBe(0);
+    expect(s.dmUpgrades).toEqual({});
+    expect(s.totalSingularityCores).toBe(0);
+    expect(s.research).toEqual({});
+    expect(s.artifacts).toEqual({});
+    expect(s.generators.dyson).toBe(0);
+    // the Crystal Matrix and permanent records survive
+    expect(s.crystalUpgrades).toEqual({ crystal_resonance: 2 });
+    expect(s.achievements.t_100).toBe(true);
+    expect(s.ascensionCount).toBe(8); // lifetime count keeps the layer unlocked
+  });
+
+  it('doTranscend does nothing before the ascension gate is met', () => {
+    reset({ ascensionsSinceTranscend: TRANSCEND_ASCENSIONS - 1, crystals: 0 });
+    useGameStore.getState().doTranscend();
+    expect(useGameStore.getState().crystals).toBe(0);
+    expect(useGameStore.getState().transcendCount).toBe(0);
   });
 
   it('resetGame wipes all progress back to a fresh state', () => {

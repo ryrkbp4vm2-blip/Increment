@@ -4,6 +4,7 @@ import { corePowers } from './ascension';
 import { asteroidRichness } from './asteroids';
 import { challengeModifiers, challengeRewardMult } from './challenges';
 import { sectorMult, sectorTrait } from './zones';
+import { crystalMult, crystalPowers } from './transcend';
 import { BASE_TAP_CPS_PCT, GENERATORS, MILESTONE_EVERY, UPGRADES_BY_ID } from './balance';
 import { effectivePowers } from './powers';
 import { GameState, GeneratorDef, GeneratorId, PersistedState, UnlockCondition } from './types';
@@ -46,6 +47,8 @@ type MultState = Pick<
   | 'activeChallenge'
   | 'challengesCompleted'
   | 'sector'
+  | 'totalCrystals'
+  | 'crystalUpgrades'
 >;
 
 export function generatorMultiplier(genId: GeneratorId, state: MultState): number {
@@ -67,6 +70,8 @@ export function globalMultiplier(state: MultState): number {
     corePowers(state.coreUpgrades).globalMult *
     sectorMult(state.sector) *
     sectorTrait(state.sector).productionMult *
+    crystalMult(state.totalCrystals) *
+    crystalPowers(state.crystalUpgrades).globalMult *
     challengeRewardMult(state.challengesCompleted).globalMult *
     challengeModifiers(state.activeChallenge).productionMult;
   for (const id of Object.keys(state.upgrades)) {
@@ -90,6 +95,8 @@ export function globalFactors(state: MultState): { label: string; value: number 
     { label: 'Singularity Cores', value: singularityMult(state.totalSingularityCores, state.singularityPerks) },
     { label: 'Sector', value: sectorMult(state.sector) },
     { label: 'Sector trait', value: sectorTrait(state.sector).productionMult },
+    { label: 'Crystals', value: crystalMult(state.totalCrystals) },
+    { label: 'Crystal Matrix', value: crystalPowers(state.crystalUpgrades).globalMult },
     { label: 'Singularity upgrades', value: corePowers(state.coreUpgrades).globalMult },
     { label: 'Artifacts · shop · research', value: powers.globalMult },
     { label: 'Mineral upgrades', value: upgradeMult },
@@ -131,6 +138,7 @@ export function tapValue(
   tapMult *= corePowers(state.coreUpgrades).tapMult;
   tapMult *= challengeRewardMult(state.challengesCompleted).tapMult;
   tapMult *= sectorTrait(state.sector).tapMult;
+  tapMult *= crystalPowers(state.crystalUpgrades).tapMult;
   // Baseline: every tap is worth a slice of current production, so active
   // tapping beats pure idle at every stage. Tap upgrades stack on top.
   let cpsPercent = BASE_TAP_CPS_PCT;

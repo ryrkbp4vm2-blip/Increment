@@ -32,6 +32,7 @@ export function ObjectiveCard({ onGo }: Props) {
   const dmSinceAscension = useGameStore((s) => s.dmSinceAscension);
   const ascensionCount = useGameStore((s) => s.ascensionCount);
   const ascensionsSinceWarp = useGameStore((s) => s.ascensionsSinceWarp);
+  const ascensionsSinceTranscend = useGameStore((s) => s.ascensionsSinceTranscend);
 
   const objective = nextObjective({
     totalTaps,
@@ -46,6 +47,7 @@ export function ObjectiveCard({ onGo }: Props) {
     dmSinceAscension,
     ascensionCount,
     ascensionsSinceWarp,
+    ascensionsSinceTranscend,
   });
 
   if (!objective) return null;

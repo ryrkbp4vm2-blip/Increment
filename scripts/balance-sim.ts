@@ -18,6 +18,7 @@ import { costOfNext, generatorProduction } from '../src/game/math';
 import { pendingDarkMatter } from '../src/game/prestige';
 import { pendingSingularityCores } from '../src/game/ascension';
 import { canWarp, sectorName } from '../src/game/zones';
+import { CRYSTAL_UPGRADES, canTranscend, crystalUpgradeCost } from '../src/game/transcend';
 import { DM_UPGRADES, darkMatterUpgradeCost } from '../src/game/darkmatter';
 import { RESEARCH_NODES, isResearchUnlocked } from '../src/game/research';
 import { UPGRADES } from '../src/game/balance';
@@ -30,8 +31,8 @@ const envNum = (k: string, d: number) => (process.env[k] ? Number(process.env[k]
 const TAPS_PER_SEC = envNum('TAPS_PER_SEC', 4); // active-player tap rate
 const MAX_STEP_SECONDS = 60 * 60 * 6; // cap on a single analytic time-skip
 const SIM_CAP_YEARS = envNum('SIM_CAP_YEARS', 50); // stop after this much game time
-const STOP_AT_ASCENSIONS = envNum('STOP_AT_ASCENSIONS', 12); // ...or this many ascensions
-const STOP_AT_SECTOR = envNum('STOP_AT_SECTOR', 2); // ...or reaching this sector (warps)
+const STOP_AT_ASCENSIONS = envNum('STOP_AT_ASCENSIONS', 30); // ...or this many ascensions
+const STOP_AT_TRANSCEND = envNum('STOP_AT_TRANSCEND', 2); // ...or this many transcends
 // Prestige/ascend when the pending gain both clears 1 and grows the bank ≥this.
 const PRESTIGE_GROWTH = envNum('PRESTIGE_GROWTH', 0.5);
 const ASCEND_GROWTH = envNum('ASCEND_GROWTH', 0.5);
@@ -84,6 +85,7 @@ function runSimulation(tapsPerSec: number): Event[] {
     for (const n of [1, 3, 5, 10, 25, 50, 100]) if (s.prestigeCount >= n) record(`Prestige #${n}`);
     for (const n of [1, 2, 3, 4, 5, 7, 10]) if (s.ascensionCount >= n) record(`Ascension #${n}`);
     for (const n of [1, 2, 3]) if (s.sector >= n) record(`Warp to ${sectorName(n)} (sector ${n})`);
+    for (const n of [1, 2, 3]) if (s.transcendCount >= n) record(`Transcend #${n}`);
     if (Object.keys(s.research).length >= RESEARCH_NODES.length) record('All research complete');
   };
 
@@ -177,6 +179,29 @@ function runSimulation(tapsPerSec: number): Event[] {
     return true;
   };
 
+  // Transcend once the gate is met, then spend the Crystals on the Matrix.
+  const spendCrystals = () => {
+    for (let guard = 0; guard < 500; guard++) {
+      const s = get();
+      let cheapest: { id: string; cost: number } | null = null;
+      for (const def of CRYSTAL_UPGRADES) {
+        const lvl = s.crystalUpgrades[def.id] ?? 0;
+        if (lvl >= def.maxLevel) continue;
+        const cost = crystalUpgradeCost(def, lvl);
+        if (cost <= s.crystals && (!cheapest || cost < cheapest.cost)) cheapest = { id: def.id, cost };
+      }
+      if (!cheapest) break;
+      get().buyCrystalUpgrade(cheapest.id);
+    }
+  };
+
+  const maybeTranscend = () => {
+    if (!canTranscend(get().ascensionsSinceTranscend)) return false;
+    get().doTranscend();
+    spendCrystals();
+    return true;
+  };
+
   const nextMineralTarget = (): number => {
     const s = get();
     let min = Infinity;
@@ -210,10 +235,11 @@ function runSimulation(tapsPerSec: number): Event[] {
     while (maybePrestige()) buyPhase();
     if (maybeAscend()) buyPhase();
     if (maybeWarp()) buyPhase();
+    if (maybeTranscend()) buyPhase();
     checkMilestones();
     if (
+      get().transcendCount >= STOP_AT_TRANSCEND ||
       get().ascensionCount >= STOP_AT_ASCENSIONS ||
-      get().sector >= STOP_AT_SECTOR ||
       simMs >= capMs
     )
       break;
@@ -264,12 +290,14 @@ function printReport(events: Event[], title: string) {
   const a1 = find(/Ascension #1/);
   const a5 = find(/Ascension #5/);
   const w1 = find(/Warp to .*sector 1/);
-  const w2 = find(/Warp to .*sector 2/);
+  const t1 = find(/Transcend #1/);
+  const t2 = find(/Transcend #2/);
   out(`  First prestige:   ${p1 ? fmtDur(p1.t) : '—'}`);
   out(`  First ascension:  ${a1 ? fmtDur(a1.t) : '—'}`);
   out(`  Fifth ascension:  ${a5 ? fmtDur(a5.t) : '—'}`);
-  out(`  First warp:       ${w1 ? fmtDur(w1.t) : '—'}`);
-  out(`  Second warp:      ${w2 ? fmtDur(w2.t) : '—'}`);
+  out(`  First warp:        ${w1 ? fmtDur(w1.t) : '—'}`);
+  out(`  First transcend:  ${t1 ? fmtDur(t1.t) : '—'}`);
+  out(`  Second transcend: ${t2 ? fmtDur(t2.t) : '—'}`);
   out(`  Total simulated:  ${fmtDur(events.length ? events[events.length - 1].t : 0)}`);
   out('');
 }
@@ -285,7 +313,8 @@ function printComparison(active: Event[], idle: Event[]) {
     ['Third ascension', /Ascension #3/],
     ['Fifth ascension', /Ascension #5/],
     ['First warp', /Warp to .*sector 1/],
-    ['Second warp', /Warp to .*sector 2/],
+    ['First transcend', /Transcend #1/],
+    ['Second transcend', /Transcend #2/],
     ['Total simulated', /.*/],
   ];
   out('');

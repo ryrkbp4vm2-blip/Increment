@@ -11,6 +11,7 @@ import { GENERATORS, GENERATORS_BY_ID, PRESTIGE_BASE } from './balance';
 import { pendingDarkMatter } from './prestige';
 import { ASCEND_BASE, pendingSingularityCores } from './ascension';
 import { canWarp } from './zones';
+import { canTranscend, transcendUnlocked } from './transcend';
 
 /** Tab ids, mirrored from the TabBar so this module stays React-free. */
 export type GuideTab = 'mine' | 'shop' | 'fleet' | 'lab' | 'goals' | 'prestige';
@@ -35,6 +36,7 @@ type ObjectiveState = {
   dmSinceAscension: number;
   ascensionCount: number;
   ascensionsSinceWarp: number;
+  ascensionsSinceTranscend: number;
 };
 
 function generatorsOwned(generators: Record<string, number>): number {
@@ -125,6 +127,15 @@ export function nextObjective(state: ObjectiveState): Objective | null {
     };
   }
 
+  // 9. Transcendence — the deepest layer, once unlocked at the 5th ascension.
+  if (transcendUnlocked(state.ascensionCount) && canTranscend(state.ascensionsSinceTranscend)) {
+    return {
+      id: 'transcend_ready',
+      text: 'You can Transcend — reset everything for Crystals and the permanent Crystal Matrix. See the Prestige tab.',
+      tab: 'prestige',
+    };
+  }
+
   // 8. The first (or next) sector warp.
   if (canWarp(state.ascensionsSinceWarp)) {
     return {
@@ -145,10 +156,12 @@ export function prestigeAttention(state: {
   lifetimeThisRun: number;
   dmSinceAscension: number;
   ascensionsSinceWarp: number;
+  ascensionsSinceTranscend: number;
 }): boolean {
   return (
     pendingDarkMatter(state.lifetimeThisRun) >= 1 ||
     pendingSingularityCores(state.dmSinceAscension) >= 1 ||
-    canWarp(state.ascensionsSinceWarp)
+    canWarp(state.ascensionsSinceWarp) ||
+    canTranscend(state.ascensionsSinceTranscend)
   );
 }

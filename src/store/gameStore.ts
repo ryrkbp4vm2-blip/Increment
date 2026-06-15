@@ -17,6 +17,12 @@ import {
 import { dailyAvailable, dailyReward, dailyStreakAfter } from '../game/daily';
 import { HEAT_PER_TAP, decayHeat, heatMultiplier } from '../game/heat';
 import { canWarp } from '../game/zones';
+import {
+  CRYSTAL_UPGRADES_BY_ID,
+  canTranscend,
+  crystalGain,
+  crystalUpgradeCost,
+} from '../game/transcend';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -59,8 +65,10 @@ export interface GameActions {
   doPrestige(): void;
   doAscend(): void;
   doWarp(): void;
+  doTranscend(): void;
   buySingularityPerk(id: string): void;
   buyCoreUpgrade(id: string): void;
+  buyCrystalUpgrade(id: string): void;
   enterChallenge(id: string): void;
   abandonChallenge(): void;
   completeChallenge(): void;
@@ -115,6 +123,11 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     dailyStreak: 0,
     sector: 0,
     ascensionsSinceWarp: 0,
+    crystals: 0,
+    totalCrystals: 0,
+    transcendCount: 0,
+    ascensionsSinceTranscend: 0,
+    crystalUpgrades: {},
   };
 }
 
@@ -131,6 +144,24 @@ function withCaches(
     lastTickAt,
     cachedCps,
     cachedTapValue: tapValue(persisted, cachedCps),
+  };
+}
+
+/**
+ * Transcendence-layer fields carried across every lower reset (prestige,
+ * ascension, warp). Crystals and the Crystal Matrix sit above everything else,
+ * so they always survive.
+ */
+function carryTranscend(state: GameState): Pick<
+  PersistedState,
+  'crystals' | 'totalCrystals' | 'transcendCount' | 'ascensionsSinceTranscend' | 'crystalUpgrades'
+> {
+  return {
+    crystals: state.crystals,
+    totalCrystals: state.totalCrystals,
+    transcendCount: state.transcendCount,
+    ascensionsSinceTranscend: state.ascensionsSinceTranscend,
+    crystalUpgrades: state.crystalUpgrades,
   };
 }
 
@@ -388,6 +419,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       withCaches(
         {
           ...initialPersistedState(Date.now()),
+          ...carryTranscend(state),
           // Carry the permanent meta-progression across the collapse.
           lifetimeAllTime: state.lifetimeAllTime,
           totalTaps: state.totalTaps,
@@ -432,6 +464,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       withCaches(
         {
           ...initialPersistedState(Date.now()),
+          ...carryTranscend(state),
+          // Each ascension counts toward the next Transcend.
+          ascensionsSinceTranscend: state.ascensionsSinceTranscend + 1,
           // Ascension keeps the deepest meta-layers but sacrifices the Dark
           // Matter economy (currency + shop) for permanent Singularity Cores.
           lifetimeAllTime: state.lifetimeAllTime,
@@ -471,6 +506,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       withCaches(
         {
           ...initialPersistedState(Date.now()),
+          ...carryTranscend(state),
           // Warping advances to the next sector for a big permanent production
           // multiplier. The run, Dark Matter layer and spendable cores reset;
           // collections, research, perks and the singularity multiplier carry.
@@ -496,6 +532,40 @@ export const useGameStore = create<GameStore>((set, get) => ({
           sector: state.sector + 1,
           ascensionsSinceWarp: 0,
           asteroidIndex: perkStartAsteroid(state.singularityPerks),
+        },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  doTranscend() {
+    const state = get();
+    if (!canTranscend(state.ascensionsSinceTranscend)) return;
+    const gained = crystalGain(state.ascensionsSinceTranscend, state.crystalUpgrades);
+    if (gained < 1) return;
+    set(
+      withCaches(
+        {
+          ...initialPersistedState(Date.now()),
+          // Transcendence wipes the entire mineral empire — Dark Matter, cores,
+          // sectors, research, artifacts and all — leaving only the permanent
+          // Crystal Matrix and the records (achievements, all-time stats).
+          crystals: state.crystals + gained,
+          totalCrystals: state.totalCrystals + gained,
+          transcendCount: state.transcendCount + 1,
+          ascensionsSinceTranscend: 0,
+          crystalUpgrades: state.crystalUpgrades,
+          // Lifetime ascension count is a permanent record (and keeps the
+          // Transcendence layer unlocked once reached) — carry it through.
+          ascensionCount: state.ascensionCount,
+          lifetimeAllTime: state.lifetimeAllTime,
+          totalTaps: state.totalTaps,
+          achievements: state.achievements,
+          asteroidsShattered: state.asteroidsShattered,
+          cometsCaught: state.cometsCaught,
+          expeditionsCompleted: state.expeditionsCompleted,
+          lastDailyAt: state.lastDailyAt,
+          dailyStreak: state.dailyStreak,
         },
         state.lastTickAt,
       ),
@@ -528,6 +598,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(
       withCaches(
         { ...state, singularityCores: state.singularityCores - cost, coreUpgrades },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  buyCrystalUpgrade(id) {
+    const state = get();
+    const def = CRYSTAL_UPGRADES_BY_ID[id];
+    if (!def) return;
+    const level = state.crystalUpgrades[id] ?? 0;
+    if (level >= def.maxLevel) return;
+    const cost = crystalUpgradeCost(def, level);
+    if (state.crystals < cost) return;
+    const crystalUpgrades = { ...state.crystalUpgrades, [id]: level + 1 };
+    set(
+      withCaches(
+        { ...state, crystals: state.crystals - cost, crystalUpgrades },
         state.lastTickAt,
       ),
     );

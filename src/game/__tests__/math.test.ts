@@ -69,6 +69,8 @@ const baseState = {
   activeChallenge: null as string | null,
   challengesCompleted: {} as Record<string, true>,
   sector: 0,
+  totalCrystals: 0,
+  crystalUpgrades: {} as Record<string, number>,
   asteroidIndex: 0,
 };
 
