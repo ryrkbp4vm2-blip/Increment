@@ -78,7 +78,7 @@ export function GameRoot({ initialOfflineReport }: Props) {
   return (
     <View style={styles.root}>
       <StatsHeader onOpenSettings={() => setSettingsOpen(true)} />
-      {tab === 'mine' && <ObjectiveCard onGo={setTab} />}
+      {(tab === 'mine' || tab === 'crystal_mine') && <ObjectiveCard onGo={setTab} />}
       <View style={styles.content}>
         {tab === 'mine' && <MineScreen />}
         {tab === 'shop' && <ShopScreen />}

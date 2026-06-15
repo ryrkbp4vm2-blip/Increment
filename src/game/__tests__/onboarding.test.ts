@@ -1,8 +1,9 @@
-import { nextObjective, prestigeAttention } from '../onboarding';
+import { nextCrystalObjective, nextObjective, prestigeAttention } from '../onboarding';
 import { PRESTIGE_BASE } from '../balance';
 import { ASCEND_BASE } from '../ascension';
 import { ZONE_WARP_ASCENSIONS } from '../zones';
 import { TRANSCEND_ASCENSIONS } from '../transcend';
+import { RESONANCE_BASE } from '../crystalGame';
 
 const base = {
   totalTaps: 0,
@@ -119,6 +120,86 @@ describe('nextObjective', () => {
         prestigeCount: 4,
         ascensionCount: 2,
         ascensionsSinceWarp: 1,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('nextCrystalObjective', () => {
+  const cbase = {
+    crystals: 0,
+    crystalGenerators: {} as Record<string, number>,
+    crystalRunUpgrades: {} as Record<string, true>,
+    lifetimeCrystals: 0,
+    resonance: 0,
+    attunement: 0,
+    crystalUpgrades: {} as Record<string, number>,
+  };
+
+  it('teaches tapping the formation before the first generator is affordable', () => {
+    expect(nextCrystalObjective({ ...cbase, crystals: 2 })?.id).toBe('c_tap');
+  });
+
+  it('points to the Forge once a Crystal Shard is affordable', () => {
+    const o = nextCrystalObjective({ ...cbase, crystals: 100 });
+    expect(o?.id).toBe('c_buy_shard');
+    expect(o?.tab).toBe('crystal_forge');
+  });
+
+  it('introduces a Forge upgrade once one is unlocked and affordable', () => {
+    // c_tap1 unlocks at shard ≥ 1, costs 60.
+    const o = nextCrystalObjective({
+      ...cbase,
+      crystalGenerators: { shard: 5 },
+      crystals: 100,
+    });
+    expect(o?.id).toBe('c_forge');
+    expect(o?.tab).toBe('crystal_forge');
+  });
+
+  it('flags the first Cascade when the Resonance gate is met', () => {
+    const o = nextCrystalObjective({
+      ...cbase,
+      crystalGenerators: { shard: 10 },
+      crystalRunUpgrades: { c_tap1: true },
+      lifetimeCrystals: RESONANCE_BASE,
+    });
+    expect(o?.id).toBe('c_cascade_ready');
+    expect(o?.tab).toBe('prestige');
+  });
+
+  it('nudges toward the Cascade as the gate approaches', () => {
+    expect(
+      nextCrystalObjective({
+        ...cbase,
+        crystalGenerators: { shard: 10 },
+        crystalRunUpgrades: { c_tap1: true },
+        lifetimeCrystals: RESONANCE_BASE * 0.5,
+      })?.id,
+    ).toBe('c_cascade_soon');
+  });
+
+  it('guides spending Attunement on the Matrix after the first Cascade', () => {
+    const o = nextCrystalObjective({
+      ...cbase,
+      crystalGenerators: { shard: 10 },
+      crystalRunUpgrades: { c_tap1: true },
+      resonance: 2,
+      attunement: 10,
+    });
+    expect(o?.id).toBe('c_matrix');
+    expect(o?.tab).toBe('prestige');
+  });
+
+  it('returns nothing for an established crystal player mid-run', () => {
+    expect(
+      nextCrystalObjective({
+        ...cbase,
+        crystalGenerators: { shard: 20 },
+        crystalRunUpgrades: { c_tap1: true },
+        resonance: 3,
+        attunement: 0,
+        lifetimeCrystals: 1000,
       }),
     ).toBeNull();
   });

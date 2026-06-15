@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { nextObjective } from '../game/onboarding';
+import { nextCrystalObjective, nextObjective } from '../game/onboarding';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { Icon } from './art/Icon';
@@ -20,6 +20,7 @@ export function ObjectiveCard({ onGo }: Props) {
   // Select stable values individually — a selector must not build a fresh object
   // each call (that breaks useSyncExternalStore), so the objective is derived
   // in render from these primitives and stable store references.
+  const transcendCount = useGameStore((s) => s.transcendCount);
   const totalTaps = useGameStore((s) => s.totalTaps);
   const minerals = useGameStore((s) => s.minerals);
   const generators = useGameStore((s) => s.generators);
@@ -33,27 +34,47 @@ export function ObjectiveCard({ onGo }: Props) {
   const ascensionCount = useGameStore((s) => s.ascensionCount);
   const ascensionsSinceWarp = useGameStore((s) => s.ascensionsSinceWarp);
   const ascensionsSinceTranscend = useGameStore((s) => s.ascensionsSinceTranscend);
+  // Crystal-mode state (only meaningful once transcended).
+  const crystals = useGameStore((s) => s.crystals);
+  const crystalGenerators = useGameStore((s) => s.crystalGenerators);
+  const crystalRunUpgrades = useGameStore((s) => s.crystalRunUpgrades);
+  const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
+  const resonance = useGameStore((s) => s.resonance);
+  const attunement = useGameStore((s) => s.attunement);
+  const crystalUpgrades = useGameStore((s) => s.crystalUpgrades);
 
-  const objective = nextObjective({
-    totalTaps,
-    minerals,
-    generators,
-    asteroidsShattered,
-    researchPoints,
-    research,
-    expeditionsCompleted,
-    lifetimeThisRun,
-    prestigeCount,
-    dmSinceAscension,
-    ascensionCount,
-    ascensionsSinceWarp,
-    ascensionsSinceTranscend,
-  });
+  const isCrystalMode = transcendCount > 0;
+  const objective = isCrystalMode
+    ? nextCrystalObjective({
+        crystals,
+        crystalGenerators,
+        crystalRunUpgrades,
+        lifetimeCrystals,
+        resonance,
+        attunement,
+        crystalUpgrades,
+      })
+    : nextObjective({
+        totalTaps,
+        minerals,
+        generators,
+        asteroidsShattered,
+        researchPoints,
+        research,
+        expeditionsCompleted,
+        lifetimeThisRun,
+        prestigeCount,
+        dmSinceAscension,
+        ascensionCount,
+        ascensionsSinceWarp,
+        ascensionsSinceTranscend,
+      });
 
   if (!objective) return null;
 
-  // "mine" objectives are already on this screen, so there's nowhere to send.
-  const showGo = objective.tab !== 'mine';
+  // Objectives whose tab is the screen we're already on have nowhere to send.
+  const homeTab = isCrystalMode ? 'crystal_mine' : 'mine';
+  const showGo = objective.tab !== homeTab;
 
   return (
     <View style={styles.card}>

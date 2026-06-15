@@ -11,10 +11,26 @@ import { GENERATORS, GENERATORS_BY_ID, PRESTIGE_BASE } from './balance';
 import { pendingDarkMatter } from './prestige';
 import { ASCEND_BASE, pendingSingularityCores } from './ascension';
 import { canWarp } from './zones';
-import { canTranscend, transcendUnlocked } from './transcend';
+import { CRYSTAL_UPGRADES, canTranscend, crystalUpgradeCost, transcendUnlocked } from './transcend';
+import {
+  CRYSTAL_GENS,
+  CRYSTAL_GENS_BY_ID,
+  CRYSTAL_GEN_UPGRADES,
+  RESONANCE_BASE,
+  canResonate,
+  crystalUpgradeUnlockMet,
+} from './crystalGame';
 
 /** Tab ids, mirrored from the TabBar so this module stays React-free. */
-export type GuideTab = 'mine' | 'shop' | 'fleet' | 'lab' | 'goals' | 'prestige';
+export type GuideTab =
+  | 'mine'
+  | 'shop'
+  | 'fleet'
+  | 'lab'
+  | 'goals'
+  | 'prestige'
+  | 'crystal_mine'
+  | 'crystal_forge';
 
 export interface Objective {
   id: string;
@@ -141,6 +157,98 @@ export function nextObjective(state: ObjectiveState): Objective | null {
     return {
       id: 'warp_ready',
       text: 'You can Warp to a new sector — each one plays differently. See the Prestige tab.',
+      tab: 'prestige',
+    };
+  }
+
+  return null;
+}
+
+type CrystalObjectiveState = {
+  crystals: number;
+  crystalGenerators: Record<string, number>;
+  crystalRunUpgrades: Record<string, true>;
+  lifetimeCrystals: number;
+  resonance: number;
+  attunement: number;
+  crystalUpgrades: Record<string, number>;
+};
+
+/**
+ * The next step for a crystal-mode player, mirroring nextObjective for the
+ * post-Transcend loop: bootstrap a generator, build the Forge, reach the first
+ * Resonance Cascade, then sink the Attunement it pays out into the Matrix.
+ */
+export function nextCrystalObjective(state: CrystalObjectiveState): Objective | null {
+  const shardCost = CRYSTAL_GENS_BY_ID.shard.baseCost;
+  const totalGens = CRYSTAL_GENS.reduce((n, g) => n + (state.crystalGenerators[g.id] ?? 0), 0);
+
+  // 1. Bootstrap: mine enough to buy the first generator, then buy it.
+  if (totalGens === 0) {
+    return state.crystals >= shardCost
+      ? {
+          id: 'c_buy_shard',
+          text: 'Open the Forge and buy a Crystal Shard to auto-produce Crystals.',
+          tab: 'crystal_forge',
+        }
+      : {
+          id: 'c_tap',
+          text: 'Tap the Crystal Formation to mine your first Crystals.',
+          tab: 'crystal_mine',
+        };
+  }
+
+  // 2. Introduce the Forge upgrades with the first affordable one.
+  if (Object.keys(state.crystalRunUpgrades).length === 0) {
+    const forgeReady = CRYSTAL_GEN_UPGRADES.some(
+      (u) => crystalUpgradeUnlockMet(u, state) && state.crystals >= u.cost,
+    );
+    if (forgeReady) {
+      return {
+        id: 'c_forge',
+        text: 'Buy a Forge Upgrade to multiply your Crystal output this run.',
+        tab: 'crystal_forge',
+      };
+    }
+  }
+
+  // 3. The first Resonance Cascade.
+  if (state.resonance === 0) {
+    if (canResonate(state.lifetimeCrystals, 0)) {
+      return {
+        id: 'c_cascade_ready',
+        text: 'You can Resonance Cascade — earn permanent Resonance and Attunement in the Prestige tab.',
+        tab: 'prestige',
+      };
+    }
+    if (state.lifetimeCrystals >= RESONANCE_BASE * 0.25) {
+      return {
+        id: 'c_cascade_soon',
+        text: 'Keep mining — the Resonance Cascade unlocks soon in the Prestige tab.',
+        tab: 'prestige',
+      };
+    }
+    return null;
+  }
+
+  // 4. Spend the Attunement a Cascade paid out on the permanent Matrix.
+  const matrixAffordable = CRYSTAL_UPGRADES.some((def) => {
+    const lvl = state.crystalUpgrades[def.id] ?? 0;
+    return lvl < def.maxLevel && state.attunement >= crystalUpgradeCost(def, lvl);
+  });
+  if (matrixAffordable) {
+    return {
+      id: 'c_matrix',
+      text: 'Spend your Attunement (◈) on the permanent Crystal Matrix in the Prestige tab.',
+      tab: 'prestige',
+    };
+  }
+
+  // 5. Subsequent Cascades, once the scaling gate is met again.
+  if (canResonate(state.lifetimeCrystals, state.resonance)) {
+    return {
+      id: 'c_cascade_again',
+      text: 'Another Resonance Cascade is ready — claim it in the Prestige tab.',
       tab: 'prestige',
     };
   }
