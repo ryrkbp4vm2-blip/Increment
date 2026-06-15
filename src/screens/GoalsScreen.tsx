@@ -26,6 +26,9 @@ export function GoalsScreen() {
   const artifacts = useGameStore((s) => s.artifacts);
   const generators = useGameStore((s) => s.generators);
   const completed = useGameStore((s) => s.achievements);
+  const resonance = useGameStore((s) => s.resonance);
+  const totalCrystals = useGameStore((s) => s.totalCrystals);
+  const crystalFormationsShattered = useGameStore((s) => s.crystalFormationsShattered);
 
   const metrics = computeMetrics({
     lifetimeAllTime,
@@ -38,6 +41,9 @@ export function GoalsScreen() {
     expeditionsCompleted,
     artifacts,
     generators,
+    resonance,
+    totalCrystals,
+    crystalFormationsShattered,
   });
 
   const doneCount = Object.keys(completed).length;

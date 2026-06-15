@@ -65,6 +65,8 @@ export function toPersisted(state: GameState): PersistedState {
     resonance: state.resonance,
     lifetimeCrystals: state.lifetimeCrystals,
     crystalRunUpgrades: state.crystalRunUpgrades,
+    crystalFormationsShattered: state.crystalFormationsShattered,
+    autoResonate: state.autoResonate,
   };
 }
 
@@ -307,6 +309,8 @@ export function migrate(raw: string | null): SaveFile | null {
     resonance: Math.max(0, Math.floor(finiteNumber(raw_.resonance, 0))),
     lifetimeCrystals: Math.max(0, finiteNumber(raw_.lifetimeCrystals, 0)),
     crystalRunUpgrades,
+    crystalFormationsShattered: Math.max(0, Math.floor(finiteNumber(raw_.crystalFormationsShattered, 0))),
+    autoResonate: raw_.autoResonate === true,
   };
   return {
     version: SAVE_VERSION,

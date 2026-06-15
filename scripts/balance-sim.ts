@@ -300,8 +300,8 @@ function runSimulation(tapsPerSec: number): Event[] {
 
   const maybeResonate = () => {
     const s = get();
-    if (!canResonate(s.lifetimeCrystals)) return false;
-    const pending = resonanceGain(s.lifetimeCrystals, s.crystalUpgrades);
+    if (!canResonate(s.lifetimeCrystals, s.resonance)) return false;
+    const pending = resonanceGain(s.lifetimeCrystals, s.crystalUpgrades, s.resonance);
     if (pending < 1) return false;
     if (s.resonance > 0 && pending < RESONANCE_GROWTH * s.resonance) return false;
     spendCrystals(); // dump remaining crystals into the permanent Matrix first

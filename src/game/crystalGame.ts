@@ -252,6 +252,47 @@ export const CRYSTAL_GEN_UPGRADES: CrystalGenUpgradeDef[] = [
     unlock: { kind: 'genCount', genId: 'condenser', n: 10 },
     effect: { kind: 'genMult', genId: 'condenser', x: 2 },
   },
+  // Per-generator tier 2 (×3 at own 25 — more valuable, requires deeper investment).
+  {
+    id: 'c_shard2',
+    name: 'Shard Mastery',
+    description: 'Crystal Shards produce ×3',
+    cost: 1_500,
+    unlock: { kind: 'genCount', genId: 'shard', n: 25 },
+    effect: { kind: 'genMult', genId: 'shard', x: 3 },
+  },
+  {
+    id: 'c_prism2',
+    name: 'Prism Mastery',
+    description: 'Prism Nodes produce ×3',
+    cost: 15_000,
+    unlock: { kind: 'genCount', genId: 'prism', n: 25 },
+    effect: { kind: 'genMult', genId: 'prism', x: 3 },
+  },
+  {
+    id: 'c_chamber2',
+    name: 'Chamber Mastery',
+    description: 'Resonance Chambers produce ×3',
+    cost: 150_000,
+    unlock: { kind: 'genCount', genId: 'chamber', n: 25 },
+    effect: { kind: 'genMult', genId: 'chamber', x: 3 },
+  },
+  {
+    id: 'c_array2',
+    name: 'Array Mastery',
+    description: 'Lattice Arrays produce ×3',
+    cost: 1_800_000,
+    unlock: { kind: 'genCount', genId: 'array', n: 25 },
+    effect: { kind: 'genMult', genId: 'array', x: 3 },
+  },
+  {
+    id: 'c_condenser2',
+    name: 'Condenser Mastery',
+    description: 'Void Condensers produce ×3',
+    cost: 20_000_000,
+    unlock: { kind: 'genCount', genId: 'condenser', n: 25 },
+    effect: { kind: 'genMult', genId: 'condenser', x: 3 },
+  },
   // Global multipliers.
   {
     id: 'c_global1',
@@ -268,6 +309,14 @@ export const CRYSTAL_GEN_UPGRADES: CrystalGenUpgradeDef[] = [
     cost: 5_000_000,
     unlock: { kind: 'lifetime', amount: 5_000_000 },
     effect: { kind: 'globalMult', x: 2 },
+  },
+  {
+    id: 'c_global3',
+    name: 'Prismatic Surge',
+    description: 'All crystal production ×3',
+    cost: 80_000_000,
+    unlock: { kind: 'lifetime', amount: 80_000_000 },
+    effect: { kind: 'globalMult', x: 3 },
   },
 ];
 
@@ -388,20 +437,37 @@ export const RESONANCE_BASE = 1e5;
 /** Permanent crystal-production multiplier granted per Resonance level. */
 export const RESONANCE_BONUS = 1;
 
-/** Resonance levels you'd earn by resonating now (square-root curve). */
-export function pendingResonance(lifetimeCrystalsRun: number): number {
-  if (lifetimeCrystalsRun < RESONANCE_BASE) return 0;
-  return Math.floor(Math.sqrt(lifetimeCrystalsRun / RESONANCE_BASE));
+/**
+ * How many NEW Resonance levels a Cascade would grant right now.
+ *
+ * Gate scales with current Resonance: to earn level N you need N² × RESONANCE_BASE
+ * lifetime crystals *this run*. Each subsequent Cascade therefore demands more
+ * crystals than the last, preventing runaway chains at high Resonance.
+ */
+export function pendingResonance(
+  lifetimeCrystalsRun: number,
+  currentResonance: number = 0,
+): number {
+  let gained = 0;
+  for (let guard = 0; guard < 10_000; guard++) {
+    const nextLevel = currentResonance + gained + 1;
+    if (lifetimeCrystalsRun < nextLevel * nextLevel * RESONANCE_BASE) break;
+    gained++;
+  }
+  return gained;
 }
 
 /** Whether a Resonance Cascade is available right now. */
-export function canResonate(lifetimeCrystalsRun: number): boolean {
-  return pendingResonance(lifetimeCrystalsRun) >= 1;
+export function canResonate(
+  lifetimeCrystalsRun: number,
+  currentResonance: number = 0,
+): boolean {
+  return pendingResonance(lifetimeCrystalsRun, currentResonance) >= 1;
 }
 
-/** Lifetime crystals needed for the next Resonance level. */
-export function nextResonanceAt(lifetimeCrystalsRun: number): number {
-  const next = pendingResonance(lifetimeCrystalsRun) + 1;
+/** Lifetime crystals this run needed to earn the next Resonance level. */
+export function nextResonanceAt(currentResonance: number): number {
+  const next = currentResonance + 1;
   return next * next * RESONANCE_BASE;
 }
 
@@ -418,7 +484,10 @@ export function resonanceMult(resonance: number): number {
 export function resonanceGain(
   lifetimeCrystalsRun: number,
   crystalUpgrades: Record<string, number>,
+  currentResonance: number = 0,
 ): number {
-  return Math.floor(pendingResonance(lifetimeCrystalsRun) * crystalYieldMult(crystalUpgrades));
+  return Math.floor(
+    pendingResonance(lifetimeCrystalsRun, currentResonance) * crystalYieldMult(crystalUpgrades),
+  );
 }
 

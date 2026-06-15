@@ -66,7 +66,7 @@ export interface CrystalUpgradeDef {
   /** Cost of the next level is baseCost * (currentLevel + 1), in Crystals. */
   baseCost: number;
   maxLevel: number;
-  kind: 'yield' | 'global' | 'tap';
+  kind: 'yield' | 'global' | 'tap' | 'formation';
   pct: number;
   /** IconName from the art layer (kept as string to stay React-free). */
   icon: string;
@@ -103,6 +103,26 @@ export const CRYSTAL_UPGRADES: CrystalUpgradeDef[] = [
     pct: 1.5,
     icon: 'kinetic_amplifier',
   },
+  {
+    id: 'crystal_prism',
+    name: 'Crystal Prism',
+    perLevel: '+50% bonus crystals per formation shatter',
+    baseCost: 3,
+    maxLevel: 30,
+    kind: 'formation',
+    pct: 0.5,
+    icon: 'shard',
+  },
+  {
+    id: 'void_amplifier',
+    name: 'Void Amplifier',
+    perLevel: '+50% all crystal production (survives Transcend)',
+    baseCost: 5,
+    maxLevel: 30,
+    kind: 'global',
+    pct: 0.5,
+    icon: 'quantum_reserves',
+  },
 ];
 
 export const CRYSTAL_UPGRADES_BY_ID: Record<string, CrystalUpgradeDef> = Object.fromEntries(
@@ -118,6 +138,16 @@ export function crystalYieldMult(levels: Record<string, number>): number {
   let mult = 1;
   for (const def of CRYSTAL_UPGRADES) {
     if (def.kind !== 'yield') continue;
+    mult += def.pct * (levels[def.id] ?? 0);
+  }
+  return mult;
+}
+
+/** Formation shatter bonus multiplier from Crystal Prism levels. */
+export function crystalFormationBonusMult(levels: Record<string, number>): number {
+  let mult = 1;
+  for (const def of CRYSTAL_UPGRADES) {
+    if (def.kind !== 'formation') continue;
     mult += def.pct * (levels[def.id] ?? 0);
   }
   return mult;
@@ -144,5 +174,6 @@ export function crystalPowers(levels: Record<string, number>): CrystalPowers {
 export function crystalTotalEffect(def: CrystalUpgradeDef, level: number): string {
   const pctTotal = Math.round(def.pct * level * 100);
   if (def.kind === 'yield') return `+${pctTotal}% Resonance`;
+  if (def.kind === 'formation') return `+${pctTotal}% shatter bonus`;
   return `+${pctTotal}% ${def.kind === 'global' ? 'production' : 'tap'}`;
 }

@@ -619,7 +619,7 @@ describe('gameStore', () => {
     reset({
       transcendCount: 1,
       crystals: 50_000,
-      lifetimeCrystals: 400_000, // pendingResonance = floor(sqrt(4)) = 2
+      lifetimeCrystals: 400_000, // pendingResonance(4e5, 0): levels 1 (1e5) + 2 (4e5) = 2
       crystalGenerators: { shard: 20 },
       crystalFormationIndex: 5,
       crystalRunUpgrades: { c_tap1: true },

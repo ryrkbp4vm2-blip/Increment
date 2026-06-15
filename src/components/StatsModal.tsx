@@ -49,6 +49,18 @@ export function StatsModal({ visible, onClose }: Props) {
             <CurrencyRow label="Dark Matter all-time" kind="dm" value={s.totalDarkMatter} />
             <Row label="Singularity Cores (total)" value={formatNumber(s.totalSingularityCores)} />
 
+            {s.transcendCount > 0 && (
+              <>
+                <Text style={styles.section}>Crystal Empire</Text>
+                <Row label="Crystals / sec" value={formatRate(s.cachedCrystalCps)} />
+                <Row label="Per tap" value={formatNumber(s.cachedCrystalTapValue)} />
+                <Row label="Resonance level" value={formatNumber(s.resonance)} />
+                <Row label="Crystals all-time" value={`${formatNumber(s.totalCrystals)} ✦`} />
+                <Row label="Formations shattered" value={formatNumber(s.crystalFormationsShattered)} />
+                <Row label="Transcendences" value={formatNumber(s.transcendCount)} />
+              </>
+            )}
+
             <Text style={styles.section}>Collections</Text>
             <Row label="Artifacts" value={`${Object.keys(s.artifacts).length} / ${ARTIFACTS.length}`} />
             <Row label="Research" value={`${Object.keys(s.research).length} / ${RESEARCH_NODES.length}`} />

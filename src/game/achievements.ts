@@ -11,7 +11,10 @@ export type MetricKey =
   | 'expeditions'
   | 'artifacts'
   | 'genTotal'
-  | 'gen';
+  | 'gen'
+  | 'resonance'
+  | 'totalCrystals'
+  | 'formations';
 
 export interface AchievementDef {
   id: string;
@@ -36,6 +39,9 @@ export interface AchievementMetrics {
   artifacts: number;
   genTotal: number;
   gen: Record<GeneratorId, number>;
+  resonance: number;
+  totalCrystals: number;
+  formations: number;
 }
 
 const BIG = 0.05;
@@ -94,6 +100,18 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'asc_5', name: 'Beyond Infinity', description: 'Ascend 5 times', bonusPct: BIG, metric: 'ascension', threshold: 5 },
   { id: 's_500', name: 'World Ender', description: 'Shatter 500 asteroids', bonusPct: BIG, metric: 'shattered', threshold: 500 },
   { id: 'dm_1000', name: 'Singularity Touched', description: 'Earn 1,000 Dark Matter all-time', bonusPct: BIG, metric: 'totalDM', threshold: 1000 },
+
+  // Crystal mode
+  { id: 'cx_1k', name: 'Crystal Novice', description: 'Earn 1K crystals all-time', bonusPct: STD, metric: 'totalCrystals', threshold: 1e3 },
+  { id: 'cx_1m', name: 'Crystal Magnate', description: 'Earn 1M crystals all-time', bonusPct: STD, metric: 'totalCrystals', threshold: 1e6 },
+  { id: 'cx_1b', name: 'Crystal Titan', description: 'Earn 1B crystals all-time', bonusPct: BIG, metric: 'totalCrystals', threshold: 1e9 },
+  { id: 'r_1', name: 'Harmonic Collapse', description: 'Complete your first Resonance Cascade', bonusPct: STD, metric: 'resonance', threshold: 1 },
+  { id: 'r_5', name: 'Crystal Resonator', description: 'Reach Resonance level 5', bonusPct: STD, metric: 'resonance', threshold: 5 },
+  { id: 'r_10', name: 'Infinite Frequency', description: 'Reach Resonance level 10', bonusPct: BIG, metric: 'resonance', threshold: 10 },
+  { id: 'r_25', name: 'Void Harmonist', description: 'Reach Resonance level 25', bonusPct: BIG, metric: 'resonance', threshold: 25 },
+  { id: 'cf_10', name: 'Shard Breaker', description: 'Shatter 10 crystal formations', bonusPct: STD, metric: 'formations', threshold: 10 },
+  { id: 'cf_50', name: 'Crystal Crusher', description: 'Shatter 50 crystal formations', bonusPct: STD, metric: 'formations', threshold: 50 },
+  { id: 'cf_200', name: 'Lattice Destroyer', description: 'Shatter 200 crystal formations', bonusPct: BIG, metric: 'formations', threshold: 200 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<string, AchievementDef> = Object.fromEntries(
@@ -113,6 +131,9 @@ export function computeMetrics(
     | 'expeditionsCompleted'
     | 'artifacts'
     | 'generators'
+    | 'resonance'
+    | 'totalCrystals'
+    | 'crystalFormationsShattered'
   >,
 ): AchievementMetrics {
   const gen = s.generators;
@@ -129,6 +150,9 @@ export function computeMetrics(
     artifacts: Object.keys(s.artifacts).length,
     genTotal,
     gen,
+    resonance: s.resonance,
+    totalCrystals: s.totalCrystals,
+    formations: s.crystalFormationsShattered,
   };
 }
 

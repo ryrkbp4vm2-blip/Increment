@@ -78,9 +78,19 @@ describe('resonance', () => {
   });
 
   it('follows a square-root curve (4x lifetime for the next level)', () => {
+    // At resonance 0: level 1 needs 1×BASE, level 2 needs 4×BASE, level 3 needs 9×BASE.
     expect(pendingResonance(4 * RESONANCE_BASE)).toBe(2);
     expect(pendingResonance(9 * RESONANCE_BASE)).toBe(3);
-    expect(nextResonanceAt(RESONANCE_BASE)).toBe(4 * RESONANCE_BASE);
+    // nextResonanceAt(resonanceLevel) → (level+1)² × BASE
+    expect(nextResonanceAt(0)).toBe(RESONANCE_BASE);
+    expect(nextResonanceAt(1)).toBe(4 * RESONANCE_BASE);
+    // Gate scales: at resonance 3 you need 16×BASE this run for the next level.
+    expect(nextResonanceAt(3)).toBe(16 * RESONANCE_BASE);
+    expect(pendingResonance(16 * RESONANCE_BASE, 3)).toBe(1);
+    expect(pendingResonance(25 * RESONANCE_BASE, 3)).toBe(2);
+    // No levels earnable before the new (harder) threshold.
+    expect(canResonate(9 * RESONANCE_BASE, 3)).toBe(false);
+    expect(canResonate(16 * RESONANCE_BASE, 3)).toBe(true);
   });
 
   it('multiplies production by +100% per level', () => {
@@ -90,10 +100,12 @@ describe('resonance', () => {
 
   it('applies the Crystal Lattice yield bonus to the gain (not the gate)', () => {
     // raw pending at 4× base = 2; Lattice 2 levels -> ×1.5 -> 3
-    expect(resonanceGain(4 * RESONANCE_BASE, {})).toBe(2);
-    expect(resonanceGain(4 * RESONANCE_BASE, { crystal_lattice: 2 })).toBe(3);
+    expect(resonanceGain(4 * RESONANCE_BASE, {}, 0)).toBe(2);
+    expect(resonanceGain(4 * RESONANCE_BASE, { crystal_lattice: 2 }, 0)).toBe(3);
     // below the gate, no Lattice can grant Resonance
-    expect(resonanceGain(RESONANCE_BASE - 1, { crystal_lattice: 9 })).toBe(0);
+    expect(resonanceGain(RESONANCE_BASE - 1, { crystal_lattice: 9 }, 0)).toBe(0);
+    // at resonance 3 the gate is 16×BASE — 4×BASE is no longer enough
+    expect(resonanceGain(4 * RESONANCE_BASE, {}, 3)).toBe(0);
   });
 });
 

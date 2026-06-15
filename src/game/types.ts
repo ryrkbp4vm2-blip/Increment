@@ -121,6 +121,10 @@ export interface PersistedState {
   lifetimeCrystals: number;
   /** Crystal Game: run-scoped Forge upgrades bought with Crystals (reset each Resonance). */
   crystalRunUpgrades: Record<string, true>;
+  /** Running total of crystal formations shattered across all runs (never resets). */
+  crystalFormationsShattered: number;
+  /** Whether Resonance Cascade fires automatically when the gate is met. */
+  autoResonate: boolean;
 }
 
 export interface GameState extends PersistedState {

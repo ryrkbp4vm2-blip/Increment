@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { computeMetrics, newlyCompleted } from '../game/achievements';
+import { achievementBonus, computeMetrics, newlyCompleted } from '../game/achievements';
 import {
   AUTO_TAPS_PER_SEC,
   CORE_UPGRADES_BY_ID,
@@ -21,6 +21,7 @@ import {
   CRYSTAL_UPGRADES_BY_ID,
   TRANSCEND_ASCENSIONS,
   canTranscend,
+  crystalFormationBonusMult,
   crystalGain,
   crystalPowers,
   crystalUpgradeCost,
@@ -87,6 +88,7 @@ export interface GameActions {
   doWarp(): void;
   doTranscend(): void;
   doResonate(): void;
+  toggleAutoResonate(): void;
   buySingularityPerk(id: string): void;
   buyCoreUpgrade(id: string): void;
   buyCrystalUpgrade(id: string): void;
@@ -157,6 +159,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     resonance: 0,
     lifetimeCrystals: 0,
     crystalRunUpgrades: {},
+    crystalFormationsShattered: 0,
+    autoResonate: false,
   };
 }
 
@@ -178,10 +182,11 @@ function withCaches(
     cachedTapValue: tapValue(persisted, cachedCps),
     cachedCrystalCps: crystalTotalCps(
       persisted.crystalGenerators,
-      cPowers.globalMult * rMult * runP.globalMult,
+      cPowers.globalMult * rMult * runP.globalMult * achievementBonus(persisted.achievements),
       runP.genMult,
     ),
-    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult,
+    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult
+      * achievementBonus(persisted.achievements),
   };
 }
 
@@ -281,14 +286,20 @@ function earnCrystals(state: GameState, amount: number): Partial<GameState> {
     state.crystalFormationDamage,
     amount,
   );
-  const total = amount + result.bonus;
-  return {
+  const bonusMult = crystalFormationBonusMult(state.crystalUpgrades);
+  const total = amount + result.bonus * bonusMult;
+  const shattered = result.formationIndex - state.crystalFormationIndex;
+  const delta: Partial<GameState> = {
     crystals: state.crystals + total,
     lifetimeCrystals: state.lifetimeCrystals + total,
     totalCrystals: state.totalCrystals + total,
     crystalFormationIndex: result.formationIndex,
     crystalFormationDamage: result.formationDamage,
   };
+  if (shattered > 0) {
+    delta.crystalFormationsShattered = state.crystalFormationsShattered + shattered;
+  }
+  return delta;
 }
 
 // Throttles for automation perks (module-level; not part of saved state).
@@ -387,6 +398,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         set({ ...earnCrystals(state, earned), lastTickAt: nowMs });
       } else {
         set({ lastTickAt: nowMs });
+      }
+      // Auto-Resonate: fire the cascade automatically when the gate is met.
+      if (state.autoResonate) {
+        const s = get();
+        if (canResonate(s.lifetimeCrystals, s.resonance)) get().doResonate();
       }
     } else {
       const earned = state.cachedCps * (deltaMs / 1000) * frenzyFactor(state, nowMs);
@@ -683,8 +699,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   doResonate() {
     const state = get();
-    if (!canResonate(state.lifetimeCrystals)) return;
-    const gained = resonanceGain(state.lifetimeCrystals, state.crystalUpgrades);
+    if (!canResonate(state.lifetimeCrystals, state.resonance)) return;
+    const gained = resonanceGain(state.lifetimeCrystals, state.crystalUpgrades, state.resonance);
     if (gained < 1) return;
     set(
       withCaches(
@@ -708,6 +724,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalTaps: state.totalTaps,
           achievements: state.achievements,
           asteroidsShattered: state.asteroidsShattered,
+          crystalFormationsShattered: state.crystalFormationsShattered,
           cometsCaught: state.cometsCaught,
           expeditionsCompleted: state.expeditionsCompleted,
           lastDailyAt: state.lastDailyAt,
@@ -716,6 +733,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         state.lastTickAt,
       ),
     );
+  },
+
+  toggleAutoResonate() {
+    const state = get();
+    set({ autoResonate: !state.autoResonate });
   },
 
   buySingularityPerk(id) {

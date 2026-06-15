@@ -10,6 +10,7 @@ import { WelcomeBackModal } from '../components/WelcomeBackModal';
 import { OfflineReport, useAppLifecycle } from '../hooks/useAppLifecycle';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { prestigeAttention } from '../game/onboarding';
+import { canResonate } from '../game/crystalGame';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { CrystalForgeScreen } from './CrystalForgeScreen';
@@ -41,12 +42,14 @@ export function GameRoot({ initialOfflineReport }: Props) {
   const prevTranscendCount = useRef(transcendCount);
 
   const prestigeDot = useGameStore((s) =>
-    prestigeAttention({
-      lifetimeThisRun: s.lifetimeThisRun,
-      dmSinceAscension: s.dmSinceAscension,
-      ascensionsSinceWarp: s.ascensionsSinceWarp,
-      ascensionsSinceTranscend: s.ascensionsSinceTranscend,
-    }),
+    s.transcendCount > 0
+      ? canResonate(s.lifetimeCrystals, s.resonance)
+      : prestigeAttention({
+          lifetimeThisRun: s.lifetimeThisRun,
+          dmSinceAscension: s.dmSinceAscension,
+          ascensionsSinceWarp: s.ascensionsSinceWarp,
+          ascensionsSinceTranscend: s.ascensionsSinceTranscend,
+        }),
   );
 
   // Switch to crystal mine tab the moment the player transcends.

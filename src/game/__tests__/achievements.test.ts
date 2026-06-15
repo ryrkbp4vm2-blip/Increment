@@ -78,6 +78,32 @@ describe('ascension and deep milestones', () => {
   });
 });
 
+describe('crystal achievements', () => {
+  it('tracks resonance and unlocks cascade achievements', () => {
+    const m = computeMetrics(stateWith({ resonance: 5, totalCrystals: 2e6 }));
+    expect(m.resonance).toBe(5);
+    expect(newlyCompleted({}, m)).toContain('r_1');
+    expect(newlyCompleted({}, m)).toContain('r_5');
+    expect(newlyCompleted({}, m)).not.toContain('r_10');
+  });
+
+  it('tracks totalCrystals and unlocks crystal milestones', () => {
+    const m = computeMetrics(stateWith({ totalCrystals: 1e6 }));
+    expect(m.totalCrystals).toBe(1e6);
+    expect(newlyCompleted({}, m)).toContain('cx_1k');
+    expect(newlyCompleted({}, m)).toContain('cx_1m');
+    expect(newlyCompleted({}, m)).not.toContain('cx_1b');
+  });
+
+  it('tracks crystal formations shattered', () => {
+    const m = computeMetrics(stateWith({ crystalFormationsShattered: 50 }));
+    expect(m.formations).toBe(50);
+    expect(newlyCompleted({}, m)).toContain('cf_10');
+    expect(newlyCompleted({}, m)).toContain('cf_50');
+    expect(newlyCompleted({}, m)).not.toContain('cf_200');
+  });
+});
+
 describe('achievementBonus', () => {
   it('is 1 with nothing completed', () => {
     expect(achievementBonus({})).toBe(1);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { BigButton } from '../components/BigButton';
 import { ChallengesSection } from '../components/ChallengesSection';
 import { Amount } from '../components/art/Amount';
@@ -88,6 +88,8 @@ export function PrestigeScreen() {
   const resonance = useGameStore((s) => s.resonance);
   const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
   const doResonate = useGameStore((s) => s.doResonate);
+  const autoResonate = useGameStore((s) => s.autoResonate);
+  const toggleAutoResonate = useGameStore((s) => s.toggleAutoResonate);
   const [confirming, setConfirming] = useState(false);
   const [confirmingAscend, setConfirmingAscend] = useState(false);
   const [confirmingWarp, setConfirmingWarp] = useState(false);
@@ -117,6 +119,8 @@ export function PrestigeScreen() {
         crystalUpgrades={crystalUpgrades}
         buyCrystalUpgrade={buyCrystalUpgrade}
         doResonate={doResonate}
+        autoResonate={autoResonate}
+        toggleAutoResonate={toggleAutoResonate}
         confirmingTranscend={confirmingTranscend}
         setConfirmingTranscend={setConfirmingTranscend}
       />
@@ -513,6 +517,8 @@ function CrystalPrestigeScreen({
   crystalUpgrades,
   buyCrystalUpgrade,
   doResonate,
+  autoResonate,
+  toggleAutoResonate,
   confirmingTranscend,
   setConfirmingTranscend,
 }: {
@@ -523,13 +529,15 @@ function CrystalPrestigeScreen({
   crystalUpgrades: Record<string, number>;
   buyCrystalUpgrade: (id: string) => void;
   doResonate: () => void;
+  autoResonate: boolean;
+  toggleAutoResonate: () => void;
   confirmingTranscend: boolean;
   setConfirmingTranscend: (v: boolean) => void;
 }) {
-  const pending = resonanceGain(lifetimeCrystals, crystalUpgrades);
-  const ready = canResonate(lifetimeCrystals);
-  const nextAt = nextResonanceAt(lifetimeCrystals);
-  const progress = Math.min(lifetimeCrystals / RESONANCE_BASE, 1);
+  const pending = resonanceGain(lifetimeCrystals, crystalUpgrades, resonance);
+  const ready = canResonate(lifetimeCrystals, resonance);
+  const nextAt = nextResonanceAt(resonance);
+  const progress = Math.min(lifetimeCrystals / nextAt, 1);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -604,6 +612,20 @@ function CrystalPrestigeScreen({
           </Text>
         </>
       )}
+
+      <View style={styles.autoRow}>
+        <View style={styles.autoLabel}>
+          <Icon name="gem_outline" size={18} color={colors.darkMatter} accent={colors.darkMatter} />
+          <Text style={styles.autoText}>Auto-Cascade</Text>
+        </View>
+        <Switch
+          value={autoResonate}
+          onValueChange={toggleAutoResonate}
+          trackColor={{ true: colors.darkMatter, false: colors.disabled }}
+          thumbColor={colors.text}
+        />
+      </View>
+      <Text style={styles.autoHint}>Automatically Cascade when the gate is met (spends crystals immediately).</Text>
 
       <Text style={styles.perksTitle}>Crystal Matrix</Text>
       <Text style={styles.perksHint}>Permanent upgrades. Survive every Cascade.</Text>
@@ -855,6 +877,16 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   perksHint: { color: colors.textMuted, fontSize: 11, marginBottom: spacing.sm },
+  autoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+    marginBottom: 2,
+  },
+  autoLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  autoText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  autoHint: { color: colors.textMuted, fontSize: 11, marginBottom: spacing.md },
   perkRow: {
     flexDirection: 'row',
     alignItems: 'center',
