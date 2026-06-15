@@ -19,6 +19,7 @@ import { HEAT_PER_TAP, decayHeat, heatMultiplier } from '../game/heat';
 import { canWarp } from '../game/zones';
 import {
   CRYSTAL_UPGRADES_BY_ID,
+  TRANSCEND_ASCENSIONS,
   canTranscend,
   crystalGain,
   crystalUpgradeCost,
@@ -77,6 +78,8 @@ export interface GameActions {
   tickAchievements(): void;
   consumeAchievements(): string[];
   resetGame(): void;
+  /** TEMPORARY dev helper: jump to a Transcendence-ready empire. */
+  devUnlockCrystals(): void;
 }
 
 export type GameStore = GameState & GameActions;
@@ -697,6 +700,45 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resetGame() {
     const now = Date.now();
     set({ ...withCaches(initialPersistedState(now), now), newAchievements: [], tapHeat: 0, lastTapAt: 0 });
+  },
+
+  // TEMPORARY: drop into a thriving late-game empire with Transcendence ready
+  // and Crystals to spend, so the Crystal layer can be tried without a multi-day
+  // climb. Remove before release.
+  devUnlockCrystals() {
+    const now = Date.now();
+    const base = initialPersistedState(now);
+    const generators = { ...base.generators };
+    for (const g of GENERATORS) generators[g.id] = 75;
+    set({
+      ...withCaches(
+        {
+          ...base,
+          generators,
+          minerals: 1e12,
+          lifetimeThisRun: 1e12,
+          lifetimeAllTime: 1e15,
+          totalTaps: 5000,
+          // Top prestige/ascension layers so production is meaningful.
+          darkMatter: 200,
+          totalDarkMatter: 5000,
+          prestigeCount: 20,
+          singularityCores: 5,
+          totalSingularityCores: 40,
+          sector: 2,
+          // Transcendence: unlocked (ascensionCount ≥ 5) and available now.
+          ascensionCount: 6,
+          ascensionsSinceTranscend: TRANSCEND_ASCENSIONS,
+          // A handful of Crystals to immediately try the Crystal Matrix.
+          crystals: 25,
+          totalCrystals: 5,
+        },
+        now,
+      ),
+      newAchievements: [],
+      tapHeat: 0,
+      lastTapAt: 0,
+    });
   },
 }));
 

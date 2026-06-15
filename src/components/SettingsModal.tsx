@@ -19,6 +19,7 @@ type View_ = 'menu' | 'backup';
 export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
   const resetGame = useGameStore((s) => s.resetGame);
   const hydrate = useGameStore((s) => s.hydrate);
+  const devUnlockCrystals = useGameStore((s) => s.devUnlockCrystals);
   const [soundOn, setSoundOn] = useState(!isMuted());
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [view, setView] = useState<View_>('menu');
@@ -45,6 +46,14 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
   const handleReset = () => {
     void clearSave();
     resetGame();
+    close();
+  };
+
+  // TEMPORARY: jump to a Transcendence-ready empire to try out Crystals.
+  const handleDevCrystals = () => {
+    devUnlockCrystals();
+    void writeSave(useGameStore.getState());
+    playSound('prestige');
     close();
   };
 
@@ -117,6 +126,16 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
               </Pressable>
 
               <View style={styles.divider} />
+
+              <Pressable style={styles.devRow} onPress={handleDevCrystals}>
+                <View style={styles.rowLabel}>
+                  <Icon name="gem_outline" size={20} color={colors.darkMatter} accent={colors.darkMatter} />
+                  <Text style={styles.devText}>TEST: Jump to Transcendence</Text>
+                </View>
+              </Pressable>
+              <Text style={styles.devHint}>
+                Temporary — sets up a late-game empire with Crystals to try the new layer.
+              </Text>
 
               {confirmingReset ? (
                 <View>
@@ -209,6 +228,9 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   resetRow: { paddingVertical: spacing.sm },
   resetText: { color: colors.danger, fontSize: 15, fontWeight: '700' },
+  devRow: { paddingVertical: spacing.sm },
+  devText: { color: colors.darkMatter, fontSize: 15, fontWeight: '700' },
+  devHint: { color: colors.textMuted, fontSize: 11, marginBottom: spacing.sm },
   warn: { color: colors.text, fontSize: 14, marginBottom: spacing.md, lineHeight: 19 },
   confirmRow: { flexDirection: 'row', gap: spacing.sm },
   flex: { flex: 1 },
