@@ -105,7 +105,7 @@ function runSimulation(tapsPerSec: number): Event[] {
     for (const mark of CRYSTAL_MARKS) {
       if (s.totalCrystals >= mark) record(`Earn ${formatNumber(mark)} crystals (all-time)`);
     }
-    for (const n of [1, 2, 3, 5, 10]) if (s.resonance >= n) record(`Resonance #${n}`);
+    for (const n of [1, 2, 3, 5, 10, 15, 20, 30, 50]) if (s.resonance >= n) record(`Resonance #${n}`);
     for (const mark of [10, 50, 200, 1000]) {
       if (s.totalAttunement >= mark) record(`Earn ${mark} Attunement (all-time)`);
     }

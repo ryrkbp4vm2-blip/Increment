@@ -1,5 +1,6 @@
 import {
   CRYSTAL_GENS,
+  CRYSTAL_GEN_UPGRADES,
   CRYSTAL_GEN_UPGRADES_BY_ID,
   RESONANCE_BASE,
   applyCrystalFormationDamage,
@@ -126,6 +127,16 @@ describe('forge run upgrades', () => {
     expect(p.tapMult).toBe(2);
     expect(p.globalMult).toBe(1.5);
     expect(p.genMult.shard).toBe(2);
+  });
+
+  it('every generator has both a ×2 and ×3 per-generator upgrade', () => {
+    for (const g of CRYSTAL_GENS) {
+      const perGen = CRYSTAL_GEN_UPGRADES.filter(
+        (u) => u.effect.kind === 'genMult' && u.effect.genId === g.id,
+      );
+      const mults = perGen.map((u) => (u.effect.kind === 'genMult' ? u.effect.x : 0)).sort();
+      expect(mults).toEqual([2, 3]);
+    }
   });
 
   it('is all-neutral with no upgrades', () => {

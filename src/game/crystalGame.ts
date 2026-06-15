@@ -252,6 +252,30 @@ export const CRYSTAL_GEN_UPGRADES: CrystalGenUpgradeDef[] = [
     unlock: { kind: 'genCount', genId: 'condenser', n: 10 },
     effect: { kind: 'genMult', genId: 'condenser', x: 2 },
   },
+  {
+    id: 'c_harmonizer',
+    name: 'Forge Attunement',
+    description: 'Harmonic Forges produce ×2',
+    cost: 17_000_000,
+    unlock: { kind: 'genCount', genId: 'harmonizer', n: 10 },
+    effect: { kind: 'genMult', genId: 'harmonizer', x: 2 },
+  },
+  {
+    id: 'c_nexus',
+    name: 'Nexus Lattice',
+    description: 'Crystal Nexuses produce ×2',
+    cost: 240_000_000,
+    unlock: { kind: 'genCount', genId: 'nexus', n: 10 },
+    effect: { kind: 'genMult', genId: 'nexus', x: 2 },
+  },
+  {
+    id: 'c_singularity',
+    name: 'Singularity Focus',
+    description: 'Prism Singularities produce ×2',
+    cost: 4_000_000_000,
+    unlock: { kind: 'genCount', genId: 'singularity', n: 10 },
+    effect: { kind: 'genMult', genId: 'singularity', x: 2 },
+  },
   // Per-generator tier 2 (×3 at own 25 — more valuable, requires deeper investment).
   {
     id: 'c_shard2',
@@ -292,6 +316,30 @@ export const CRYSTAL_GEN_UPGRADES: CrystalGenUpgradeDef[] = [
     cost: 20_000_000,
     unlock: { kind: 'genCount', genId: 'condenser', n: 25 },
     effect: { kind: 'genMult', genId: 'condenser', x: 3 },
+  },
+  {
+    id: 'c_harmonizer2',
+    name: 'Forge Mastery',
+    description: 'Harmonic Forges produce ×3',
+    cost: 210_000_000,
+    unlock: { kind: 'genCount', genId: 'harmonizer', n: 25 },
+    effect: { kind: 'genMult', genId: 'harmonizer', x: 3 },
+  },
+  {
+    id: 'c_nexus2',
+    name: 'Nexus Mastery',
+    description: 'Crystal Nexuses produce ×3',
+    cost: 3_000_000_000,
+    unlock: { kind: 'genCount', genId: 'nexus', n: 25 },
+    effect: { kind: 'genMult', genId: 'nexus', x: 3 },
+  },
+  {
+    id: 'c_singularity2',
+    name: 'Singularity Mastery',
+    description: 'Prism Singularities produce ×3',
+    cost: 50_000_000_000,
+    unlock: { kind: 'genCount', genId: 'singularity', n: 25 },
+    effect: { kind: 'genMult', genId: 'singularity', x: 3 },
   },
   // Global multipliers.
   {
