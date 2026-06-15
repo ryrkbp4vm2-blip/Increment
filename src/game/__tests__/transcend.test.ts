@@ -1,5 +1,6 @@
 import {
   CRYSTAL_BONUS,
+  CRYSTAL_UPGRADE_GROWTH,
   CRYSTAL_UPGRADES_BY_ID,
   TRANSCEND_ASCENSIONS,
   canTranscend,
@@ -62,10 +63,12 @@ describe('crystalMult', () => {
 });
 
 describe('crystal matrix upgrades', () => {
-  it('scales cost linearly with level', () => {
+  it('scales cost geometrically so deep levels stay long-term goals', () => {
     const def = CRYSTAL_UPGRADES_BY_ID.crystal_resonance;
     expect(crystalUpgradeCost(def, 0)).toBe(def.baseCost);
-    expect(crystalUpgradeCost(def, 3)).toBe(def.baseCost * 4);
+    expect(crystalUpgradeCost(def, 3)).toBe(Math.ceil(def.baseCost * CRYSTAL_UPGRADE_GROWTH ** 3));
+    // Strictly increasing and far steeper than linear by deep levels.
+    expect(crystalUpgradeCost(def, 20)).toBeGreaterThan(crystalUpgradeCost(def, 10) * 50);
   });
 
   it('turns global and tap levels into multipliers, ignoring yield', () => {

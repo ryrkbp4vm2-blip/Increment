@@ -166,8 +166,16 @@ export const CRYSTAL_UPGRADES_BY_ID: Record<string, CrystalUpgradeDef> = Object.
   CRYSTAL_UPGRADES.map((u) => [u.id, u]),
 );
 
+/**
+ * Geometric cost growth per Matrix level. Keeps the first levels cheap but makes
+ * deep levels expensive, so the big production multipliers stay long-term goals
+ * instead of maxing the moment Attunement floods in (which trivialised the late
+ * game and made cascades near-instant past ~Resonance 10).
+ */
+export const CRYSTAL_UPGRADE_GROWTH = 1.6;
+
 export function crystalUpgradeCost(def: CrystalUpgradeDef, level: number): number {
-  return def.baseCost * (level + 1);
+  return Math.ceil(def.baseCost * Math.pow(CRYSTAL_UPGRADE_GROWTH, level));
 }
 
 /** Crystal-gain multiplier from the Crystal Lattice levels. */

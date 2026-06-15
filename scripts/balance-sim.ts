@@ -445,6 +445,15 @@ function printComparison(active: Event[], idle: Event[]) {
 describe('balance playthrough', () => {
   it('prints a timeline (no assertions — output is the report)', () => {
     const active = runSimulation(TAPS_PER_SEC);
+    const fin = useGameStore.getState();
+    out('');
+    out(`  CRYSTAL ECONOMY (active run end)`);
+    out(`  resonance ${fin.resonance}  ·  Attunement earned ${formatNumber(fin.totalAttunement)}`);
+    out(
+      `  Matrix levels: ${CRYSTAL_UPGRADES.map(
+        (u) => `${u.id.replace('crystal_', '')}=${fin.crystalUpgrades[u.id] ?? 0}/${u.maxLevel}`,
+      ).join('  ')}`,
+    );
     const idle = runSimulation(0); // pure passive/offline player, never taps
     printReport(active, `ACTIVE · ${TAPS_PER_SEC} taps/s`);
     printComparison(active, idle);
