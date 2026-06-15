@@ -634,6 +634,32 @@ describe('gameStore', () => {
     expect(gained).toBeCloseTo(s.cachedCrystalCps * 2 * 7);
   });
 
+  it('Auto-Forge buys generators each tick once unlocked at the Resonance gate', () => {
+    // Locked below the gate: nothing is bought even with crystals and the toggle on.
+    reset({ transcendCount: 1, resonance: 2, autoForge: true, crystals: 1e6 });
+    useGameStore.getState().autoTick(1_000_000);
+    expect(
+      Object.values(useGameStore.getState().crystalGenerators).reduce((a, b) => a + b, 0),
+    ).toBe(0);
+    // At the gate, a tick buys the best-payback affordable generator.
+    reset({ transcendCount: 1, resonance: 3, autoForge: true, crystals: 1e6 });
+    useGameStore.getState().autoTick(2_000_000);
+    const owned = Object.values(useGameStore.getState().crystalGenerators).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    expect(owned).toBeGreaterThan(0);
+    expect(useGameStore.getState().crystals).toBeLessThan(1e6);
+  });
+
+  it('Auto-Forge does nothing while disabled', () => {
+    reset({ transcendCount: 1, resonance: 5, autoForge: false, crystals: 1e6 });
+    useGameStore.getState().autoTick(3_000_000);
+    expect(
+      Object.values(useGameStore.getState().crystalGenerators).reduce((a, b) => a + b, 0),
+    ).toBe(0);
+  });
+
   it('buyCrystalRunUpgrade spends crystals and applies its multiplier', () => {
     reset({ transcendCount: 1, crystals: 1000, crystalGenerators: { shard: 1 } });
     const tapBefore = useGameStore.getState().cachedCrystalTapValue;

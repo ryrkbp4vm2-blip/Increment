@@ -27,11 +27,13 @@ import {
   crystalUpgradeCost,
   resonancePowerMult,
 } from '../game/transcend';
-import { RESONANCE_BONUS } from '../game/crystalGame';
 import {
+  AUTO_FORGE_RESONANCE,
+  CRYSTAL_GENS,
   CRYSTAL_GENS_BY_ID,
   CRYSTAL_GEN_UPGRADES_BY_ID,
   CRYSTAL_TAP_BASE,
+  RESONANCE_BONUS,
   applyCrystalFormationDamage,
   attunementGain,
   canResonate,
@@ -92,6 +94,7 @@ export interface GameActions {
   doTranscend(): void;
   doResonate(): void;
   toggleAutoResonate(): void;
+  toggleAutoForge(): void;
   buySingularityPerk(id: string): void;
   buyCoreUpgrade(id: string): void;
   buyCrystalUpgrade(id: string): void;
@@ -164,6 +167,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     crystalRunUpgrades: {},
     crystalFormationsShattered: 0,
     autoResonate: false,
+    autoForge: false,
     attunement: 0,
     totalAttunement: 0,
   };
@@ -318,6 +322,7 @@ function earnCrystals(state: GameState, amount: number): Partial<GameState> {
 // Throttles for automation perks (module-level; not part of saved state).
 let lastAutoBuyAt = 0;
 let lastAutoFleetAt = 0;
+let lastAutoForgeAt = 0;
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
@@ -766,6 +771,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ autoResonate: !state.autoResonate });
   },
 
+  toggleAutoForge() {
+    const state = get();
+    set({ autoForge: !state.autoForge });
+  },
+
   buySingularityPerk(id) {
     const state = get();
     const def = SINGULARITY_PERKS_BY_ID[id];
@@ -861,6 +871,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         if (pick) get().launchExpedition(pick, nowMs);
       }
+    }
+    // Auto-Forge: in crystal mode, buy the best-payback affordable generator so
+    // a re-climb after a Cascade doesn't need manual re-buying (~2/sec).
+    if (
+      state.autoForge &&
+      state.transcendCount > 0 &&
+      state.resonance >= AUTO_FORGE_RESONANCE &&
+      nowMs - lastAutoForgeAt > 500
+    ) {
+      lastAutoForgeAt = nowMs;
+      const s = get();
+      const genMult = crystalRunPowers(s.crystalRunUpgrades).genMult;
+      let bestId: string | null = null;
+      let bestPayback = Infinity;
+      for (const def of CRYSTAL_GENS) {
+        const owned = s.crystalGenerators[def.id] ?? 0;
+        const cost = crystalGenCostOfNext(def, owned);
+        if (cost > s.crystals) continue;
+        const marginal = def.baseProd * (genMult[def.id] ?? 1);
+        const payback = marginal > 0 ? cost / marginal : Infinity;
+        if (payback < bestPayback) {
+          bestPayback = payback;
+          bestId = def.id;
+        }
+      }
+      if (bestId) get().buyCrystalGenerator(bestId, 1);
     }
   },
 

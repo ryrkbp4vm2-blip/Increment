@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
 import {
+  AUTO_FORGE_RESONANCE,
   CRYSTAL_GENS,
   CRYSTAL_GEN_UPGRADES,
   CrystalGenDef,
@@ -32,8 +33,12 @@ export function CrystalForgeScreen() {
   const crystalRunUpgrades = useGameStore((s) => s.crystalRunUpgrades);
   const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
   const resonance = useGameStore((s) => s.resonance);
+  const autoForge = useGameStore((s) => s.autoForge);
+  const toggleAutoForge = useGameStore((s) => s.toggleAutoForge);
   const buyCrystalGenerator = useGameStore((s) => s.buyCrystalGenerator);
   const buyCrystalRunUpgrade = useGameStore((s) => s.buyCrystalRunUpgrade);
+
+  const autoForgeUnlocked = resonance >= AUTO_FORGE_RESONANCE;
 
   const runPowers = crystalRunPowers(crystalRunUpgrades);
   // Effective global multiplier shared by every generator line (matrix × resonance × run).
@@ -88,6 +93,28 @@ export function CrystalForgeScreen() {
         </View>
       </View>
       <Text style={styles.hint}>Buy generators to auto-produce Crystals per second.</Text>
+
+      {autoForgeUnlocked ? (
+        <View style={styles.autoRow}>
+          <View style={styles.autoLabel}>
+            <Icon name="gem_outline" size={18} color={colors.darkMatter} accent={colors.darkMatter} />
+            <Text style={styles.autoText}>Auto-Forge</Text>
+          </View>
+          <Switch
+            value={autoForge}
+            onValueChange={toggleAutoForge}
+            trackColor={{ true: colors.darkMatter, false: colors.disabled }}
+            thumbColor={colors.text}
+          />
+        </View>
+      ) : (
+        <View style={styles.autoRowLocked}>
+          <Icon name="lock" size={16} color={colors.textMuted} accent={colors.textMuted} />
+          <Text style={styles.autoLockedText}>
+            Auto-Forge auto-buys generators — unlocks at Resonance {AUTO_FORGE_RESONANCE}
+          </Text>
+        </View>
+      )}
 
       {CRYSTAL_GENS.map((def) => (
         <CrystalGenRow
@@ -211,6 +238,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: spacing.md,
   },
+  autoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.panel,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  autoLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  autoText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  autoRowLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  autoLockedText: { flex: 1, color: colors.textMuted, fontSize: 12 },
   generatorHeader: {
     flexDirection: 'row',
     alignItems: 'center',

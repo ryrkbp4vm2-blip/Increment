@@ -437,6 +437,9 @@ export const RESONANCE_BASE = 1e5;
 /** Permanent crystal-production multiplier granted per Resonance level. */
 export const RESONANCE_BONUS = 1;
 
+/** Resonance level that unlocks the Auto-Forge generator-buying toggle. */
+export const AUTO_FORGE_RESONANCE = 3;
+
 /**
  * How many NEW Resonance levels a Cascade would grant right now.
  *
