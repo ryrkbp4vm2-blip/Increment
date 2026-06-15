@@ -49,6 +49,7 @@ const MAX_STEP_SECONDS = 60 * 60 * 6; // cap on a single analytic time-skip
 const SIM_CAP_YEARS = envNum('SIM_CAP_YEARS', 50); // stop after this much game time
 const STOP_AT_ASCENSIONS = envNum('STOP_AT_ASCENSIONS', 30); // ...or this many ascensions
 const STOP_AT_RESONANCE = envNum('STOP_AT_RESONANCE', 4); // ...or this much crystal-mode Resonance
+const STOP_AT_CONVERGENCE = envNum('STOP_AT_CONVERGENCE', 0); // ...or this many Convergences (0 = ignore)
 // Prestige/ascend/resonate when pending gain clears 1 and grows the bank ≥this.
 const PRESTIGE_GROWTH = envNum('PRESTIGE_GROWTH', 0.5);
 const ASCEND_GROWTH = envNum('ASCEND_GROWTH', 0.5);
@@ -365,7 +366,9 @@ function runSimulation(tapsPerSec: number): Event[] {
 
   const capMs = SIM_CAP_YEARS * 31_536_000 * 1000;
   const stop = () =>
-    get().resonance >= STOP_AT_RESONANCE ||
+    (STOP_AT_CONVERGENCE > 0
+      ? get().convergenceCount >= STOP_AT_CONVERGENCE
+      : get().resonance >= STOP_AT_RESONANCE) ||
     get().ascensionCount >= STOP_AT_ASCENSIONS ||
     simMs >= capMs;
 

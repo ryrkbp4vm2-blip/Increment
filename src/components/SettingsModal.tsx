@@ -127,15 +127,19 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
 
               <View style={styles.divider} />
 
-              <Pressable style={styles.devRow} onPress={handleDevCrystals}>
-                <View style={styles.rowLabel}>
-                  <Icon name="gem_outline" size={20} color={colors.darkMatter} accent={colors.darkMatter} />
-                  <Text style={styles.devText}>TEST: Jump to Transcendence</Text>
-                </View>
-              </Pressable>
-              <Text style={styles.devHint}>
-                Temporary — sets up a late-game empire with Crystals to try the new layer.
-              </Text>
+              {__DEV__ && (
+                <>
+                  <Pressable style={styles.devRow} onPress={handleDevCrystals}>
+                    <View style={styles.rowLabel}>
+                      <Icon name="gem_outline" size={20} color={colors.darkMatter} accent={colors.darkMatter} />
+                      <Text style={styles.devText}>TEST: Jump to Transcendence</Text>
+                    </View>
+                  </Pressable>
+                  <Text style={styles.devHint}>
+                    Temporary — sets up a late-game empire with Crystals to try the new layer.
+                  </Text>
+                </>
+              )}
 
               {confirmingReset ? (
                 <View>
