@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { achievementBonus, computeMetrics, newlyCompleted } from '../game/achievements';
 import {
   AUTO_TAPS_PER_SEC,
+  AUTO_UPGRADE_ASCENSIONS,
   CORE_UPGRADES_BY_ID,
   SINGULARITY_PERKS_BY_ID,
   coreUpgradeCost,
@@ -29,8 +30,10 @@ import {
 } from '../game/transcend';
 import {
   AUTO_FORGE_RESONANCE,
+  AUTO_UPGRADE_RESONANCE,
   CRYSTAL_GENS,
   CRYSTAL_GENS_BY_ID,
+  CRYSTAL_GEN_UPGRADES,
   CRYSTAL_GEN_UPGRADES_BY_ID,
   CRYSTAL_TAP_BASE,
   RESONANCE_BONUS,
@@ -48,7 +51,7 @@ import {
   resonanceMult,
 } from '../game/crystalGame';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
-import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES_BY_ID } from '../game/balance';
+import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
 import { CometReward, frenzyFactor } from '../game/events';
 import { EventOutcome } from '../game/cosmicEvents';
@@ -96,6 +99,8 @@ export interface GameActions {
   doResonate(): void;
   toggleAutoResonate(): void;
   toggleAutoForge(): void;
+  toggleAutoUpgrade(): void;
+  toggleAutoCrystalUpgrade(): void;
   setBuyQty(qty: BuyQty): void;
   buySingularityPerk(id: string): void;
   buyCoreUpgrade(id: string): void;
@@ -170,6 +175,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     crystalFormationsShattered: 0,
     autoResonate: false,
     autoForge: false,
+    autoUpgrade: false,
+    autoCrystalUpgrade: false,
     attunement: 0,
     totalAttunement: 0,
     buyQty: 1,
@@ -222,6 +229,8 @@ function carryTranscend(state: GameState): Pick<
   | 'attunement'
   | 'totalAttunement'
   | 'buyQty'
+  | 'autoUpgrade'
+  | 'autoCrystalUpgrade'
 > {
   return {
     crystals: state.crystals,
@@ -233,6 +242,8 @@ function carryTranscend(state: GameState): Pick<
     totalAttunement: state.totalAttunement,
     resonance: state.resonance,
     buyQty: state.buyQty,
+    autoUpgrade: state.autoUpgrade,
+    autoCrystalUpgrade: state.autoCrystalUpgrade,
   };
 }
 
@@ -328,6 +339,8 @@ function earnCrystals(state: GameState, amount: number): Partial<GameState> {
 let lastAutoBuyAt = 0;
 let lastAutoFleetAt = 0;
 let lastAutoForgeAt = 0;
+let lastAutoUpgradeAt = 0;
+let lastAutoCrystalUpgradeAt = 0;
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
@@ -731,6 +744,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
           buyQty: state.buyQty,
+          autoUpgrade: state.autoUpgrade,
+          autoCrystalUpgrade: state.autoCrystalUpgrade,
         },
         state.lastTickAt,
       ),
@@ -777,6 +792,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // would disable itself the instant it fired.
           autoResonate: state.autoResonate,
           autoForge: state.autoForge,
+          autoCrystalUpgrade: state.autoCrystalUpgrade,
           buyQty: state.buyQty,
         },
         state.lastTickAt,
@@ -792,6 +808,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
   toggleAutoForge() {
     const state = get();
     set({ autoForge: !state.autoForge });
+  },
+
+  toggleAutoUpgrade() {
+    const state = get();
+    set({ autoUpgrade: !state.autoUpgrade });
+  },
+
+  toggleAutoCrystalUpgrade() {
+    const state = get();
+    set({ autoCrystalUpgrade: !state.autoCrystalUpgrade });
   },
 
   setBuyQty(qty) {
@@ -919,6 +945,46 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
       if (bestId) get().buyCrystalGenerator(bestId, 1);
+    }
+    // Auto-Buy Upgrades (mineral shop): once unlocked, buy the cheapest
+    // affordable, unlocked, unowned upgrade each ~500ms.
+    if (
+      state.autoUpgrade &&
+      state.transcendCount === 0 &&
+      state.ascensionCount >= AUTO_UPGRADE_ASCENSIONS &&
+      nowMs - lastAutoUpgradeAt > 500
+    ) {
+      lastAutoUpgradeAt = nowMs;
+      const s = get();
+      let bestId: string | null = null;
+      let bestCost = Infinity;
+      for (const def of UPGRADES) {
+        if (s.upgrades[def.id] || def.cost > s.minerals || def.cost >= bestCost) continue;
+        if (!isUnlockMet(def.unlock, s)) continue;
+        bestCost = def.cost;
+        bestId = def.id;
+      }
+      if (bestId) get().buyUpgrade(bestId);
+    }
+    // Auto-Buy Upgrades (crystal Forge): same idea for the run-scoped Forge
+    // upgrades, gated by Resonance (the crystal-game ascension analogue).
+    if (
+      state.autoCrystalUpgrade &&
+      state.transcendCount > 0 &&
+      state.resonance >= AUTO_UPGRADE_RESONANCE &&
+      nowMs - lastAutoCrystalUpgradeAt > 500
+    ) {
+      lastAutoCrystalUpgradeAt = nowMs;
+      const s = get();
+      let bestId: string | null = null;
+      let bestCost = Infinity;
+      for (const def of CRYSTAL_GEN_UPGRADES) {
+        if (s.crystalRunUpgrades[def.id] || def.cost > s.crystals || def.cost >= bestCost) continue;
+        if (!crystalUpgradeUnlockMet(def, s)) continue;
+        bestCost = def.cost;
+        bestId = def.id;
+      }
+      if (bestId) get().buyCrystalRunUpgrade(bestId);
     }
   },
 

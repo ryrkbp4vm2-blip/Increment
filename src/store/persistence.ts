@@ -68,6 +68,8 @@ export function toPersisted(state: GameState): PersistedState {
     crystalFormationsShattered: state.crystalFormationsShattered,
     autoResonate: state.autoResonate,
     autoForge: state.autoForge,
+    autoUpgrade: state.autoUpgrade,
+    autoCrystalUpgrade: state.autoCrystalUpgrade,
     attunement: state.attunement,
     totalAttunement: state.totalAttunement,
     buyQty: state.buyQty,
@@ -316,6 +318,8 @@ export function migrate(raw: string | null): SaveFile | null {
     crystalFormationsShattered: Math.max(0, Math.floor(finiteNumber(raw_.crystalFormationsShattered, 0))),
     autoResonate: raw_.autoResonate === true,
     autoForge: raw_.autoForge === true,
+    autoUpgrade: raw_.autoUpgrade === true,
+    autoCrystalUpgrade: raw_.autoCrystalUpgrade === true,
     attunement: Math.max(0, finiteNumber(raw_.attunement, 0)),
     totalAttunement: Math.max(0, finiteNumber(raw_.totalAttunement, 0)),
     buyQty:

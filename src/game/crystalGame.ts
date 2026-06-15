@@ -489,6 +489,13 @@ export const RESONANCE_BONUS = 1;
 export const AUTO_FORGE_RESONANCE = 3;
 
 /**
+ * Resonance level that unlocks the Forge's Auto-Buy Upgrades toggle. Resonance
+ * is the crystal-game analogue of Ascension, so this mirrors the mineral shop's
+ * "2 ascensions" gate.
+ */
+export const AUTO_UPGRADE_RESONANCE = 2;
+
+/**
  * How many NEW Resonance levels a Cascade would grant right now.
  *
  * Gate scales with current Resonance: to earn level N you need N² × RESONANCE_BASE

@@ -92,6 +92,9 @@ export const SINGULARITY_PERKS_BY_ID: Record<string, SingularityPerkDef> = Objec
 export const AUTO_TAPS_PER_SEC = 5;
 export const BELT_MEMORY_INDEX = 4;
 
+/** Ascensions required before the mineral shop's Auto-Buy Upgrades unlocks. */
+export const AUTO_UPGRADE_ASCENSIONS = 2;
+
 export function offlineEfficiency(perks: Record<string, true>): number {
   return perks.offline_overdrive ? 1.5 : 1.0;
 }

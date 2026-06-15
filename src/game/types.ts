@@ -127,6 +127,10 @@ export interface PersistedState {
   autoResonate: boolean;
   /** Whether crystal generators are auto-bought each tick (unlocked at a Resonance gate). */
   autoForge: boolean;
+  /** Whether mineral shop upgrades are auto-bought (unlocked after 2 ascensions). */
+  autoUpgrade: boolean;
+  /** Whether crystal Forge upgrades are auto-bought (unlocked at Resonance 2). */
+  autoCrystalUpgrade: boolean;
   /** Attunement: the permanent Crystal-Matrix currency, earned only by Cascading. */
   attunement: number;
   /** Attunement earned all-time (for stats; never spent down). */

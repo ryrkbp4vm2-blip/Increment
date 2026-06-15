@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { playSound } from '../audio/sound';
 import {
   AUTO_FORGE_RESONANCE,
+  AUTO_UPGRADE_RESONANCE,
   CRYSTAL_GENS,
   CRYSTAL_GEN_UPGRADES,
   CrystalGenDef,
@@ -37,10 +38,13 @@ export function CrystalForgeScreen() {
   const resonance = useGameStore((s) => s.resonance);
   const autoForge = useGameStore((s) => s.autoForge);
   const toggleAutoForge = useGameStore((s) => s.toggleAutoForge);
+  const autoCrystalUpgrade = useGameStore((s) => s.autoCrystalUpgrade);
+  const toggleAutoCrystalUpgrade = useGameStore((s) => s.toggleAutoCrystalUpgrade);
   const buyCrystalGenerator = useGameStore((s) => s.buyCrystalGenerator);
   const buyCrystalRunUpgrade = useGameStore((s) => s.buyCrystalRunUpgrade);
 
   const autoForgeUnlocked = resonance >= AUTO_FORGE_RESONANCE;
+  const autoUpgradeUnlocked = resonance >= AUTO_UPGRADE_RESONANCE;
 
   const runPowers = crystalRunPowers(crystalRunUpgrades);
   // Effective global multiplier shared by every generator line (matrix × resonance × run).
@@ -76,6 +80,29 @@ export function CrystalForgeScreen() {
             ))}
           </ScrollView>
         </>
+      )}
+
+      {autoUpgradeUnlocked ? (
+        <View style={styles.autoRow}>
+          <View style={styles.autoLabel}>
+            <Icon name="gem_outline" size={18} color={colors.darkMatter} accent={colors.darkMatter} />
+            <Text style={styles.autoText}>Auto-Buy Forge Upgrades</Text>
+          </View>
+          <Switch
+            value={autoCrystalUpgrade}
+            onValueChange={toggleAutoCrystalUpgrade}
+            trackColor={{ true: colors.darkMatter, false: colors.disabled }}
+            thumbColor={colors.text}
+          />
+        </View>
+      ) : (
+        <View style={styles.autoRowLocked}>
+          <Icon name="lock" size={16} color={colors.textMuted} accent={colors.textMuted} />
+          <Text style={styles.autoLockedText}>
+            Auto-Buy Forge Upgrades auto-purchases Forge upgrades — unlocks at Resonance{' '}
+            {AUTO_UPGRADE_RESONANCE}
+          </Text>
+        </View>
       )}
 
       <View style={styles.generatorHeader}>

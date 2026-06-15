@@ -661,6 +661,43 @@ describe('gameStore', () => {
     ).toBe(0);
   });
 
+  it('Auto-Buy Upgrades is gated by two ascensions, then buys mineral upgrades', () => {
+    // One ascension short: nothing is bought even with the toggle on.
+    reset({ ascensionCount: 1, autoUpgrade: true, minerals: 1e6, totalTaps: 100 });
+    useGameStore.getState().autoTick(11_000_000);
+    expect(Object.keys(useGameStore.getState().upgrades).length).toBe(0);
+    // At two ascensions, a tick buys the cheapest unlocked upgrade (tap1).
+    reset({ ascensionCount: 2, autoUpgrade: true, minerals: 1e6, totalTaps: 100 });
+    useGameStore.getState().autoTick(12_000_000);
+    const s = useGameStore.getState();
+    expect(s.upgrades.tap1).toBe(true);
+    expect(s.minerals).toBeLessThan(1e6);
+  });
+
+  it('Auto-Buy Forge Upgrades is gated by Resonance, then buys crystal upgrades', () => {
+    // Below Resonance 2: nothing bought.
+    reset({
+      transcendCount: 1,
+      resonance: 1,
+      autoCrystalUpgrade: true,
+      crystals: 1e6,
+      crystalGenerators: { shard: 10 },
+    });
+    useGameStore.getState().autoTick(13_000_000);
+    expect(Object.keys(useGameStore.getState().crystalRunUpgrades).length).toBe(0);
+    // At Resonance 2, a tick buys the cheapest unlocked Forge upgrade.
+    reset({
+      transcendCount: 1,
+      resonance: 2,
+      autoCrystalUpgrade: true,
+      crystals: 1e6,
+      crystalGenerators: { shard: 10 },
+    });
+    useGameStore.getState().autoTick(14_000_000);
+    expect(Object.keys(useGameStore.getState().crystalRunUpgrades).length).toBeGreaterThan(0);
+    expect(useGameStore.getState().crystals).toBeLessThan(1e6);
+  });
+
   it('buyCrystalRunUpgrade spends crystals and applies its multiplier', () => {
     reset({ transcendCount: 1, crystals: 1000, crystalGenerators: { shard: 1 } });
     const tapBefore = useGameStore.getState().cachedCrystalTapValue;
