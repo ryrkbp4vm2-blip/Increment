@@ -9,6 +9,7 @@ import {
 import { decayHeat, heatMultiplier } from '../game/heat';
 import { CometReward } from '../game/events';
 import { CrystalComet } from '../components/CrystalComet';
+import { playSound } from '../audio/sound';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
@@ -70,6 +71,7 @@ export function CrystalMineScreen() {
         Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
       ]).start();
       setBurstKey((k) => k + 1);
+      playSound('shatter');
       try {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
