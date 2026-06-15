@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
 import {
@@ -26,7 +26,9 @@ type BuyQty = 1 | 10 | 'max';
 const QTY_OPTIONS: BuyQty[] = [1, 10, 'max'];
 
 export function CrystalForgeScreen() {
-  const [qty, setQty] = useState<BuyQty>(1);
+  // Shared remembered buy-quantity, persisted in the store (see ShopScreen).
+  const qty = useGameStore((s) => s.buyQty) as BuyQty;
+  const setQty = useGameStore((s) => s.setBuyQty);
   const crystals = useGameStore((s) => s.crystals);
   const crystalGenerators = useGameStore((s) => s.crystalGenerators);
   const crystalUpgrades = useGameStore((s) => s.crystalUpgrades);

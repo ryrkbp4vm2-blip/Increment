@@ -712,6 +712,31 @@ describe('gameStore', () => {
     expect(useGameStore.getState().resonance).toBe(0);
   });
 
+  it('keeps remembered preferences (buy qty, auto toggles) through a Cascade', () => {
+    reset({
+      transcendCount: 1,
+      lifetimeCrystals: 400_000,
+      resonance: 0,
+      autoResonate: true,
+      autoForge: true,
+      buyQty: 'max',
+    });
+    useGameStore.getState().doResonate();
+    const s = useGameStore.getState();
+    expect(s.resonance).toBeGreaterThan(0);
+    expect(s.autoResonate).toBe(true);
+    expect(s.autoForge).toBe(true);
+    expect(s.buyQty).toBe('max');
+  });
+
+  it('setBuyQty remembers the chosen quantity', () => {
+    reset({});
+    useGameStore.getState().setBuyQty(10);
+    expect(useGameStore.getState().buyQty).toBe(10);
+    useGameStore.getState().setBuyQty('max');
+    expect(useGameStore.getState().buyQty).toBe('max');
+  });
+
   it('buyCrystalUpgrade spends Attunement, not crystals', () => {
     reset({ transcendCount: 1, crystals: 1e9, attunement: 10, crystalUpgrades: {} });
     const def = CRYSTAL_UPGRADES_BY_ID.crystal_resonance; // baseCost 2

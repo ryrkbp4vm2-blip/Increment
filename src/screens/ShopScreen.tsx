@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GeneratorRow } from '../components/GeneratorRow';
 import { UpgradeCard } from '../components/UpgradeCard';
@@ -11,7 +11,10 @@ import { colors, spacing } from '../theme';
 const QTY_OPTIONS: BuyQty[] = [1, 10, 'max'];
 
 export function ShopScreen() {
-  const [qty, setQty] = useState<BuyQty>(1);
+  // The buy-quantity choice is remembered in the store, so it survives tab
+  // switches, app restarts and every reset.
+  const qty = useGameStore((s) => s.buyQty);
+  const setQty = useGameStore((s) => s.setBuyQty);
 
   // Reveal generators once lifetime earnings approach their cost; never re-hide.
   const revealedCount = useGameStore((s) => {

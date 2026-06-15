@@ -96,6 +96,7 @@ export interface GameActions {
   doResonate(): void;
   toggleAutoResonate(): void;
   toggleAutoForge(): void;
+  setBuyQty(qty: BuyQty): void;
   buySingularityPerk(id: string): void;
   buyCoreUpgrade(id: string): void;
   buyCrystalUpgrade(id: string): void;
@@ -171,6 +172,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     autoForge: false,
     attunement: 0,
     totalAttunement: 0,
+    buyQty: 1,
   };
 }
 
@@ -207,7 +209,7 @@ function withCaches(
 /**
  * Transcendence-layer fields carried across every lower reset (prestige,
  * ascension, warp). Crystals and the Crystal Matrix sit above everything else,
- * so they always survive.
+ * so they always survive — as does the remembered buy-quantity preference.
  */
 function carryTranscend(state: GameState): Pick<
   PersistedState,
@@ -219,6 +221,7 @@ function carryTranscend(state: GameState): Pick<
   | 'resonance'
   | 'attunement'
   | 'totalAttunement'
+  | 'buyQty'
 > {
   return {
     crystals: state.crystals,
@@ -229,6 +232,7 @@ function carryTranscend(state: GameState): Pick<
     attunement: state.attunement,
     totalAttunement: state.totalAttunement,
     resonance: state.resonance,
+    buyQty: state.buyQty,
   };
 }
 
@@ -726,6 +730,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           expeditionsCompleted: state.expeditionsCompleted,
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
+          buyQty: state.buyQty,
         },
         state.lastTickAt,
       ),
@@ -768,6 +773,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           expeditionsCompleted: state.expeditionsCompleted,
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
+          // Remembered preferences survive the Cascade — otherwise Auto-Cascade
+          // would disable itself the instant it fired.
+          autoResonate: state.autoResonate,
+          autoForge: state.autoForge,
+          buyQty: state.buyQty,
         },
         state.lastTickAt,
       ),
@@ -782,6 +792,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   toggleAutoForge() {
     const state = get();
     set({ autoForge: !state.autoForge });
+  },
+
+  setBuyQty(qty) {
+    set({ buyQty: qty });
   },
 
   buySingularityPerk(id) {

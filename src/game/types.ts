@@ -131,6 +131,8 @@ export interface PersistedState {
   attunement: number;
   /** Attunement earned all-time (for stats; never spent down). */
   totalAttunement: number;
+  /** Remembered buy-quantity preference for generator shops (×1 / ×10 / Max). */
+  buyQty: BuyQty;
 }
 
 export interface GameState extends PersistedState {

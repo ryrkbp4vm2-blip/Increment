@@ -199,6 +199,16 @@ describe('migrate hardening', () => {
     expect(dirty.state.researchPoints).toBe(0);
   });
 
+  it('round-trips the remembered buy-quantity and defaults bad values to 1', () => {
+    expect(migrate(serialize(makeState({ buyQty: 10 }), 1))!.state.buyQty).toBe(10);
+    expect(migrate(serialize(makeState({ buyQty: 'max' }), 1))!.state.buyQty).toBe('max');
+    // Missing or invalid → ×1.
+    expect(migrate('{"version":1,"savedAt":50,"state":{}}')!.state.buyQty).toBe(1);
+    expect(
+      migrate('{"version":1,"savedAt":50,"state":{"buyQty":7}}')!.state.buyQty,
+    ).toBe(1);
+  });
+
   it('sanitizes invalid values', () => {
     const save = migrate(
       '{"version":1,"savedAt":50,"state":{"minerals":-5,"totalTaps":3.7,"generators":{"drone":"lots"},"upgrades":{"fake_upgrade":true,"tap1":true}}}',

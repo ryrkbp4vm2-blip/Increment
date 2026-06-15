@@ -70,6 +70,7 @@ export function toPersisted(state: GameState): PersistedState {
     autoForge: state.autoForge,
     attunement: state.attunement,
     totalAttunement: state.totalAttunement,
+    buyQty: state.buyQty,
   };
 }
 
@@ -317,6 +318,8 @@ export function migrate(raw: string | null): SaveFile | null {
     autoForge: raw_.autoForge === true,
     attunement: Math.max(0, finiteNumber(raw_.attunement, 0)),
     totalAttunement: Math.max(0, finiteNumber(raw_.totalAttunement, 0)),
+    buyQty:
+      raw_.buyQty === 10 || raw_.buyQty === 'max' ? raw_.buyQty : 1,
   };
   return {
     version: SAVE_VERSION,
