@@ -3,12 +3,23 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
 import {
   CRYSTAL_GENS,
+  CRYSTAL_GEN_UPGRADES,
   CrystalGenDef,
+  CrystalGenUpgradeDef,
   crystalGenBulkCost,
   crystalGenCostOfNext,
   crystalGenMaxAffordable,
+  crystalGenProduction,
+  crystalRunPowers,
+  crystalUpgradeUnlockMet,
+  resonanceMult,
 } from '../game/crystalGame';
-import { CRYSTAL_UPGRADES, crystalUpgradeCost, crystalTotalEffect } from '../game/transcend';
+import {
+  CRYSTAL_UPGRADES,
+  crystalPowers,
+  crystalUpgradeCost,
+  crystalTotalEffect,
+} from '../game/transcend';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
@@ -22,11 +33,47 @@ export function CrystalForgeScreen() {
   const crystals = useGameStore((s) => s.crystals);
   const crystalGenerators = useGameStore((s) => s.crystalGenerators);
   const crystalUpgrades = useGameStore((s) => s.crystalUpgrades);
+  const crystalRunUpgrades = useGameStore((s) => s.crystalRunUpgrades);
+  const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
+  const resonance = useGameStore((s) => s.resonance);
   const buyCrystalGenerator = useGameStore((s) => s.buyCrystalGenerator);
   const buyCrystalUpgrade = useGameStore((s) => s.buyCrystalUpgrade);
+  const buyCrystalRunUpgrade = useGameStore((s) => s.buyCrystalRunUpgrade);
+
+  const runPowers = crystalRunPowers(crystalRunUpgrades);
+  // Effective global multiplier shared by every generator line (matrix × resonance × run).
+  const baseGlobalMult =
+    crystalPowers(crystalUpgrades).globalMult * resonanceMult(resonance) * runPowers.globalMult;
+
+  // Upgrades that are unlocked and not yet owned.
+  const availableUpgrades = CRYSTAL_GEN_UPGRADES.filter(
+    (u) =>
+      !crystalRunUpgrades[u.id] &&
+      crystalUpgradeUnlockMet(u, { crystalGenerators, lifetimeCrystals }),
+  );
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      {availableUpgrades.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Forge Upgrades</Text>
+          <Text style={styles.hint}>One-time boosts for this run. Reset on each Cascade.</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upgradeRow}>
+            {availableUpgrades.map((def) => (
+              <CrystalUpgradeCard
+                key={def.id}
+                def={def}
+                affordable={crystals >= def.cost}
+                onBuy={() => {
+                  buyCrystalRunUpgrade(def.id);
+                  playSound('buy');
+                }}
+              />
+            ))}
+          </ScrollView>
+        </>
+      )}
+
       <View style={styles.generatorHeader}>
         <Text style={styles.sectionTitle}>Crystal Generators</Text>
         <View style={styles.qtyToggle}>
@@ -52,6 +99,8 @@ export function CrystalForgeScreen() {
           owned={crystalGenerators[def.id] ?? 0}
           qty={qty}
           crystals={crystals}
+          genMult={runPowers.genMult[def.id] ?? 1}
+          globalMult={baseGlobalMult}
           onBuy={() => {
             buyCrystalGenerator(def.id, qty);
             playSound('buy');
@@ -119,17 +168,45 @@ export function CrystalForgeScreen() {
   );
 }
 
+function CrystalUpgradeCard({
+  def,
+  affordable,
+  onBuy,
+}: {
+  def: CrystalGenUpgradeDef;
+  affordable: boolean;
+  onBuy: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onBuy}
+      disabled={!affordable}
+      style={[styles.upgradeCard, !affordable && styles.upgradeCardDisabled]}
+    >
+      <Text style={styles.upgradeName}>{def.name}</Text>
+      <Text style={styles.upgradeDesc}>{def.description}</Text>
+      <Text style={[styles.upgradeCost, !affordable && styles.upgradeCostDisabled]}>
+        {formatNumber(def.cost)} ✦
+      </Text>
+    </Pressable>
+  );
+}
+
 function CrystalGenRow({
   def,
   owned,
   qty,
   crystals,
+  genMult,
+  globalMult,
   onBuy,
 }: {
   def: CrystalGenDef;
   owned: number;
   qty: BuyQty;
   crystals: number;
+  genMult: number;
+  globalMult: number;
   onBuy: () => void;
 }) {
   const count = qty === 'max' ? crystalGenMaxAffordable(def, owned, crystals) : qty;
@@ -140,7 +217,7 @@ function CrystalGenRow({
         : crystalGenCostOfNext(def, owned)
       : crystalGenBulkCost(def, owned, qty);
   const affordable = qty === 'max' ? count > 0 : crystals >= cost;
-  const production = owned * def.baseProd;
+  const production = crystalGenProduction(def, owned, globalMult, genMult);
 
   return (
     <View style={styles.genRow}>
@@ -206,6 +283,21 @@ const styles = StyleSheet.create({
   qtyButtonActive: { backgroundColor: '#C084FC22' },
   qtyLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
   qtyLabelActive: { color: colors.darkMatter },
+  upgradeRow: { marginBottom: spacing.lg },
+  upgradeCard: {
+    width: 150,
+    backgroundColor: colors.panel,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.darkMatter,
+    padding: spacing.md,
+    marginRight: spacing.sm,
+  },
+  upgradeCardDisabled: { borderColor: colors.disabled, opacity: 0.6 },
+  upgradeName: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  upgradeDesc: { color: colors.textMuted, fontSize: 11, marginTop: 3, minHeight: 28 },
+  upgradeCost: { color: colors.darkMatter, fontSize: 13, fontWeight: '800', marginTop: spacing.sm },
+  upgradeCostDisabled: { color: colors.disabled },
   genRow: {
     flexDirection: 'row',
     alignItems: 'center',

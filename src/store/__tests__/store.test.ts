@@ -599,6 +599,22 @@ describe('gameStore', () => {
     expect(s.cachedCrystalCps).toBeGreaterThan(before);
   });
 
+  it('buyCrystalRunUpgrade spends crystals and applies its multiplier', () => {
+    reset({ transcendCount: 1, crystals: 1000, crystalGenerators: { shard: 1 } });
+    const tapBefore = useGameStore.getState().cachedCrystalTapValue;
+    useGameStore.getState().buyCrystalRunUpgrade('c_tap1'); // ×2 tap, unlock shard ≥ 1
+    const s = useGameStore.getState();
+    expect(s.crystalRunUpgrades.c_tap1).toBe(true);
+    expect(s.crystals).toBeLessThan(1000);
+    expect(s.cachedCrystalTapValue).toBeCloseTo(tapBefore * 2);
+  });
+
+  it('buyCrystalRunUpgrade is blocked until its unlock condition is met', () => {
+    reset({ transcendCount: 1, crystals: 1e9, crystalGenerators: {} });
+    useGameStore.getState().buyCrystalRunUpgrade('c_shard'); // needs shard ≥ 10
+    expect(useGameStore.getState().crystalRunUpgrades.c_shard).toBeUndefined();
+  });
+
   it('doResonate resets the crystal run for permanent Resonance', () => {
     reset({
       transcendCount: 1,
@@ -606,6 +622,7 @@ describe('gameStore', () => {
       lifetimeCrystals: 400_000, // pendingResonance = floor(sqrt(4)) = 2
       crystalGenerators: { shard: 20 },
       crystalFormationIndex: 5,
+      crystalRunUpgrades: { c_tap1: true },
       crystalUpgrades: { crystal_resonance: 1 },
       resonance: 0,
     });
@@ -618,6 +635,7 @@ describe('gameStore', () => {
     expect(s.lifetimeCrystals).toBe(0);
     expect(s.crystalGenerators).toEqual({});
     expect(s.crystalFormationIndex).toBe(0);
+    expect(s.crystalRunUpgrades).toEqual({});
     // The Matrix and transcend state survive.
     expect(s.crystalUpgrades).toEqual({ crystal_resonance: 1 });
     expect(s.transcendCount).toBe(1);

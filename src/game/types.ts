@@ -119,6 +119,8 @@ export interface PersistedState {
   resonance: number;
   /** Crystals earned in the current crystal run (resets each Resonance). */
   lifetimeCrystals: number;
+  /** Crystal Game: run-scoped Forge upgrades bought with Crystals (reset each Resonance). */
+  crystalRunUpgrades: Record<string, true>;
 }
 
 export interface GameState extends PersistedState {

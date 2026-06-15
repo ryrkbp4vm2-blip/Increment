@@ -7,7 +7,7 @@ import { EXPEDITIONS_BY_ID } from '../game/expeditions';
 import { RESEARCH_BY_ID } from '../game/research';
 import { CORE_UPGRADES_BY_ID, SINGULARITY_PERKS_BY_ID } from '../game/ascension';
 import { CRYSTAL_UPGRADES_BY_ID } from '../game/transcend';
-import { CRYSTAL_GENS_BY_ID } from '../game/crystalGame';
+import { CRYSTAL_GENS_BY_ID, CRYSTAL_GEN_UPGRADES_BY_ID } from '../game/crystalGame';
 import { CHALLENGES_BY_ID } from '../game/challenges';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
@@ -64,6 +64,7 @@ export function toPersisted(state: GameState): PersistedState {
     crystalFormationDamage: state.crystalFormationDamage,
     resonance: state.resonance,
     lifetimeCrystals: state.lifetimeCrystals,
+    crystalRunUpgrades: state.crystalRunUpgrades,
   };
 }
 
@@ -222,6 +223,12 @@ export function migrate(raw: string | null): SaveFile | null {
       if (count > 0) crystalGenerators[id] = count;
     }
   }
+  const crystalRunUpgrades: Record<string, true> = {};
+  if (typeof raw_.crystalRunUpgrades === 'object' && raw_.crystalRunUpgrades !== null) {
+    for (const id of Object.keys(raw_.crystalRunUpgrades)) {
+      if (CRYSTAL_GEN_UPGRADES_BY_ID[id]) crystalRunUpgrades[id] = true;
+    }
+  }
   const singularityCores = Math.max(0, Math.floor(finiteNumber(raw_.singularityCores, 0)));
   const crystals = Math.max(0, Math.floor(finiteNumber(raw_.crystals, 0)));
   const research: Record<string, true> = {};
@@ -299,6 +306,7 @@ export function migrate(raw: string | null): SaveFile | null {
     crystalFormationDamage: Math.max(0, finiteNumber(raw_.crystalFormationDamage, 0)),
     resonance: Math.max(0, Math.floor(finiteNumber(raw_.resonance, 0))),
     lifetimeCrystals: Math.max(0, finiteNumber(raw_.lifetimeCrystals, 0)),
+    crystalRunUpgrades,
   };
   return {
     version: SAVE_VERSION,

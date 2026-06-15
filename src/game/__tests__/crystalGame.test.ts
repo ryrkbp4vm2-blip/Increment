@@ -1,5 +1,6 @@
 import {
   CRYSTAL_GENS,
+  CRYSTAL_GEN_UPGRADES_BY_ID,
   RESONANCE_BASE,
   applyCrystalFormationDamage,
   canResonate,
@@ -7,7 +8,9 @@ import {
   crystalGenBulkCost,
   crystalGenCostOfNext,
   crystalGenMaxAffordable,
+  crystalRunPowers,
   crystalTotalCps,
+  crystalUpgradeUnlockMet,
   nextResonanceAt,
   pendingResonance,
   resonanceMult,
@@ -82,5 +85,47 @@ describe('resonance', () => {
   it('multiplies production by +100% per level', () => {
     expect(resonanceMult(0)).toBe(1);
     expect(resonanceMult(3)).toBe(4);
+  });
+});
+
+describe('forge run upgrades', () => {
+  it('aggregates tap, global and per-generator multipliers', () => {
+    const p = crystalRunPowers({ c_tap1: true, c_global1: true, c_shard: true });
+    expect(p.tapMult).toBe(2);
+    expect(p.globalMult).toBe(1.5);
+    expect(p.genMult.shard).toBe(2);
+  });
+
+  it('is all-neutral with no upgrades', () => {
+    const p = crystalRunPowers({});
+    expect(p.tapMult).toBe(1);
+    expect(p.globalMult).toBe(1);
+    expect(p.genMult).toEqual({});
+  });
+
+  it('per-generator multiplier flows into total CPS', () => {
+    const gens = { shard: 10 };
+    const p = crystalRunPowers({ c_shard: true });
+    const boosted = crystalTotalCps(gens, 1, p.genMult);
+    const plain = crystalTotalCps(gens, 1);
+    expect(boosted).toBeCloseTo(plain * 2);
+  });
+
+  it('checks genCount and lifetime unlock conditions', () => {
+    const shardUp = CRYSTAL_GEN_UPGRADES_BY_ID.c_shard; // genCount shard 10
+    expect(
+      crystalUpgradeUnlockMet(shardUp, { crystalGenerators: { shard: 9 }, lifetimeCrystals: 0 }),
+    ).toBe(false);
+    expect(
+      crystalUpgradeUnlockMet(shardUp, { crystalGenerators: { shard: 10 }, lifetimeCrystals: 0 }),
+    ).toBe(true);
+
+    const globalUp = CRYSTAL_GEN_UPGRADES_BY_ID.c_global1; // lifetime 50_000
+    expect(
+      crystalUpgradeUnlockMet(globalUp, { crystalGenerators: {}, lifetimeCrystals: 49_999 }),
+    ).toBe(false);
+    expect(
+      crystalUpgradeUnlockMet(globalUp, { crystalGenerators: {}, lifetimeCrystals: 50_000 }),
+    ).toBe(true);
   });
 });

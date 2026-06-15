@@ -27,13 +27,16 @@ import {
 } from '../game/transcend';
 import {
   CRYSTAL_GENS_BY_ID,
+  CRYSTAL_GEN_UPGRADES_BY_ID,
   CRYSTAL_TAP_BASE,
   applyCrystalFormationDamage,
   canResonate,
   crystalGenBulkCost,
   crystalGenCostOfNext,
   crystalGenMaxAffordable,
+  crystalRunPowers,
   crystalTotalCps,
+  crystalUpgradeUnlockMet,
   pendingResonance,
   resonanceMult,
 } from '../game/crystalGame';
@@ -70,6 +73,7 @@ export interface GameActions {
   buyGenerator(id: GeneratorId, qty: BuyQty): void;
   buyUpgrade(id: string): void;
   buyCrystalGenerator(id: string, qty: 1 | 10 | 'max'): void;
+  buyCrystalRunUpgrade(id: string): void;
   applyTick(nowMs: number): void;
   applyOffline(earned: number, nowMs: number): void;
   collectComet(reward: CometReward, nowMs: number): void;
@@ -152,6 +156,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     crystalFormationDamage: 0,
     resonance: 0,
     lifetimeCrystals: 0,
+    crystalRunUpgrades: {},
   };
 }
 
@@ -165,13 +170,18 @@ function withCaches(
   const cachedCps = cps(persisted);
   const cPowers = crystalPowers(persisted.crystalUpgrades);
   const rMult = resonanceMult(persisted.resonance);
+  const runP = crystalRunPowers(persisted.crystalRunUpgrades);
   return {
     ...persisted,
     lastTickAt,
     cachedCps,
     cachedTapValue: tapValue(persisted, cachedCps),
-    cachedCrystalCps: crystalTotalCps(persisted.crystalGenerators, cPowers.globalMult * rMult),
-    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult,
+    cachedCrystalCps: crystalTotalCps(
+      persisted.crystalGenerators,
+      cPowers.globalMult * rMult * runP.globalMult,
+      runP.genMult,
+    ),
+    cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult,
   };
 }
 
@@ -355,6 +365,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (cost > state.crystals) return;
     const crystalGenerators = { ...state.crystalGenerators, [id]: owned + count };
     set(withCaches({ ...state, crystals: state.crystals - cost, crystalGenerators }, state.lastTickAt));
+  },
+
+  buyCrystalRunUpgrade(id) {
+    const state = get();
+    const def = CRYSTAL_GEN_UPGRADES_BY_ID[id];
+    if (!def || state.crystalRunUpgrades[id]) return;
+    if (state.crystals < def.cost || !crystalUpgradeUnlockMet(def, state)) return;
+    const crystalRunUpgrades = { ...state.crystalRunUpgrades, [id]: true as const };
+    set(withCaches({ ...state, crystals: state.crystals - def.cost, crystalRunUpgrades }, state.lastTickAt));
   },
 
   applyTick(nowMs) {
@@ -683,6 +702,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           crystalGenerators: {},
           crystalFormationIndex: 0,
           crystalFormationDamage: 0,
+          crystalRunUpgrades: {},
           lifetimeAllTime: state.lifetimeAllTime,
           totalTaps: state.totalTaps,
           achievements: state.achievements,

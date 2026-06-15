@@ -63,6 +63,33 @@ export const CRYSTAL_GENS: CrystalGenDef[] = [
     growth: 1.15,
     icon: 'dark_compression',
   },
+  {
+    id: 'harmonizer',
+    name: 'Harmonic Forge',
+    description: 'Forges crystals from pure resonance',
+    baseCost: 1_400_000,
+    baseProd: 1_400,
+    growth: 1.15,
+    icon: 'cosmic_magnet',
+  },
+  {
+    id: 'nexus',
+    name: 'Crystal Nexus',
+    description: 'A self-sustaining lattice of growing crystal',
+    baseCost: 20_000_000,
+    baseProd: 7_800,
+    growth: 1.15,
+    icon: 'quantum_reserves',
+  },
+  {
+    id: 'singularity',
+    name: 'Prism Singularity',
+    description: 'Bends spacetime into endless crystal',
+    baseCost: 330_000_000,
+    baseProd: 44_000,
+    growth: 1.15,
+    icon: 'temporal_vault',
+  },
 ];
 
 export const CRYSTAL_GENS_BY_ID = Object.fromEntries(
@@ -105,16 +132,177 @@ export function crystalGenMaxAffordable(
 /** Base crystals earned per tap before Crystal Matrix tap multiplier. */
 export const CRYSTAL_TAP_BASE = 0.5;
 
-/** Total crystal CPS from all owned generators with the global multiplier applied. */
+/**
+ * Total crystal CPS from all owned generators, with the global multiplier and
+ * any per-generator multipliers (from run upgrades) applied.
+ */
 export function crystalTotalCps(
   generators: Record<string, number>,
   globalMult: number,
+  genMult: Record<string, number> = {},
 ): number {
   let total = 0;
   for (const def of CRYSTAL_GENS) {
-    total += (generators[def.id] ?? 0) * def.baseProd * globalMult;
+    const m = genMult[def.id] ?? 1;
+    total += (generators[def.id] ?? 0) * def.baseProd * m * globalMult;
   }
   return total;
+}
+
+/** Production of a single crystal generator line (for display). */
+export function crystalGenProduction(
+  def: CrystalGenDef,
+  owned: number,
+  globalMult: number,
+  genMult = 1,
+): number {
+  return owned * def.baseProd * genMult * globalMult;
+}
+
+// ── Forge upgrades — run-scoped, bought with crystals, reset each Resonance ────
+//
+// Unlike the permanent Crystal Matrix, these are the moment-to-moment purchases
+// inside a single crystal run: tap power, per-generator boosts and global
+// multipliers. They reset on every Resonance Cascade (re-bought each climb),
+// giving the Forge real decisions rather than just "buy the next generator."
+
+export type CrystalUpgradeEffect =
+  | { kind: 'tapMult'; x: number }
+  | { kind: 'genMult'; genId: string; x: number }
+  | { kind: 'globalMult'; x: number };
+
+export type CrystalUpgradeUnlock =
+  | { kind: 'genCount'; genId: string; n: number }
+  | { kind: 'lifetime'; amount: number };
+
+export interface CrystalGenUpgradeDef {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  unlock: CrystalUpgradeUnlock;
+  effect: CrystalUpgradeEffect;
+}
+
+export const CRYSTAL_GEN_UPGRADES: CrystalGenUpgradeDef[] = [
+  // Tap line.
+  {
+    id: 'c_tap1',
+    name: 'Reinforced Resonator',
+    description: 'Double your crystals per tap',
+    cost: 60,
+    unlock: { kind: 'genCount', genId: 'shard', n: 1 },
+    effect: { kind: 'tapMult', x: 2 },
+  },
+  {
+    id: 'c_tap2',
+    name: 'Tuned Resonator',
+    description: 'Double your crystals per tap again',
+    cost: 4_000,
+    unlock: { kind: 'lifetime', amount: 5_000 },
+    effect: { kind: 'tapMult', x: 2 },
+  },
+  {
+    id: 'c_tap3',
+    name: 'Harmonic Resonator',
+    description: 'Double your crystals per tap once more',
+    cost: 250_000,
+    unlock: { kind: 'lifetime', amount: 250_000 },
+    effect: { kind: 'tapMult', x: 2 },
+  },
+  // Per-generator boosts (×2 once you own 10).
+  {
+    id: 'c_shard',
+    name: 'Shard Alignment',
+    description: 'Crystal Shards produce ×2',
+    cost: 120,
+    unlock: { kind: 'genCount', genId: 'shard', n: 10 },
+    effect: { kind: 'genMult', genId: 'shard', x: 2 },
+  },
+  {
+    id: 'c_prism',
+    name: 'Prism Focus',
+    description: 'Prism Nodes produce ×2',
+    cost: 1_200,
+    unlock: { kind: 'genCount', genId: 'prism', n: 10 },
+    effect: { kind: 'genMult', genId: 'prism', x: 2 },
+  },
+  {
+    id: 'c_chamber',
+    name: 'Chamber Tuning',
+    description: 'Resonance Chambers produce ×2',
+    cost: 13_000,
+    unlock: { kind: 'genCount', genId: 'chamber', n: 10 },
+    effect: { kind: 'genMult', genId: 'chamber', x: 2 },
+  },
+  {
+    id: 'c_array',
+    name: 'Lattice Sync',
+    description: 'Lattice Arrays produce ×2',
+    cost: 150_000,
+    unlock: { kind: 'genCount', genId: 'array', n: 10 },
+    effect: { kind: 'genMult', genId: 'array', x: 2 },
+  },
+  {
+    id: 'c_condenser',
+    name: 'Void Calibration',
+    description: 'Void Condensers produce ×2',
+    cost: 1_600_000,
+    unlock: { kind: 'genCount', genId: 'condenser', n: 10 },
+    effect: { kind: 'genMult', genId: 'condenser', x: 2 },
+  },
+  // Global multipliers.
+  {
+    id: 'c_global1',
+    name: 'Crystal Harmonics',
+    description: 'All crystal production ×1.5',
+    cost: 50_000,
+    unlock: { kind: 'lifetime', amount: 50_000 },
+    effect: { kind: 'globalMult', x: 1.5 },
+  },
+  {
+    id: 'c_global2',
+    name: 'Resonant Cascade',
+    description: 'All crystal production ×2',
+    cost: 5_000_000,
+    unlock: { kind: 'lifetime', amount: 5_000_000 },
+    effect: { kind: 'globalMult', x: 2 },
+  },
+];
+
+export const CRYSTAL_GEN_UPGRADES_BY_ID: Record<string, CrystalGenUpgradeDef> = Object.fromEntries(
+  CRYSTAL_GEN_UPGRADES.map((u) => [u.id, u]),
+);
+
+export interface CrystalRunPowers {
+  tapMult: number;
+  globalMult: number;
+  genMult: Record<string, number>;
+}
+
+/** Aggregate the active run upgrades into tap / global / per-generator multipliers. */
+export function crystalRunPowers(upgrades: Record<string, true>): CrystalRunPowers {
+  let tapMult = 1;
+  let globalMult = 1;
+  const genMult: Record<string, number> = {};
+  for (const def of CRYSTAL_GEN_UPGRADES) {
+    if (!upgrades[def.id]) continue;
+    const e = def.effect;
+    if (e.kind === 'tapMult') tapMult *= e.x;
+    else if (e.kind === 'globalMult') globalMult *= e.x;
+    else if (e.kind === 'genMult') genMult[e.genId] = (genMult[e.genId] ?? 1) * e.x;
+  }
+  return { tapMult, globalMult, genMult };
+}
+
+/** Whether a Forge upgrade's unlock condition is met. */
+export function crystalUpgradeUnlockMet(
+  def: CrystalGenUpgradeDef,
+  state: { crystalGenerators: Record<string, number>; lifetimeCrystals: number },
+): boolean {
+  const u = def.unlock;
+  if (u.kind === 'genCount') return (state.crystalGenerators[u.genId] ?? 0) >= u.n;
+  return state.lifetimeCrystals >= u.amount;
 }
 
 const FORMATION_NAMES = [
