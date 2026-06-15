@@ -14,12 +14,7 @@ import {
   crystalUpgradeUnlockMet,
   resonanceMult,
 } from '../game/crystalGame';
-import {
-  CRYSTAL_UPGRADES,
-  crystalPowers,
-  crystalUpgradeCost,
-  crystalTotalEffect,
-} from '../game/transcend';
+import { crystalPowers } from '../game/transcend';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
@@ -37,7 +32,6 @@ export function CrystalForgeScreen() {
   const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
   const resonance = useGameStore((s) => s.resonance);
   const buyCrystalGenerator = useGameStore((s) => s.buyCrystalGenerator);
-  const buyCrystalUpgrade = useGameStore((s) => s.buyCrystalUpgrade);
   const buyCrystalRunUpgrade = useGameStore((s) => s.buyCrystalRunUpgrade);
 
   const runPowers = crystalRunPowers(crystalRunUpgrades);
@@ -109,61 +103,13 @@ export function CrystalForgeScreen() {
       ))}
 
       <View style={styles.divider} />
-      <Text style={styles.sectionTitle}>Crystal Matrix</Text>
-      <Text style={styles.hint}>Permanent upgrades that survive every Transcend.</Text>
-
-      {CRYSTAL_UPGRADES.map((def) => {
-        const level = crystalUpgrades[def.id] ?? 0;
-        const maxed = level >= def.maxLevel;
-        const cost = crystalUpgradeCost(def, level);
-        const affordable = !maxed && crystals >= cost;
-        return (
-          <View key={def.id} style={styles.matrixRow}>
-            <View style={styles.matrixIconBox}>
-              <Icon
-                name={def.icon as IconName}
-                size={26}
-                color={colors.darkMatter}
-                accent={colors.darkMatter}
-              />
-            </View>
-            <View style={styles.matrixInfo}>
-              <Text style={styles.matrixName}>
-                {def.name}{' '}
-                <Text style={styles.matrixLevel}>
-                  Lv {level}/{def.maxLevel}
-                </Text>
-              </Text>
-              <Text style={styles.matrixDesc}>{def.perLevel}</Text>
-              {level > 0 && (
-                <Text style={styles.matrixCurrent}>Now: {crystalTotalEffect(def, level)}</Text>
-              )}
-            </View>
-            <Pressable
-              onPress={() => {
-                buyCrystalUpgrade(def.id);
-                playSound('buy');
-              }}
-              disabled={!affordable}
-              style={[
-                styles.matrixBuy,
-                maxed && styles.matrixMaxed,
-                !affordable && !maxed && styles.matrixBuyDisabled,
-              ]}
-            >
-              {maxed ? (
-                <Text style={styles.matrixMaxedText}>MAX</Text>
-              ) : (
-                <Text
-                  style={[styles.matrixBuyText, !affordable && styles.matrixBuyTextDisabled]}
-                >
-                  {cost} ✦
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        );
-      })}
+      <View style={styles.matrixNote}>
+        <Icon name="gem_outline" size={20} color={colors.darkMatter} accent={colors.darkMatter} />
+        <Text style={styles.matrixNoteText}>
+          The permanent Crystal Matrix is now bought with Attunement (◈) on the Prestige tab —
+          earn it by triggering a Resonance Cascade.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -328,35 +274,15 @@ const styles = StyleSheet.create({
   buyCost: { color: colors.darkMatter, fontSize: 12 },
   buyLabelDisabled: { color: colors.disabled },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
-  matrixRow: {
+  matrixNote: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
     backgroundColor: colors.panel,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.md,
-    marginBottom: spacing.sm,
   },
-  matrixIconBox: { width: 34, alignItems: 'center', marginRight: spacing.sm },
-  matrixInfo: { flex: 1 },
-  matrixName: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  matrixLevel: { color: colors.darkMatter, fontWeight: '700' },
-  matrixDesc: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  matrixCurrent: { color: colors.accent, fontSize: 11, marginTop: 2 },
-  matrixBuy: {
-    backgroundColor: '#C084FC22',
-    borderWidth: 1,
-    borderColor: colors.darkMatter,
-    borderRadius: 10,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    minWidth: 70,
-  },
-  matrixBuyDisabled: { borderColor: colors.disabled, backgroundColor: 'transparent' },
-  matrixMaxed: { borderColor: colors.gold, backgroundColor: 'transparent' },
-  matrixBuyText: { color: colors.darkMatter, fontSize: 13, fontWeight: '700' },
-  matrixBuyTextDisabled: { color: colors.disabled },
-  matrixMaxedText: { color: colors.gold, fontSize: 13, fontWeight: '800' },
+  matrixNoteText: { flex: 1, color: colors.textMuted, fontSize: 12, lineHeight: 17 },
 });

@@ -46,6 +46,7 @@ import {
 } from '../game/transcend';
 import {
   RESONANCE_BASE,
+  attunementGain,
   canResonate,
   nextResonanceAt,
   resonanceGain,
@@ -86,6 +87,7 @@ export function PrestigeScreen() {
   const doTranscend = useGameStore((s) => s.doTranscend);
   const buyCrystalUpgrade = useGameStore((s) => s.buyCrystalUpgrade);
   const resonance = useGameStore((s) => s.resonance);
+  const attunement = useGameStore((s) => s.attunement);
   const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
   const doResonate = useGameStore((s) => s.doResonate);
   const autoResonate = useGameStore((s) => s.autoResonate);
@@ -114,6 +116,7 @@ export function PrestigeScreen() {
       <CrystalPrestigeScreen
         crystals={crystals}
         totalCrystals={totalCrystals}
+        attunement={attunement}
         resonance={resonance}
         lifetimeCrystals={lifetimeCrystals}
         crystalUpgrades={crystalUpgrades}
@@ -512,6 +515,7 @@ export function PrestigeScreen() {
 function CrystalPrestigeScreen({
   crystals,
   totalCrystals,
+  attunement,
   resonance,
   lifetimeCrystals,
   crystalUpgrades,
@@ -524,6 +528,7 @@ function CrystalPrestigeScreen({
 }: {
   crystals: number;
   totalCrystals: number;
+  attunement: number;
   resonance: number;
   lifetimeCrystals: number;
   crystalUpgrades: Record<string, number>;
@@ -535,6 +540,7 @@ function CrystalPrestigeScreen({
   setConfirmingTranscend: (v: boolean) => void;
 }) {
   const pending = resonanceGain(lifetimeCrystals, crystalUpgrades, resonance);
+  const pendingAttune = attunementGain(lifetimeCrystals);
   const ready = canResonate(lifetimeCrystals, resonance);
   const nextAt = nextResonanceAt(resonance);
   const progress = Math.min(lifetimeCrystals / nextAt, 1);
@@ -547,15 +553,17 @@ function CrystalPrestigeScreen({
       </View>
       <Text style={styles.body}>
         Collapse your crystal harmonics into permanent Resonance — each level multiplies all
-        crystal production forever. Your crystal balance, generators and formation depth reset;
-        the Crystal Matrix stays. Spend your crystals on the Matrix below before you cascade!
+        crystal production forever. Your crystal balance, generators and formation depth reset.
+        Every Cascade also pays out Attunement (◈) — the currency that buys the permanent
+        Crystal Matrix below.
       </Text>
 
       <View style={styles.statsCard}>
-        <StatRow label="Crystals to spend" value={`${formatNumber(crystals)} ✦`} />
-        <StatRow label="Total Crystals earned" value={`${formatNumber(totalCrystals)} ✦`} />
+        <StatRow label="Attunement to spend" value={`${formatNumber(attunement)} ◈`} />
         <StatRow label="Resonance" value={`Lv ${formatNumber(resonance)}`} />
         <StatRow label="Production bonus" value={`×${formatNumber(resonanceMult(resonance))}`} />
+        <StatRow label="Crystals this run" value={`${formatNumber(crystals)} ✦`} />
+        <StatRow label="Total Crystals earned" value={`${formatNumber(totalCrystals)} ✦`} />
         <StatRow
           label={ready ? 'Next Resonance at' : 'First Resonance at'}
           value={`${formatNumber(nextAt)} ✦ this run`}
@@ -569,7 +577,8 @@ function CrystalPrestigeScreen({
               Cascade for +{formatNumber(pending)} Resonance (×{formatNumber(
                 resonanceMult(resonance + pending),
               )}{' '}
-              production)? Your crystals and generators reset.
+              production) and +{formatNumber(pendingAttune)} ◈ Attunement? Your crystals and
+              generators reset.
             </Text>
             <View style={styles.confirmButtons}>
               <BigButton
@@ -592,7 +601,7 @@ function CrystalPrestigeScreen({
           </View>
         ) : (
           <BigButton
-            label={`Cascade for +${formatNumber(pending)} Resonance`}
+            label={`Cascade: +${formatNumber(pending)} Resonance, +${formatNumber(pendingAttune)} ◈`}
             color={colors.darkMatter}
             onPress={() => setConfirmingTranscend(true)}
           />
@@ -628,12 +637,12 @@ function CrystalPrestigeScreen({
       <Text style={styles.autoHint}>Automatically Cascade when the gate is met (spends crystals immediately).</Text>
 
       <Text style={styles.perksTitle}>Crystal Matrix</Text>
-      <Text style={styles.perksHint}>Permanent upgrades. Survive every Cascade.</Text>
+      <Text style={styles.perksHint}>Permanent upgrades bought with Attunement (◈). Survive every Cascade.</Text>
       {CRYSTAL_UPGRADES.map((def) => {
         const level = crystalUpgrades[def.id] ?? 0;
         const maxed = level >= def.maxLevel;
         const cost = crystalUpgradeCost(def, level);
-        const affordable = !maxed && crystals >= cost;
+        const affordable = !maxed && attunement >= cost;
         return (
           <View key={def.id} style={styles.dmRow}>
             <View style={styles.dmIconBox}>
@@ -657,7 +666,7 @@ function CrystalPrestigeScreen({
               {maxed ? (
                 <Text style={styles.dmMaxedText}>MAX</Text>
               ) : (
-                <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ✦</Text>
+                <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ◈</Text>
               )}
             </Pressable>
           </View>

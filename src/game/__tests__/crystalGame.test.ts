@@ -3,6 +3,7 @@ import {
   CRYSTAL_GEN_UPGRADES_BY_ID,
   RESONANCE_BASE,
   applyCrystalFormationDamage,
+  attunementGain,
   canResonate,
   crystalFormationHp,
   crystalGenBulkCost,
@@ -96,6 +97,16 @@ describe('resonance', () => {
   it('multiplies production by +100% per level', () => {
     expect(resonanceMult(0)).toBe(1);
     expect(resonanceMult(3)).toBe(4);
+  });
+
+  it('awards Attunement from run depth, gated by the first Resonance', () => {
+    // Below the Resonance gate, no Attunement.
+    expect(attunementGain(RESONANCE_BASE - 1)).toBe(0);
+    // floor(sqrt(life / ATTUNEMENT_BASE)): 1e5 → floor(sqrt(10)) = 3.
+    expect(attunementGain(1e5)).toBe(3);
+    // 1e6 → floor(sqrt(100)) = 10; 1e8 → floor(sqrt(10000)) = 100.
+    expect(attunementGain(1e6)).toBe(10);
+    expect(attunementGain(1e8)).toBe(100);
   });
 
   it('applies the Crystal Lattice yield bonus to the gain (not the gate)', () => {

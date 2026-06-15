@@ -56,14 +56,15 @@ export function crystalMult(totalCrystals: number): number {
 }
 
 /**
- * Leveled Crystal Matrix upgrades — bought with Crystals, they survive every
- * Transcend. The first ones improve the Crystal economy itself.
+ * Leveled Crystal Matrix upgrades — bought with Attunement (earned only from a
+ * Resonance Cascade), they survive every reset. The first ones improve the
+ * Crystal economy itself.
  */
 export interface CrystalUpgradeDef {
   id: string;
   name: string;
   perLevel: string;
-  /** Cost of the next level is baseCost * (currentLevel + 1), in Crystals. */
+  /** Cost of the next level is baseCost * (currentLevel + 1), in Attunement. */
   baseCost: number;
   maxLevel: number;
   kind: 'yield' | 'global' | 'tap' | 'formation';

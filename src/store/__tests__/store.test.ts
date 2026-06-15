@@ -3,7 +3,7 @@ import { singularityMult } from '../../game/ascension';
 import { GENERATORS_BY_ID } from '../../game/balance';
 import { achievementBonus } from '../../game/achievements';
 import { ZONE_WARP_ASCENSIONS, sectorMult, sectorTrait } from '../../game/zones';
-import { TRANSCEND_ASCENSIONS } from '../../game/transcend';
+import { CRYSTAL_UPGRADES_BY_ID, TRANSCEND_ASCENSIONS } from '../../game/transcend';
 import { initialPersistedState, useGameStore } from '../gameStore';
 
 function reset(overrides: Partial<ReturnType<typeof initialPersistedState>> = {}) {
@@ -630,6 +630,9 @@ describe('gameStore', () => {
     const s = useGameStore.getState();
     // Gains 2 Resonance levels.
     expect(s.resonance).toBe(2);
+    // …and Attunement = floor(sqrt(400000 / 10000)) = floor(sqrt(40)) = 6.
+    expect(s.attunement).toBe(6);
+    expect(s.totalAttunement).toBe(6);
     // The crystal run resets.
     expect(s.crystals).toBe(0);
     expect(s.lifetimeCrystals).toBe(0);
@@ -645,6 +648,22 @@ describe('gameStore', () => {
     reset({ transcendCount: 1, lifetimeCrystals: 100, resonance: 0 });
     useGameStore.getState().doResonate();
     expect(useGameStore.getState().resonance).toBe(0);
+  });
+
+  it('buyCrystalUpgrade spends Attunement, not crystals', () => {
+    reset({ transcendCount: 1, crystals: 1e9, attunement: 10, crystalUpgrades: {} });
+    const def = CRYSTAL_UPGRADES_BY_ID.crystal_resonance; // baseCost 2
+    useGameStore.getState().buyCrystalUpgrade('crystal_resonance');
+    const s = useGameStore.getState();
+    expect(s.crystalUpgrades.crystal_resonance).toBe(1);
+    expect(s.attunement).toBe(10 - def.baseCost);
+    expect(s.crystals).toBe(1e9); // crystals untouched
+  });
+
+  it('buyCrystalUpgrade is blocked without enough Attunement', () => {
+    reset({ transcendCount: 1, crystals: 1e9, attunement: 0, crystalUpgrades: {} });
+    useGameStore.getState().buyCrystalUpgrade('crystal_resonance');
+    expect(useGameStore.getState().crystalUpgrades.crystal_resonance).toBeUndefined();
   });
 
   it('resetGame wipes all progress back to a fresh state', () => {

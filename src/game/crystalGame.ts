@@ -491,3 +491,24 @@ export function resonanceGain(
   );
 }
 
+// ── Attunement — the permanent Crystal-Matrix currency ────────────────────────
+//
+// A Resonance Cascade pays out Attunement on top of Resonance levels. Unlike
+// the Crystals you mine (which fund this run's generators and Forge upgrades),
+// Attunement is the scarce meta-currency that buys the permanent Crystal Matrix.
+// It grows with how deep your run went (lifetime crystals this run), so longer
+// climbs before a Cascade are rewarded.
+
+/** Lifetime crystals (this run) that equate to one Attunement, square-root scaled. */
+export const ATTUNEMENT_BASE = 1e4;
+
+/**
+ * Attunement awarded for cascading now. Square-root of run depth so deeper runs
+ * pay more, but with diminishing returns. Zero until the Resonance gate is met
+ * (a Cascade can't happen below it anyway).
+ */
+export function attunementGain(lifetimeCrystalsRun: number): number {
+  if (lifetimeCrystalsRun < RESONANCE_BASE) return 0;
+  return Math.floor(Math.sqrt(lifetimeCrystalsRun / ATTUNEMENT_BASE));
+}
+

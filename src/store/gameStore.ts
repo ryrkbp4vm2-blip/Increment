@@ -31,6 +31,7 @@ import {
   CRYSTAL_GEN_UPGRADES_BY_ID,
   CRYSTAL_TAP_BASE,
   applyCrystalFormationDamage,
+  attunementGain,
   canResonate,
   crystalGenBulkCost,
   crystalGenCostOfNext,
@@ -161,6 +162,8 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     crystalRunUpgrades: {},
     crystalFormationsShattered: 0,
     autoResonate: false,
+    attunement: 0,
+    totalAttunement: 0,
   };
 }
 
@@ -203,6 +206,8 @@ function carryTranscend(state: GameState): Pick<
   | 'ascensionsSinceTranscend'
   | 'crystalUpgrades'
   | 'resonance'
+  | 'attunement'
+  | 'totalAttunement'
 > {
   return {
     crystals: state.crystals,
@@ -210,6 +215,8 @@ function carryTranscend(state: GameState): Pick<
     transcendCount: state.transcendCount,
     ascensionsSinceTranscend: state.ascensionsSinceTranscend,
     crystalUpgrades: state.crystalUpgrades,
+    attunement: state.attunement,
+    totalAttunement: state.totalAttunement,
     resonance: state.resonance,
   };
 }
@@ -702,6 +709,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!canResonate(state.lifetimeCrystals, state.resonance)) return;
     const gained = resonanceGain(state.lifetimeCrystals, state.crystalUpgrades, state.resonance);
     if (gained < 1) return;
+    // A Cascade also pays out Attunement — the permanent Crystal-Matrix currency.
+    const attune = attunementGain(state.lifetimeCrystals);
     set(
       withCaches(
         {
@@ -713,6 +722,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ascensionCount: state.ascensionCount,
           crystalUpgrades: state.crystalUpgrades,
           resonance: state.resonance + gained,
+          attunement: state.attunement + attune,
+          totalAttunement: state.totalAttunement + attune,
           totalCrystals: state.totalCrystals,
           crystals: 0,
           lifetimeCrystals: 0,
@@ -778,11 +789,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const level = state.crystalUpgrades[id] ?? 0;
     if (level >= def.maxLevel) return;
     const cost = crystalUpgradeCost(def, level);
-    if (state.crystals < cost) return;
+    // The permanent Matrix is bought with Attunement (a Cascade reward), not the
+    // crystals you mine this run.
+    if (state.attunement < cost) return;
     const crystalUpgrades = { ...state.crystalUpgrades, [id]: level + 1 };
     set(
       withCaches(
-        { ...state, crystals: state.crystals - cost, crystalUpgrades },
+        { ...state, attunement: state.attunement - cost, crystalUpgrades },
         state.lastTickAt,
       ),
     );
@@ -885,6 +898,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           crystals: 200_000,
           totalCrystals: 200_000,
           lifetimeCrystals: 200_000,
+          // Some Attunement banked so the permanent Crystal Matrix can be tried.
+          attunement: 30,
+          totalAttunement: 30,
           // A few generators pre-seeded so there's CPS from the start.
           crystalGenerators: { shard: 10, prism: 3 },
         },

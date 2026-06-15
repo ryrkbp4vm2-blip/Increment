@@ -106,6 +106,9 @@ function runSimulation(tapsPerSec: number): Event[] {
       if (s.totalCrystals >= mark) record(`Earn ${formatNumber(mark)} crystals (all-time)`);
     }
     for (const n of [1, 2, 3, 5, 10]) if (s.resonance >= n) record(`Resonance #${n}`);
+    for (const mark of [10, 50, 200, 1000]) {
+      if (s.totalAttunement >= mark) record(`Earn ${mark} Attunement (all-time)`);
+    }
   };
 
   const effectiveRate = (): number => {
@@ -198,8 +201,9 @@ function runSimulation(tapsPerSec: number): Event[] {
     return true;
   };
 
-  // Transcend once the gate is met, then spend the Crystals on the Matrix.
-  const spendCrystals = () => {
+  // Spend banked Attunement (a Cascade reward) on the permanent Crystal Matrix,
+  // cheapest first.
+  const spendAttunement = () => {
     for (let guard = 0; guard < 500; guard++) {
       const s = get();
       let cheapest: { id: string; cost: number } | null = null;
@@ -207,7 +211,7 @@ function runSimulation(tapsPerSec: number): Event[] {
         const lvl = s.crystalUpgrades[def.id] ?? 0;
         if (lvl >= def.maxLevel) continue;
         const cost = crystalUpgradeCost(def, lvl);
-        if (cost <= s.crystals && (!cheapest || cost < cheapest.cost)) cheapest = { id: def.id, cost };
+        if (cost <= s.attunement && (!cheapest || cost < cheapest.cost)) cheapest = { id: def.id, cost };
       }
       if (!cheapest) break;
       get().buyCrystalUpgrade(cheapest.id);
@@ -217,7 +221,6 @@ function runSimulation(tapsPerSec: number): Event[] {
   const maybeTranscend = () => {
     if (!canTranscend(get().ascensionsSinceTranscend)) return false;
     get().doTranscend();
-    spendCrystals();
     return true;
   };
 
@@ -304,8 +307,8 @@ function runSimulation(tapsPerSec: number): Event[] {
     const pending = resonanceGain(s.lifetimeCrystals, s.crystalUpgrades, s.resonance);
     if (pending < 1) return false;
     if (s.resonance > 0 && pending < RESONANCE_GROWTH * s.resonance) return false;
-    spendCrystals(); // dump remaining crystals into the permanent Matrix first
-    get().doResonate();
+    get().doResonate(); // Cascade first — it pays out the Attunement…
+    spendAttunement(); // …then sink it into the permanent Matrix.
     return true;
   };
 

@@ -125,6 +125,10 @@ export interface PersistedState {
   crystalFormationsShattered: number;
   /** Whether Resonance Cascade fires automatically when the gate is met. */
   autoResonate: boolean;
+  /** Attunement: the permanent Crystal-Matrix currency, earned only by Cascading. */
+  attunement: number;
+  /** Attunement earned all-time (for stats; never spent down). */
+  totalAttunement: number;
 }
 
 export interface GameState extends PersistedState {

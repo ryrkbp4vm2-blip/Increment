@@ -55,6 +55,8 @@ export function StatsModal({ visible, onClose }: Props) {
                 <Row label="Crystals / sec" value={formatRate(s.cachedCrystalCps)} />
                 <Row label="Per tap" value={formatNumber(s.cachedCrystalTapValue)} />
                 <Row label="Resonance level" value={formatNumber(s.resonance)} />
+                <Row label="Attunement" value={`${formatNumber(s.attunement)} ◈`} />
+                <Row label="Attunement all-time" value={`${formatNumber(s.totalAttunement)} ◈`} />
                 <Row label="Crystals all-time" value={`${formatNumber(s.totalCrystals)} ✦`} />
                 <Row label="Formations shattered" value={formatNumber(s.crystalFormationsShattered)} />
                 <Row label="Transcendences" value={formatNumber(s.transcendCount)} />
