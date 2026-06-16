@@ -1,0 +1,128 @@
+# Device Testing & Build Guide
+
+The game has only ever been verified headless (`tsc`, `jest`, `expo export`). The
+two things that decide whether it actually ships well — *does it feel good on a
+phone* and *does the live loop behave under real conditions* — can only be
+confirmed on a device. This guide covers both the zero-build path (Expo Go) and
+producing installable / store binaries (EAS), plus a checklist of what to verify.
+
+---
+
+## 1. Fastest path: Expo Go (no build required)
+
+Every native module this app uses (`expo-audio`, `expo-haptics`,
+`expo-clipboard`, `async-storage`, `react-native-svg`, `expo-status-bar`) ships
+inside Expo Go for SDK 56, so you can run the real app on your phone with no
+build step.
+
+```bash
+npm install
+npx expo start --tunnel      # --tunnel works across networks; drop it on same Wi-Fi
+```
+
+Then scan the QR code with the **Expo Go** app (iOS: Camera app → Expo Go;
+Android: Expo Go → Scan). The game runs as a real native build would, with one
+caveat: it runs inside Expo Go's container, so the app icon/splash and a few
+launch-time behaviors aren't representative — use an EAS build (section 2) to
+check those.
+
+> The `TEST: Jump to Transcendence` button in Settings is gated behind `__DEV__`,
+> so it **is** visible in Expo Go / dev — use it to jump straight to crystal mode
+> for testing the deep game without a 2-day climb.
+
+---
+
+## 2. Installable & store builds (EAS)
+
+`eas.json` defines three profiles. EAS CLI is not a project dependency — run it
+via `npx`:
+
+```bash
+npx eas-cli login            # one-time: sign in to your Expo account
+npx eas-cli init             # one-time: links this repo to an EAS project (writes the project id)
+```
+
+| Profile | Command | Use |
+|---|---|---|
+| **preview** | `npx eas-cli build --profile preview --platform android` | Direct-install **APK** for sideloading onto a test Android device. |
+| **preview** | `npx eas-cli build --profile preview --platform ios` | Internal-distribution iOS build (needs an Apple Developer account for device provisioning). |
+| **development** | `npx eas-cli build --profile development --platform <p>` | Dev client build (requires adding `expo-dev-client`); only needed if you outgrow Expo Go. |
+| **production** | `npx eas-cli build --profile production --platform <p>` | Store-ready binary (AAB / IPA). Build number auto-increments. |
+
+Submitting to stores later: `npx eas-cli submit --profile production --platform <p>`.
+
+### Before the first store submission
+- [ ] Change the bundle identifier / package from the placeholder
+  `com.asteroidtycoon.app` (in `app.json` → `ios.bundleIdentifier` and
+  `android.package`) to **your own** reverse-domain id. This is hard to change
+  after release, so set it before the first submit.
+- [ ] Confirm `version` in `app.json` (currently `1.0.0`).
+- [ ] Verify the Android adaptive-icon background (`app.json` →
+  `android.adaptiveIcon.backgroundColor`, currently light `#E6F4FE`) looks right
+  against the foreground art — the rest of the app is dark (`#0B0E1A`).
+
+---
+
+## 3. On-device checklist
+
+Run through this on at least one small phone and, ideally, one large phone /
+tablet. Tap a box as you confirm it.
+
+### Core loop & feel
+- [ ] Tapping the asteroid feels responsive; the pop animation and floating
+  "+N" appear and don't stutter under fast tapping.
+- [ ] Haptics fire on tap / shatter / prestige and feel right (not too strong).
+- [ ] Drill Heat bar fills with rapid taps and drains smoothly between them.
+- [ ] The 10 Hz loop is smooth — numbers tick up without jank; no visible frame
+  drops while idling on the Mine screen.
+- [ ] Buying generators/upgrades (×1 / ×10 / Max) updates instantly; the
+  remembered buy-quantity persists across tab switches.
+
+### Layout & safe areas
+- [ ] Header, tab bar, and content respect the notch / status bar / home
+  indicator (no clipped text or buttons under the notch or gesture bar).
+- [ ] All buttons have comfortable touch targets; nothing is too small to hit.
+- [ ] Long numbers (e.g. `1.00aa`) don't overflow or wrap awkwardly in the
+  header, stat rows, or buy buttons.
+- [ ] Modals (Settings, Stats, Welcome Back) are centered and scroll if needed.
+
+### Persistence & lifecycle
+- [ ] Earn some minerals, background the app (~1 min), reopen → a "Welcome back"
+  offline-earnings modal appears with a sensible amount.
+- [ ] Fully kill the app (swipe from app switcher), relaunch → progress is
+  restored (minerals, generators, upgrades, prestige layers all intact).
+- [ ] Background during crystal mode and return → crystal offline earnings apply
+  (crystals, not minerals).
+- [ ] Settings → Backup & restore: copy the code, reset progress, paste it back
+  → state is fully restored.
+
+### Audio
+- [ ] Sounds play (tap, buy, shatter, comet, prestige, achievement).
+- [ ] Settings → Sound effects toggle mutes/unmutes and the choice survives a
+  relaunch.
+- [ ] Audio respects the silent switch / doesn't hijack background music
+  unexpectedly.
+
+### Progression (use the dev jump to reach crystal mode fast)
+- [ ] First Collapse → Dark Matter shop appears and the bonus applies.
+- [ ] Ascension, Sector Warp, and Transcendence each trigger and reset the
+  expected things.
+- [ ] Crystal mode: tapping the formation, shattering, the Forge, Resonance
+  Cascade, and the Crystal Matrix all work; the prestige attention dot lights
+  when a Cascade is ready.
+- [ ] Convergence card shows the "Attunement channelled / 200,000" progress and
+  the Converge button enables at the gate; Eons apply a permanent boost.
+- [ ] Comets / Resonant Geodes spawn, are tappable, and grant the right reward.
+
+### Stability
+- [ ] Leave the app running for several minutes in each mode — no crash, no
+  runaway memory, battery drain is reasonable.
+- [ ] Rapidly switch tabs and open/close modals — no flicker or crash.
+- [ ] Achievements/Goals unlock and the toast appears without blocking input.
+
+---
+
+## 4. What to report back
+
+If anything in section 3 fails, note: device + OS version, which checkbox, and
+what happened. Layout issues are easiest to fix from a screenshot.

@@ -55,8 +55,10 @@ phone. If your phone isn't on the same network, use `npx expo start --tunnel`.
 
 You can also run it in a browser with `npx expo start --web`.
 
-To ship store builds later, use [EAS Build](https://docs.expo.dev/build/setup/):
-`npx eas build --platform all`.
+To ship store builds later, use [EAS Build](https://docs.expo.dev/build/setup/).
+Build profiles are configured in `eas.json` (preview = installable APK / internal
+build, production = store binary). See **[DEVICE_TESTING.md](DEVICE_TESTING.md)**
+for the full build commands and an on-device QA checklist.
 
 ## Development
 
