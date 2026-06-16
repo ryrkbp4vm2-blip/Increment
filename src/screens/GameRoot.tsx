@@ -44,7 +44,7 @@ export function GameRoot({ initialOfflineReport }: Props) {
 
   const prestigeDot = useGameStore((s) =>
     s.transcendCount > 0
-      ? canResonate(s.lifetimeCrystals, s.resonance) || canConverge(s.resonance)
+      ? canResonate(s.lifetimeCrystals, s.resonance) || canConverge(s.attunementSinceConverge)
       : prestigeAttention({
           lifetimeThisRun: s.lifetimeThisRun,
           dmSinceAscension: s.dmSinceAscension,

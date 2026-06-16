@@ -135,6 +135,8 @@ export interface PersistedState {
   attunement: number;
   /** Attunement earned all-time (for stats; never spent down). */
   totalAttunement: number;
+  /** Attunement earned since the last Convergence (the Convergence gate; resets on Converge). */
+  attunementSinceConverge: number;
   /** Eons (∞): the Convergence meta-currency, above the Crystal Matrix. */
   eons: number;
   /** Eons earned all-time (drives the permanent eonMult; never spent down). */

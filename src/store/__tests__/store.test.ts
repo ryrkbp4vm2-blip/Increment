@@ -4,6 +4,7 @@ import { GENERATORS_BY_ID } from '../../game/balance';
 import { achievementBonus } from '../../game/achievements';
 import { ZONE_WARP_ASCENSIONS, sectorMult, sectorTrait } from '../../game/zones';
 import { CRYSTAL_UPGRADES_BY_ID, TRANSCEND_ASCENSIONS } from '../../game/transcend';
+import { CONVERGENCE_ATTUNEMENT } from '../../game/convergence';
 import { initialPersistedState, useGameStore } from '../gameStore';
 
 function reset(overrides: Partial<ReturnType<typeof initialPersistedState>> = {}) {
@@ -752,7 +753,8 @@ describe('gameStore', () => {
   it('doConverge collapses the crystal layer into Eons', () => {
     reset({
       transcendCount: 1,
-      resonance: 100, // pendingEons = sqrt(100/25) = 2
+      resonance: 40,
+      attunementSinceConverge: CONVERGENCE_ATTUNEMENT * 4, // pendingEons = sqrt(4) = 2
       crystals: 5000,
       lifetimeCrystals: 9000,
       crystalGenerators: { shard: 30 },
@@ -766,19 +768,21 @@ describe('gameStore', () => {
     expect(s.eons).toBe(2);
     expect(s.totalEons).toBe(2);
     expect(s.convergenceCount).toBe(1);
-    // The whole crystal layer — including Resonance and the Matrix — resets.
+    // The whole crystal layer — including Resonance, the Matrix and the
+    // channelled-Attunement gate — resets.
     expect(s.resonance).toBe(0);
     expect(s.crystals).toBe(0);
     expect(s.lifetimeCrystals).toBe(0);
     expect(s.crystalGenerators).toEqual({});
     expect(s.crystalUpgrades).toEqual({});
     expect(s.attunement).toBe(0);
+    expect(s.attunementSinceConverge).toBe(0);
     // Crystal mode and records persist.
     expect(s.transcendCount).toBe(1);
   });
 
-  it('doConverge does nothing below the Resonance gate', () => {
-    reset({ transcendCount: 1, resonance: 10 });
+  it('doConverge does nothing below the channelled-Attunement gate', () => {
+    reset({ transcendCount: 1, attunementSinceConverge: CONVERGENCE_ATTUNEMENT - 1 });
     useGameStore.getState().doConverge();
     expect(useGameStore.getState().convergenceCount).toBe(0);
   });

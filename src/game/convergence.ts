@@ -1,42 +1,53 @@
 /**
  * Convergence — the deepest prestige layer, sitting above the Crystal Matrix.
  *
- * Once a crystal cosmos has resonated deeply enough, the player can Converge:
- * the entire crystal layer collapses — crystals, generators, Forge upgrades,
- * Resonance, Attunement and the whole Crystal Matrix all reset — in exchange
- * for Eons (∞), the ultimate meta-currency.
+ * Once a crystal cosmos has channelled enough Attunement, the player can
+ * Converge: the entire crystal layer collapses — crystals, generators, Forge
+ * upgrades, Resonance, Attunement and the whole Crystal Matrix all reset — in
+ * exchange for Eons (∞), the ultimate meta-currency.
  *
  * Eons give two things that survive every Convergence: a flat permanent boost
  * to all crystal production (so each re-climb is faster), and the Convergence
  * tree below — leveled upgrades that accelerate the whole crystal economy.
  * This is the endgame goal for veterans who have outgrown grinding Resonance.
+ *
+ * The gate is *channelled Attunement* (Attunement earned since the last
+ * Convergence), not a Resonance level: Resonance climbs unboundedly fast
+ * because production compounds multiplicatively, so any Resonance gate is
+ * cleared in minutes. Attunement per Cascade is square-root-damped and
+ * accumulates across many Cascades, so reaching the gate is a genuine, earned
+ * milestone — and it ties Convergence to the Matrix you built with that
+ * Attunement.
  */
 
-/** Resonance level required to Converge (and the per-Eon resonance interval). */
-export const CONVERGENCE_RESONANCE = 25;
+/** Channelled Attunement (since the last Convergence) required to Converge. */
+export const CONVERGENCE_ATTUNEMENT = 200_000;
 
 /** Permanent crystal-production multiplier granted per Eon ever earned. */
 export const EON_BONUS = 1;
 
 /**
  * How many Eons a Convergence would grant right now. Square-root scaled against
- * the resonance gate so Eons stay scarce: Resonance 25 → 1, 100 → 2, 225 → 3,
- * 400 → 4. The Convergent Will tree multiplies the payout.
+ * the gate so Eons stay scarce: gate ×1 → 1, ×4 → 2, ×9 → 3. The Convergent
+ * Will tree multiplies the payout.
  */
-export function pendingEons(resonance: number, eonUpgrades: Record<string, number> = {}): number {
-  if (resonance < CONVERGENCE_RESONANCE) return 0;
-  const raw = Math.sqrt(resonance / CONVERGENCE_RESONANCE);
+export function pendingEons(
+  attunementSinceConverge: number,
+  eonUpgrades: Record<string, number> = {},
+): number {
+  if (attunementSinceConverge < CONVERGENCE_ATTUNEMENT) return 0;
+  const raw = Math.sqrt(attunementSinceConverge / CONVERGENCE_ATTUNEMENT);
   return Math.max(1, Math.floor(raw * eonYieldMult(eonUpgrades)));
 }
 
 /** Whether a Convergence is available right now. */
-export function canConverge(resonance: number): boolean {
-  return resonance >= CONVERGENCE_RESONANCE;
+export function canConverge(attunementSinceConverge: number): boolean {
+  return attunementSinceConverge >= CONVERGENCE_ATTUNEMENT;
 }
 
-/** Resonance still needed before the first/next Convergence is available. */
-export function nextConvergenceAt(): number {
-  return CONVERGENCE_RESONANCE;
+/** Channelled Attunement still needed before a Convergence is available. */
+export function convergeRemaining(attunementSinceConverge: number): number {
+  return Math.max(0, CONVERGENCE_ATTUNEMENT - attunementSinceConverge);
 }
 
 /** Permanent all-crystal-production multiplier from total Eons ever earned. */

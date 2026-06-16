@@ -55,7 +55,7 @@ import {
   resonanceMult,
 } from '../game/crystalGame';
 import {
-  CONVERGENCE_RESONANCE,
+  CONVERGENCE_ATTUNEMENT,
   EON_UPGRADES,
   canConverge,
   eonMult,
@@ -107,6 +107,7 @@ export function PrestigeScreen() {
   const totalEons = useGameStore((s) => s.totalEons);
   const convergenceCount = useGameStore((s) => s.convergenceCount);
   const eonUpgrades = useGameStore((s) => s.eonUpgrades);
+  const attunementSinceConverge = useGameStore((s) => s.attunementSinceConverge);
   const doConverge = useGameStore((s) => s.doConverge);
   const buyEonUpgrade = useGameStore((s) => s.buyEonUpgrade);
   const [confirming, setConfirming] = useState(false);
@@ -147,6 +148,7 @@ export function PrestigeScreen() {
         totalEons={totalEons}
         convergenceCount={convergenceCount}
         eonUpgrades={eonUpgrades}
+        attunementSinceConverge={attunementSinceConverge}
         doConverge={doConverge}
         buyEonUpgrade={buyEonUpgrade}
       />
@@ -552,6 +554,7 @@ function CrystalPrestigeScreen({
   totalEons,
   convergenceCount,
   eonUpgrades,
+  attunementSinceConverge,
   doConverge,
   buyEonUpgrade,
 }: {
@@ -571,14 +574,16 @@ function CrystalPrestigeScreen({
   totalEons: number;
   convergenceCount: number;
   eonUpgrades: Record<string, number>;
+  attunementSinceConverge: number;
   doConverge: () => void;
   buyEonUpgrade: (id: string) => void;
 }) {
   const [confirmingConverge, setConfirmingConverge] = useState(false);
-  const pendingEon = pendingEons(resonance, eonUpgrades);
-  const convergeReady = canConverge(resonance);
-  // Reveal the Convergence layer as the player approaches the Resonance gate.
-  const convergeRevealed = totalEons > 0 || convergenceCount > 0 || resonance >= CONVERGENCE_RESONANCE * 0.4;
+  const pendingEon = pendingEons(attunementSinceConverge, eonUpgrades);
+  const convergeReady = canConverge(attunementSinceConverge);
+  // Reveal the Convergence layer as the player channels toward the gate.
+  const convergeRevealed =
+    totalEons > 0 || convergenceCount > 0 || attunementSinceConverge >= CONVERGENCE_ATTUNEMENT * 0.25;
   const pending = resonanceGain(lifetimeCrystals, crystalUpgrades, resonance);
   const pendingAttune = attunementGain(lifetimeCrystals);
   const ready = canResonate(lifetimeCrystals, resonance);
@@ -738,14 +743,15 @@ function CrystalPrestigeScreen({
             Collapse the entire crystal cosmos — your crystals, generators, Forge upgrades,
             Resonance, Attunement and the whole Crystal Matrix all reset — into Eons (∞). Each
             Eon permanently boosts all crystal production, so every re-climb is faster, and the
-            Convergence tree below survives forever.
+            Convergence tree below survives forever. Channel enough Attunement through Cascades to
+            reach it.
           </Text>
           <StatRow label="Eons to spend" value={`${formatNumber(eons)} ∞`} />
           <StatRow label="Crystal bonus" value={`×${formatNumber(eonMult(totalEons))}`} />
           <StatRow label="Convergences" value={formatNumber(convergenceCount)} />
           <StatRow
-            label="Resonance toward Convergence"
-            value={`${formatNumber(Math.min(resonance, CONVERGENCE_RESONANCE))} / ${CONVERGENCE_RESONANCE}`}
+            label="Attunement channelled"
+            value={`${formatNumber(Math.min(attunementSinceConverge, CONVERGENCE_ATTUNEMENT))} / ${formatNumber(CONVERGENCE_ATTUNEMENT)} ◈`}
           />
 
           {!convergeReady ? (
@@ -755,14 +761,15 @@ function CrystalPrestigeScreen({
                   style={[
                     styles.progressFill,
                     {
-                      width: `${Math.min(resonance / CONVERGENCE_RESONANCE, 1) * 100}%`,
+                      width: `${Math.min(attunementSinceConverge / CONVERGENCE_ATTUNEMENT, 1) * 100}%`,
                       backgroundColor: colors.gold,
                     },
                   ]}
                 />
               </View>
               <Text style={styles.transcendHint}>
-                Reach Resonance {CONVERGENCE_RESONANCE} to Converge for your first Eon.
+                Channel {formatNumber(CONVERGENCE_ATTUNEMENT)} ◈ Attunement (across Cascades) to
+                Converge for your first Eon.
               </Text>
             </>
           ) : confirmingConverge ? (

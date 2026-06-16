@@ -20,7 +20,6 @@ import { pendingSingularityCores } from '../src/game/ascension';
 import { canWarp, sectorName } from '../src/game/zones';
 import { CRYSTAL_UPGRADES, canTranscend, crystalUpgradeCost } from '../src/game/transcend';
 import {
-  CONVERGENCE_RESONANCE,
   EON_UPGRADES,
   canConverge,
   eonUpgradeCost,
@@ -344,8 +343,8 @@ function runSimulation(tapsPerSec: number): Event[] {
 
   const maybeConverge = () => {
     const s = get();
-    if (!canConverge(s.resonance)) return false;
-    if (pendingEons(s.resonance, s.eonUpgrades) < 1) return false;
+    if (!canConverge(s.attunementSinceConverge)) return false;
+    if (pendingEons(s.attunementSinceConverge, s.eonUpgrades) < 1) return false;
     get().doConverge();
     spendEons();
     return true;
@@ -444,6 +443,7 @@ function printReport(events: Event[], title: string) {
   const r1 = find(/Resonance #1/);
   const r2 = find(/Resonance #2/);
   const r3 = find(/Resonance #3/);
+  const cv1 = find(/Convergence #1/);
   out(`  First prestige:    ${p1 ? fmtDur(p1.t) : '—'}`);
   out(`  First ascension:   ${a1 ? fmtDur(a1.t) : '—'}`);
   out(`  Fifth ascension:   ${a5 ? fmtDur(a5.t) : '—'}`);
@@ -452,6 +452,7 @@ function printReport(events: Event[], title: string) {
   out(`  First resonance:   ${r1 ? fmtDur(r1.t) : '—'}  (${r1 && t1 ? '+' + fmtDur(r1.t - t1.t) + ' in crystal mode' : '—'})`);
   out(`  Second resonance:  ${r2 ? fmtDur(r2.t) : '—'}`);
   out(`  Third resonance:   ${r3 ? fmtDur(r3.t) : '—'}`);
+  out(`  First convergence: ${cv1 ? fmtDur(cv1.t) : '—'}  (${cv1 && t1 ? '+' + fmtDur(cv1.t - t1.t) + ' in crystal mode' : '—'})`);
   out(`  Total simulated:   ${fmtDur(events.length ? events[events.length - 1].t : 0)}`);
   out('');
 }

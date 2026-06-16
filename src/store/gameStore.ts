@@ -192,6 +192,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     autoCrystalUpgrade: false,
     attunement: 0,
     totalAttunement: 0,
+    attunementSinceConverge: 0,
     eons: 0,
     totalEons: 0,
     convergenceCount: 0,
@@ -808,6 +809,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           resonance: state.resonance + gained,
           attunement: state.attunement + attune,
           totalAttunement: state.totalAttunement + attune,
+          // Channelled Attunement accumulates across Cascades toward Convergence.
+          attunementSinceConverge: state.attunementSinceConverge + attune,
           totalCrystals: state.totalCrystals,
           crystals: 0,
           lifetimeCrystals: 0,
@@ -844,8 +847,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   doConverge() {
     const state = get();
-    if (!canConverge(state.resonance)) return;
-    const gained = pendingEons(state.resonance, state.eonUpgrades);
+    if (!canConverge(state.attunementSinceConverge)) return;
+    const gained = pendingEons(state.attunementSinceConverge, state.eonUpgrades);
     if (gained < 1) return;
     set(
       withCaches(
@@ -853,8 +856,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           ...initialPersistedState(Date.now()),
           // Convergence — the deepest reset. The entire crystal layer collapses:
           // balance, generators, Forge upgrades, Resonance, Attunement and the
-          // whole Crystal Matrix all reset. Only Eons, the Convergence tree and
-          // the permanent records survive.
+          // whole Crystal Matrix all reset (attunementSinceConverge back to 0).
+          // Only Eons, the Convergence tree and the permanent records survive.
           transcendCount: state.transcendCount,
           ascensionCount: state.ascensionCount,
           eons: state.eons + gained,

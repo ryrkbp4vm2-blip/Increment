@@ -1,9 +1,10 @@
 import {
-  CONVERGENCE_RESONANCE,
+  CONVERGENCE_ATTUNEMENT,
   EON_BONUS,
   EON_UPGRADES_BY_ID,
   EON_UPGRADE_GROWTH,
   canConverge,
+  convergeRemaining,
   eonAttuneMult,
   eonCrystalMult,
   eonMult,
@@ -15,26 +16,32 @@ import {
 } from '../convergence';
 
 describe('Convergence gating', () => {
-  it('cannot converge below the Resonance gate', () => {
-    expect(canConverge(CONVERGENCE_RESONANCE - 1)).toBe(false);
-    expect(canConverge(CONVERGENCE_RESONANCE)).toBe(true);
+  it('cannot converge below the channelled-Attunement gate', () => {
+    expect(canConverge(CONVERGENCE_ATTUNEMENT - 1)).toBe(false);
+    expect(canConverge(CONVERGENCE_ATTUNEMENT)).toBe(true);
+  });
+
+  it('reports the Attunement still needed to Converge', () => {
+    expect(convergeRemaining(0)).toBe(CONVERGENCE_ATTUNEMENT);
+    expect(convergeRemaining(CONVERGENCE_ATTUNEMENT)).toBe(0);
+    expect(convergeRemaining(CONVERGENCE_ATTUNEMENT * 2)).toBe(0);
   });
 
   it('pays no Eons below the gate and at least one at it', () => {
-    expect(pendingEons(CONVERGENCE_RESONANCE - 1)).toBe(0);
-    expect(pendingEons(CONVERGENCE_RESONANCE)).toBe(1);
+    expect(pendingEons(CONVERGENCE_ATTUNEMENT - 1)).toBe(0);
+    expect(pendingEons(CONVERGENCE_ATTUNEMENT)).toBe(1);
   });
 
-  it('scales Eons with the square root of resonance over the gate', () => {
-    // sqrt(resonance / 25): 100 -> 2, 225 -> 3, 400 -> 4.
-    expect(pendingEons(CONVERGENCE_RESONANCE * 4)).toBe(2);
-    expect(pendingEons(CONVERGENCE_RESONANCE * 9)).toBe(3);
-    expect(pendingEons(CONVERGENCE_RESONANCE * 16)).toBe(4);
+  it('scales Eons with the square root of channelled Attunement over the gate', () => {
+    // sqrt(attunement / gate): ×4 -> 2, ×9 -> 3, ×16 -> 4.
+    expect(pendingEons(CONVERGENCE_ATTUNEMENT * 4)).toBe(2);
+    expect(pendingEons(CONVERGENCE_ATTUNEMENT * 9)).toBe(3);
+    expect(pendingEons(CONVERGENCE_ATTUNEMENT * 16)).toBe(4);
   });
 
   it('Convergent Will multiplies the Eon payout', () => {
-    // +20%/level. At resonance 400 (raw 4), 5 levels -> ×2 -> 8.
-    expect(pendingEons(CONVERGENCE_RESONANCE * 16, { eon_will: 5 })).toBe(8);
+    // +20%/level. At ×16 (raw 4), 5 levels -> ×2 -> 8.
+    expect(pendingEons(CONVERGENCE_ATTUNEMENT * 16, { eon_will: 5 })).toBe(8);
   });
 });
 
