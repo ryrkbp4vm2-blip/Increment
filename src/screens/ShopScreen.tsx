@@ -49,17 +49,6 @@ export function ShopScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {visibleUpgrades.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Upgrades</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upgradeRow}>
-            {visibleUpgrades.map((u) => (
-              <UpgradeCard key={u.id} def={u} />
-            ))}
-          </ScrollView>
-        </>
-      )}
-
       {autoUpgradeUnlocked ? (
         <View style={styles.autoRow}>
           <View style={styles.autoLabel}>
@@ -105,6 +94,18 @@ export function ShopScreen() {
       ))}
       {revealedCount < GENERATORS.length && (
         <Text style={styles.hidden}>Keep mining to discover more technology…</Text>
+      )}
+
+      {visibleUpgrades.length > 0 && (
+        <>
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>Upgrades</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upgradeRow}>
+            {visibleUpgrades.map((u) => (
+              <UpgradeCard key={u.id} def={u} />
+            ))}
+          </ScrollView>
+        </>
       )}
     </ScrollView>
   );
@@ -186,4 +187,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     fontStyle: 'italic',
   },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
 });

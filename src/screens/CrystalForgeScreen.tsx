@@ -62,26 +62,6 @@ export function CrystalForgeScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {availableUpgrades.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Forge Upgrades</Text>
-          <Text style={styles.hint}>One-time boosts for this run. Reset on each Cascade.</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upgradeRow}>
-            {availableUpgrades.map((def) => (
-              <CrystalUpgradeCard
-                key={def.id}
-                def={def}
-                affordable={crystals >= def.cost}
-                onBuy={() => {
-                  buyCrystalRunUpgrade(def.id);
-                  playSound('buy');
-                }}
-              />
-            ))}
-          </ScrollView>
-        </>
-      )}
-
       {autoUpgradeUnlocked ? (
         <View style={styles.autoRow}>
           <View style={styles.autoLabel}>
@@ -160,6 +140,27 @@ export function CrystalForgeScreen() {
           }}
         />
       ))}
+
+      {availableUpgrades.length > 0 && (
+        <>
+          <View style={styles.divider} />
+          <Text style={styles.sectionTitle}>Forge Upgrades</Text>
+          <Text style={styles.hint}>One-time boosts for this run. Reset on each Cascade.</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upgradeRow}>
+            {availableUpgrades.map((def) => (
+              <CrystalUpgradeCard
+                key={def.id}
+                def={def}
+                affordable={crystals >= def.cost}
+                onBuy={() => {
+                  buyCrystalRunUpgrade(def.id);
+                  playSound('buy');
+                }}
+              />
+            ))}
+          </ScrollView>
+        </>
+      )}
 
       <View style={styles.divider} />
       <View style={styles.matrixNote}>
