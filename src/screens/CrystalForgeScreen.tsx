@@ -53,12 +53,12 @@ export function CrystalForgeScreen() {
     resonanceMult(resonance, RESONANCE_BONUS * resonancePowerMult(crystalUpgrades)) *
     runPowers.globalMult;
 
-  // Upgrades that are unlocked and not yet owned.
+  // Upgrades that are unlocked and not yet owned, cheapest first.
   const availableUpgrades = CRYSTAL_GEN_UPGRADES.filter(
     (u) =>
       !crystalRunUpgrades[u.id] &&
       crystalUpgradeUnlockMet(u, { crystalGenerators, lifetimeCrystals }),
-  );
+  ).sort((a, b) => a.cost - b.cost);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>

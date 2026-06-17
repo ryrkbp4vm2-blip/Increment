@@ -119,8 +119,12 @@ export function PrestigeScreen() {
 
   const pendingCores = pendingSingularityCores(dmSinceAscension);
   const ascendNextAt = nextAscensionAt(dmSinceAscension);
-  // Reveal the ascension layer once the player is at least halfway to it.
-  const ascendRevealed = singularityCores > 0 || dmSinceAscension >= ASCEND_BASE * 0.5;
+  // Reveal the ascension layer as soon as the player has collapsed once, so the
+  // next prestige layer is discoverable (with a progress bar toward its gate)
+  // instead of staying hidden until halfway to a large Dark-Matter total.
+  const ascendRevealed = singularityCores > 0 || ascensionCount > 0 || prestigeCount > 0;
+  // Only surface the (otherwise empty) Cores shops once Cores are in play.
+  const ascendShopsRevealed = singularityCores > 0 || pendingCores >= 1;
 
   const powers = effectivePowers(artifacts, dmUpgrades);
   const pending = pendingDarkMatter(lifetimeThisRun);
@@ -243,6 +247,19 @@ export function PrestigeScreen() {
             label="Dark Matter banked"
             value={`${formatNumber(dmSinceAscension)} / ${formatNumber(ascendNextAt)}`}
           />
+          {pendingCores < 1 && (
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${Math.min(dmSinceAscension / ASCEND_BASE, 1) * 100}%`,
+                    backgroundColor: colors.gold,
+                  },
+                ]}
+              />
+            </View>
+          )}
           {confirmingAscend ? (
             <View style={styles.confirmButtons}>
               <BigButton
@@ -276,6 +293,8 @@ export function PrestigeScreen() {
             />
           )}
 
+          {ascendShopsRevealed && (
+          <>
           <Text style={styles.perksTitle}>Singularity Upgrades</Text>
           <Text style={styles.perksHint}>Repeatable, bought with Cores. Levels are permanent.</Text>
           {CORE_UPGRADES.map((def) => {
@@ -346,6 +365,8 @@ export function PrestigeScreen() {
               </View>
             );
           })}
+          </>
+          )}
         </View>
       )}
 

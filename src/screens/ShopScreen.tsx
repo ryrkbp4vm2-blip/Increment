@@ -43,7 +43,9 @@ export function ShopScreen() {
       .map((u) => u.id)
       .join(','),
   );
-  const visibleUpgrades = UPGRADES.filter((u) => visibleUpgradeIds.split(',').includes(u.id));
+  const visibleUpgrades = UPGRADES.filter((u) => visibleUpgradeIds.split(',').includes(u.id)).sort(
+    (a, b) => a.cost - b.cost,
+  );
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
