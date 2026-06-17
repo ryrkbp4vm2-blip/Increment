@@ -165,11 +165,32 @@ export function challengeRewardMult(completed: Record<string, true>): {
   return { globalMult, tapMult };
 }
 
-/** Whether the active challenge's goal has been met this run. */
-export function challengeComplete(activeChallenge: string | null, lifetimeThisRun: number): boolean {
+/**
+ * The run goal scaled by the player's permanent power, so the constraint stays
+ * meaningful no matter how strong they've become. A fixed goal trivialises:
+ * once permanent multipliers are large a fresh constrained run blows past 1e8
+ * in seconds. Scaling by the same power that boosts production keeps the run a
+ * real fight at every unlock point.
+ */
+export function scaledChallengeGoal(def: ChallengeDef, permanentPower: number): number {
+  return Math.ceil(def.goal * Math.max(1, permanentPower));
+}
+
+/**
+ * Whether the active challenge's goal has been met this run. Pass the snapshot
+ * goal taken at entry (`activeChallengeGoal`); falls back to the unscaled base
+ * goal when no snapshot is supplied (e.g. legacy callers / tests).
+ */
+export function challengeComplete(
+  activeChallenge: string | null,
+  lifetimeThisRun: number,
+  goal?: number,
+): boolean {
   if (!activeChallenge) return false;
   const def = CHALLENGES_BY_ID[activeChallenge];
-  return !!def && lifetimeThisRun >= def.goal;
+  if (!def) return false;
+  const target = goal && goal > 0 ? goal : def.goal;
+  return lifetimeThisRun >= target;
 }
 
 /** Challenges visible to the player at the given ascension count. */

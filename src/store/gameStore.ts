@@ -14,6 +14,7 @@ import {
   CHALLENGES_BY_ID,
   challengeComplete,
   challengeModifiers,
+  scaledChallengeGoal,
 } from '../game/challenges';
 import { dailyAvailable, dailyReward, dailyStreakAfter } from '../game/daily';
 import { HEAT_PER_TAP, decayHeat, heatMultiplier } from '../game/heat';
@@ -81,6 +82,7 @@ import {
   cps,
   isUnlockMet,
   maxAffordable,
+  permanentPowerMultiplier,
   tapValue,
 } from '../game/math';
 import { effectivePowers } from '../game/powers';
@@ -169,6 +171,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     singularityPerks: {},
     coreUpgrades: {},
     activeChallenge: null,
+    activeChallengeGoal: 0,
     challengesCompleted: {},
     lastDailyAt: 0,
     dailyStreak: 0,
@@ -281,7 +284,11 @@ function carryTranscend(state: GameState): Pick<
  * current state so every meta-currency, collection and upgrade is preserved
  * automatically; only the active run resets.
  */
-function challengeRunReset(state: GameState, activeChallenge: string | null): Partial<PersistedState> {
+function challengeRunReset(
+  state: GameState,
+  activeChallenge: string | null,
+  activeChallengeGoal = 0,
+): Partial<PersistedState> {
   const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
   return {
     minerals: powers.startMinerals,
@@ -294,6 +301,7 @@ function challengeRunReset(state: GameState, activeChallenge: string | null): Pa
     asteroidDamage: 0,
     expedition: null,
     activeChallenge,
+    activeChallengeGoal,
   };
 }
 
@@ -572,8 +580,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   enterChallenge(id) {
     const state = get();
-    if (state.activeChallenge || !CHALLENGES_BY_ID[id]) return;
-    set(withCaches({ ...state, ...challengeRunReset(state, id) }, state.lastTickAt));
+    const def = CHALLENGES_BY_ID[id];
+    if (state.activeChallenge || !def) return;
+    const goal = scaledChallengeGoal(def, permanentPowerMultiplier(state));
+    set(withCaches({ ...state, ...challengeRunReset(state, id, goal) }, state.lastTickAt));
   },
 
   abandonChallenge() {
@@ -585,7 +595,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   completeChallenge() {
     const state = get();
     const active = state.activeChallenge;
-    if (!active || !challengeComplete(active, state.lifetimeThisRun)) return;
+    if (!active || !challengeComplete(active, state.lifetimeThisRun, state.activeChallengeGoal)) return;
     const challengesCompleted = { ...state.challengesCompleted, [active]: true as const };
     set(
       withCaches(

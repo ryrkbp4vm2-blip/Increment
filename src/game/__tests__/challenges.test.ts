@@ -1,8 +1,12 @@
 import {
+  CHALLENGES_BY_ID,
   challengeComplete,
   challengeModifiers,
   challengeRewardMult,
   cometsDisabled,
+  nextChallengeUnlockAt,
+  scaledChallengeGoal,
+  unlockedChallenges,
 } from '../challenges';
 
 describe('challengeModifiers', () => {
@@ -50,5 +54,39 @@ describe('challengeComplete', () => {
     expect(challengeComplete('asceticism', 999_999)).toBe(false);
     expect(challengeComplete('asceticism', 1e6)).toBe(true);
     expect(challengeComplete(null, 1e9)).toBe(false);
+  });
+
+  it('compares against the scaled snapshot goal when supplied', () => {
+    // Base goal is 1e6; with a ×10 snapshot the bar moves to 1e7.
+    expect(challengeComplete('asceticism', 1e6, 1e7)).toBe(false);
+    expect(challengeComplete('asceticism', 1e7, 1e7)).toBe(true);
+  });
+});
+
+describe('scaledChallengeGoal', () => {
+  const ascet = CHALLENGES_BY_ID.asceticism;
+
+  it('never scales below the base goal', () => {
+    expect(scaledChallengeGoal(ascet, 1)).toBe(ascet.goal);
+    expect(scaledChallengeGoal(ascet, 0.1)).toBe(ascet.goal);
+  });
+
+  it('scales the goal up with permanent power', () => {
+    expect(scaledChallengeGoal(ascet, 25)).toBe(ascet.goal * 25);
+  });
+});
+
+describe('challenge unlock gating', () => {
+  it('reveals more challenges as ascensions accrue', () => {
+    expect(unlockedChallenges(0).map((c) => c.id)).toEqual(['asceticism']);
+    expect(unlockedChallenges(1).length).toBe(3);
+    expect(unlockedChallenges(2).length).toBe(5);
+    expect(unlockedChallenges(99).length).toBe(6);
+  });
+
+  it('reports the next unlock ascension, or null once all are unlocked', () => {
+    expect(nextChallengeUnlockAt(0)).toBe(1);
+    expect(nextChallengeUnlockAt(2)).toBe(3);
+    expect(nextChallengeUnlockAt(3)).toBeNull();
   });
 });

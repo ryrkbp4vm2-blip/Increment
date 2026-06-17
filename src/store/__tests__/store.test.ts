@@ -445,6 +445,23 @@ describe('gameStore', () => {
     expect(useGameStore.getState().challengesCompleted.famine).toBeUndefined();
   });
 
+  it('enterChallenge snapshots a goal scaled by permanent power', () => {
+    // A heavily-ascended player carries a large permanent multiplier, so the
+    // challenge goal must scale up to stay a real fight (not insta-cleared).
+    reset({ totalSingularityCores: 10 });
+    const power = singularityMult(10);
+    useGameStore.getState().enterChallenge('famine');
+    const s = useGameStore.getState();
+    expect(power).toBeGreaterThan(1);
+    // famine base goal is 1e8; the snapshot is at least that, scaled by power.
+    expect(s.activeChallengeGoal).toBeGreaterThan(1e8);
+    expect(s.activeChallengeGoal).toBeGreaterThanOrEqual(1e8 * power);
+    // The same fixed lifetime that used to clear it no longer does.
+    useGameStore.setState({ lifetimeThisRun: 1e8 });
+    useGameStore.getState().completeChallenge();
+    expect(useGameStore.getState().activeChallenge).toBe('famine');
+  });
+
   it('abandonChallenge exits with no reward', () => {
     reset({ activeChallenge: 'famine', lifetimeThisRun: 1e8 });
     useGameStore.getState().abandonChallenge();

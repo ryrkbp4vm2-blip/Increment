@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
-import { CHALLENGES, CHALLENGES_BY_ID, challengeComplete, nextChallengeUnlockAt, unlockedChallenges } from '../game/challenges';
+import {
+  CHALLENGES,
+  CHALLENGES_BY_ID,
+  challengeComplete,
+  nextChallengeUnlockAt,
+  scaledChallengeGoal,
+  unlockedChallenges,
+} from '../game/challenges';
+import { permanentPowerMultiplier } from '../game/math';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -10,9 +18,11 @@ import { Icon } from './art/Icon';
 
 export function ChallengesSection() {
   const activeChallenge = useGameStore((s) => s.activeChallenge);
+  const activeChallengeGoal = useGameStore((s) => s.activeChallengeGoal);
   const challengesCompleted = useGameStore((s) => s.challengesCompleted);
   const lifetimeThisRun = useGameStore((s) => s.lifetimeThisRun);
   const ascensionCount = useGameStore((s) => s.ascensionCount);
+  const permanentPower = useGameStore((s) => permanentPowerMultiplier(s));
   const enterChallenge = useGameStore((s) => s.enterChallenge);
   const abandonChallenge = useGameStore((s) => s.abandonChallenge);
   const completeChallenge = useGameStore((s) => s.completeChallenge);
@@ -23,7 +33,7 @@ export function ChallengesSection() {
   const nextUnlockAt = nextChallengeUnlockAt(ascensionCount);
   const doneCount = Object.keys(challengesCompleted).length;
   const active = activeChallenge ? CHALLENGES_BY_ID[activeChallenge] : null;
-  const canClaim = challengeComplete(activeChallenge, lifetimeThisRun);
+  const canClaim = challengeComplete(activeChallenge, lifetimeThisRun, activeChallengeGoal);
 
   return (
     <View>
@@ -45,11 +55,15 @@ export function ChallengesSection() {
           <Text style={styles.activeDesc}>{active.description}</Text>
           <View style={styles.track}>
             <View
-              style={[styles.fill, { width: `${Math.min((lifetimeThisRun / active.goal) * 100, 100)}%` }]}
+              style={[
+                styles.fill,
+                { width: `${Math.min((lifetimeThisRun / activeChallengeGoal) * 100, 100)}%` },
+              ]}
             />
           </View>
           <Text style={styles.progress}>
-            {formatNumber(Math.min(lifetimeThisRun, active.goal))} / {formatNumber(active.goal)}
+            {formatNumber(Math.min(lifetimeThisRun, activeChallengeGoal))} /{' '}
+            {formatNumber(activeChallengeGoal)}
           </Text>
           <Text style={styles.rewardLine}>Reward: {active.rewardLabel}</Text>
           {canClaim ? (
@@ -96,7 +110,7 @@ export function ChallengesSection() {
                   <Text style={[styles.name, done && styles.nameDone]}>{c.name}</Text>
                   <Text style={styles.desc}>{c.description}</Text>
                   <Text style={styles.meta}>
-                    Goal {formatNumber(c.goal)} · {c.rewardLabel}
+                    Goal {formatNumber(scaledChallengeGoal(c, permanentPower))} · {c.rewardLabel}
                   </Text>
                   {confirming && (
                     <View style={styles.confirmRow}>

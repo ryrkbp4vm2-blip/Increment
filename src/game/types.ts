@@ -94,6 +94,8 @@ export interface PersistedState {
   coreUpgrades: Record<string, number>;
   /** Prestige challenge currently being attempted, if any. */
   activeChallenge: string | null;
+  /** Run goal snapshot for the active challenge (scaled by permanent power at entry). */
+  activeChallengeGoal: number;
   /** Completed challenge ids (permanent rewards, survive everything). */
   challengesCompleted: Record<string, true>;
   /** Daily bonus: last claim time (ms epoch) and consecutive-day streak. */

@@ -81,6 +81,29 @@ export function globalMultiplier(state: MultState): number {
   return mult;
 }
 
+/**
+ * The portion of the global multiplier that carries across a run reset — every
+ * permanent bonus (artifacts, Dark Matter shop, research, achievements, cores,
+ * sector, crystals, completed challenges) but NOT per-run factors (belt
+ * richness, mineral upgrades) or the active challenge's own constraint. Used to
+ * scale challenge goals so a constrained run stays meaningful no matter how
+ * powerful the player has become.
+ */
+export function permanentPowerMultiplier(state: MultState): number {
+  const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
+  return (
+    powers.globalMult *
+    achievementBonus(state.achievements) *
+    singularityMult(state.totalSingularityCores, state.singularityPerks) *
+    corePowers(state.coreUpgrades).globalMult *
+    sectorMult(state.sector) *
+    sectorTrait(state.sector).productionMult *
+    crystalMult(state.totalCrystals) *
+    crystalPowers(state.crystalUpgrades).globalMult *
+    challengeRewardMult(state.challengesCompleted).globalMult
+  );
+}
+
 /** Labelled global-multiplier factors for the statistics screen. */
 export function globalFactors(state: MultState): { label: string; value: number }[] {
   const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
