@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
-import { CHALLENGES, CHALLENGES_BY_ID, challengeComplete } from '../game/challenges';
+import { CHALLENGES, CHALLENGES_BY_ID, challengeComplete, nextChallengeUnlockAt, unlockedChallenges } from '../game/challenges';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -12,12 +12,15 @@ export function ChallengesSection() {
   const activeChallenge = useGameStore((s) => s.activeChallenge);
   const challengesCompleted = useGameStore((s) => s.challengesCompleted);
   const lifetimeThisRun = useGameStore((s) => s.lifetimeThisRun);
+  const ascensionCount = useGameStore((s) => s.ascensionCount);
   const enterChallenge = useGameStore((s) => s.enterChallenge);
   const abandonChallenge = useGameStore((s) => s.abandonChallenge);
   const completeChallenge = useGameStore((s) => s.completeChallenge);
   const [confirmEnter, setConfirmEnter] = useState<string | null>(null);
   const [confirmAbandon, setConfirmAbandon] = useState(false);
 
+  const visible = unlockedChallenges(ascensionCount);
+  const nextUnlockAt = nextChallengeUnlockAt(ascensionCount);
   const doneCount = Object.keys(challengesCompleted).length;
   const active = activeChallenge ? CHALLENGES_BY_ID[activeChallenge] : null;
   const canClaim = challengeComplete(activeChallenge, lifetimeThisRun);
@@ -33,6 +36,7 @@ export function ChallengesSection() {
       </View>
       <Text style={styles.hint}>
         Constrained runs (your current run resets on entry). Beat the goal for a permanent reward.
+        New challenges unlock as you ascend.
       </Text>
 
       {active ? (
@@ -82,50 +86,62 @@ export function ChallengesSection() {
           )}
         </View>
       ) : (
-        CHALLENGES.map((c) => {
-          const done = !!challengesCompleted[c.id];
-          const confirming = confirmEnter === c.id;
-          return (
-            <View key={c.id} style={[styles.row, done && styles.rowDone]}>
-              <View style={styles.info}>
-                <Text style={[styles.name, done && styles.nameDone]}>{c.name}</Text>
-                <Text style={styles.desc}>{c.description}</Text>
-                <Text style={styles.meta}>
-                  Goal {formatNumber(c.goal)} · {c.rewardLabel}
-                </Text>
-                {confirming && (
-                  <View style={styles.confirmRow}>
-                    <BigButton
-                      label="Enter (resets run)"
-                      color={colors.danger}
-                      onPress={() => {
-                        enterChallenge(c.id);
-                        playSound('prestige');
-                        setConfirmEnter(null);
-                      }}
-                      style={styles.flex}
-                    />
-                    <BigButton
-                      label="Cancel"
-                      color={colors.panelLight}
-                      onPress={() => setConfirmEnter(null)}
-                      style={styles.flex}
-                    />
-                  </View>
-                )}
-              </View>
-              {done ? (
-                <View style={styles.doneBadge}>
-                  <Icon name="check" size={18} accent={colors.gold} />
+        <>
+          {visible.map((c) => {
+            const done = !!challengesCompleted[c.id];
+            const confirming = confirmEnter === c.id;
+            return (
+              <View key={c.id} style={[styles.row, done && styles.rowDone]}>
+                <View style={styles.info}>
+                  <Text style={[styles.name, done && styles.nameDone]}>{c.name}</Text>
+                  <Text style={styles.desc}>{c.description}</Text>
+                  <Text style={styles.meta}>
+                    Goal {formatNumber(c.goal)} · {c.rewardLabel}
+                  </Text>
+                  {confirming && (
+                    <View style={styles.confirmRow}>
+                      <BigButton
+                        label="Enter (resets run)"
+                        color={colors.danger}
+                        onPress={() => {
+                          enterChallenge(c.id);
+                          playSound('prestige');
+                          setConfirmEnter(null);
+                        }}
+                        style={styles.flex}
+                      />
+                      <BigButton
+                        label="Cancel"
+                        color={colors.panelLight}
+                        onPress={() => setConfirmEnter(null)}
+                        style={styles.flex}
+                      />
+                    </View>
+                  )}
                 </View>
-              ) : !confirming ? (
-                <Pressable style={styles.enterBtn} onPress={() => setConfirmEnter(c.id)}>
-                  <Text style={styles.enterText}>Enter</Text>
-                </Pressable>
-              ) : null}
+                {done ? (
+                  <View style={styles.doneBadge}>
+                    <Icon name="check" size={18} accent={colors.gold} />
+                  </View>
+                ) : !confirming ? (
+                  <Pressable style={styles.enterBtn} onPress={() => setConfirmEnter(c.id)}>
+                    <Text style={styles.enterText}>Enter</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            );
+          })}
+          {nextUnlockAt !== null && (
+            <View style={styles.lockedHint}>
+              <Icon name="lock" size={14} color={colors.textMuted} accent={colors.textMuted} />
+              <Text style={styles.lockedText}>
+                {CHALLENGES.length - visible.length} more challenge
+                {CHALLENGES.length - visible.length === 1 ? '' : 's'} unlock after ascension{' '}
+                {nextUnlockAt}
+              </Text>
             </View>
-          );
-        })
+          )}
+        </>
       )}
     </View>
   );
@@ -185,4 +201,12 @@ const styles = StyleSheet.create({
   doneBadge: { marginLeft: spacing.sm },
   confirmRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   flex: { flex: 1 },
+  lockedHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  lockedText: { color: colors.textMuted, fontSize: 12, flex: 1 },
 });

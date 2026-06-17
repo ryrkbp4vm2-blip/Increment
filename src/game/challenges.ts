@@ -20,6 +20,8 @@ export interface ChallengeDef {
   disableUpgrades: boolean;
   rewardLabel: string;
   reward: ChallengeReward;
+  /** Minimum ascension count before this challenge appears. */
+  unlockAscensions: number;
 }
 
 export const CHALLENGES: ChallengeDef[] = [
@@ -35,19 +37,7 @@ export const CHALLENGES: ChallengeDef[] = [
     disableUpgrades: false,
     rewardLabel: 'Tap power ×4 forever',
     reward: { tapMult: 4 },
-  },
-  {
-    id: 'famine',
-    name: 'Famine',
-    description: 'All production runs at 20% — squeeze blood from the belt.',
-    goal: 1e8,
-    productionMult: 0.2,
-    tapMult: 0.2,
-    disableGenerators: false,
-    disableComets: false,
-    disableUpgrades: false,
-    rewardLabel: 'All production ×2 forever',
-    reward: { globalMult: 2 },
+    unlockAscensions: 0,
   },
   {
     id: 'solitude',
@@ -61,19 +51,21 @@ export const CHALLENGES: ChallengeDef[] = [
     disableUpgrades: false,
     rewardLabel: 'All production ×1.75 forever',
     reward: { globalMult: 1.75 },
+    unlockAscensions: 1,
   },
   {
-    id: 'idle_doctrine',
-    name: 'Idle Doctrine',
-    description: 'Tapping does nothing — win on passive income alone.',
+    id: 'famine',
+    name: 'Famine',
+    description: 'All production runs at 20% — squeeze blood from the belt.',
     goal: 1e8,
-    productionMult: 1,
-    tapMult: 0,
+    productionMult: 0.2,
+    tapMult: 0.2,
     disableGenerators: false,
     disableComets: false,
     disableUpgrades: false,
-    rewardLabel: 'All production ×1.75 forever',
-    reward: { globalMult: 1.75 },
+    rewardLabel: 'All production ×2 forever',
+    reward: { globalMult: 2 },
+    unlockAscensions: 1,
   },
   {
     id: 'purity',
@@ -87,6 +79,21 @@ export const CHALLENGES: ChallengeDef[] = [
     disableUpgrades: true,
     rewardLabel: 'All production ×1.5 forever',
     reward: { globalMult: 1.5 },
+    unlockAscensions: 2,
+  },
+  {
+    id: 'idle_doctrine',
+    name: 'Idle Doctrine',
+    description: 'Tapping does nothing — win on passive income alone.',
+    goal: 1e8,
+    productionMult: 1,
+    tapMult: 0,
+    disableGenerators: false,
+    disableComets: false,
+    disableUpgrades: false,
+    rewardLabel: 'All production ×1.75 forever',
+    reward: { globalMult: 1.75 },
+    unlockAscensions: 2,
   },
   {
     id: 'hardcore',
@@ -100,6 +107,7 @@ export const CHALLENGES: ChallengeDef[] = [
     disableUpgrades: false,
     rewardLabel: 'All production ×2.5 forever',
     reward: { globalMult: 2.5 },
+    unlockAscensions: 3,
   },
 ];
 
@@ -162,4 +170,15 @@ export function challengeComplete(activeChallenge: string | null, lifetimeThisRu
   if (!activeChallenge) return false;
   const def = CHALLENGES_BY_ID[activeChallenge];
   return !!def && lifetimeThisRun >= def.goal;
+}
+
+/** Challenges visible to the player at the given ascension count. */
+export function unlockedChallenges(ascensionCount: number): ChallengeDef[] {
+  return CHALLENGES.filter((c) => c.unlockAscensions <= ascensionCount);
+}
+
+/** How many ascensions until the next batch of challenges unlocks, or null if all are unlocked. */
+export function nextChallengeUnlockAt(ascensionCount: number): number | null {
+  const next = CHALLENGES.find((c) => c.unlockAscensions > ascensionCount);
+  return next ? next.unlockAscensions : null;
 }
