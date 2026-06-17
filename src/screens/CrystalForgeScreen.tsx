@@ -22,6 +22,7 @@ import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
 import { Icon, IconName } from '../components/art/Icon';
+import { InlineUpgrade } from '../components/InlineUpgrade';
 
 type BuyQty = 1 | 10 | 'max';
 const QTY_OPTIONS: BuyQty[] = [1, 10, 'max'];
@@ -59,6 +60,17 @@ export function CrystalForgeScreen() {
       !crystalRunUpgrades[u.id] &&
       crystalUpgradeUnlockMet(u, { crystalGenerators, lifetimeCrystals }),
   ).sort((a, b) => a.cost - b.cost);
+
+  // Per-generator boosts render inline beneath the generator they boost; tap
+  // and global upgrades stay in their own section below the list.
+  const upgradesByGen: Record<string, CrystalGenUpgradeDef[]> = {};
+  const otherUpgrades = availableUpgrades.filter((u) => {
+    if (u.effect.kind === 'genMult') {
+      (upgradesByGen[u.effect.genId] ??= []).push(u);
+      return false;
+    }
+    return true;
+  });
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -126,28 +138,49 @@ export function CrystalForgeScreen() {
       )}
 
       {CRYSTAL_GENS.map((def) => (
-        <CrystalGenRow
-          key={def.id}
-          def={def}
-          owned={crystalGenerators[def.id] ?? 0}
-          qty={qty}
-          crystals={crystals}
-          genMult={runPowers.genMult[def.id] ?? 1}
-          globalMult={baseGlobalMult}
-          onBuy={() => {
-            buyCrystalGenerator(def.id, qty);
-            playSound('buy');
-          }}
-        />
+        <React.Fragment key={def.id}>
+          <CrystalGenRow
+            def={def}
+            owned={crystalGenerators[def.id] ?? 0}
+            qty={qty}
+            crystals={crystals}
+            genMult={runPowers.genMult[def.id] ?? 1}
+            globalMult={baseGlobalMult}
+            onBuy={() => {
+              buyCrystalGenerator(def.id, qty);
+              playSound('buy');
+            }}
+          />
+          {(upgradesByGen[def.id] ?? []).map((u) => (
+            <InlineUpgrade
+              key={u.id}
+              name={u.name}
+              description={u.description}
+              accent={colors.darkMatter}
+              affordable={crystals >= u.cost}
+              cost={
+                <Text
+                  style={[styles.inlineCost, crystals < u.cost && styles.inlineCostDisabled]}
+                >
+                  {formatNumber(u.cost)} ✦
+                </Text>
+              }
+              onBuy={() => {
+                buyCrystalRunUpgrade(u.id);
+                playSound('buy');
+              }}
+            />
+          ))}
+        </React.Fragment>
       ))}
 
-      {availableUpgrades.length > 0 && (
+      {otherUpgrades.length > 0 && (
         <>
           <View style={styles.divider} />
           <Text style={styles.sectionTitle}>Forge Upgrades</Text>
           <Text style={styles.hint}>One-time boosts for this run. Reset on each Cascade.</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upgradeRow}>
-            {availableUpgrades.map((def) => (
+            {otherUpgrades.map((def) => (
               <CrystalUpgradeCard
                 key={def.id}
                 def={def}
@@ -368,4 +401,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   matrixNoteText: { flex: 1, color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+  inlineCost: { color: colors.darkMatter, fontSize: 12, fontWeight: '700' },
+  inlineCostDisabled: { color: colors.disabled },
 });

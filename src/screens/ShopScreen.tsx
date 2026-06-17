@@ -2,12 +2,15 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { GeneratorRow } from '../components/GeneratorRow';
 import { UpgradeCard } from '../components/UpgradeCard';
+import { InlineUpgrade } from '../components/InlineUpgrade';
+import { Amount } from '../components/art/Amount';
 import { Icon } from '../components/art/Icon';
 import { AUTO_UPGRADE_ASCENSIONS } from '../game/ascension';
 import { GENERATORS, REVEAL_FRACTION, UPGRADES } from '../game/balance';
 import { isUnlockMet } from '../game/math';
 import { BuyQty } from '../game/types';
 import { useGameStore } from '../store/gameStore';
+import { playSound } from '../audio/sound';
 import { colors, spacing } from '../theme';
 
 const QTY_OPTIONS: BuyQty[] = [1, 10, 'max'];
@@ -38,6 +41,9 @@ export function ShopScreen() {
     return Math.max(count, 1);
   });
 
+  const minerals = useGameStore((s) => s.minerals);
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade);
+
   const visibleUpgradeIds = useGameStore((s) =>
     UPGRADES.filter((u) => !s.upgrades[u.id] && isUnlockMet(u.unlock, s))
       .map((u) => u.id)
@@ -46,6 +52,17 @@ export function ShopScreen() {
   const visibleUpgrades = UPGRADES.filter((u) => visibleUpgradeIds.split(',').includes(u.id)).sort(
     (a, b) => a.cost - b.cost,
   );
+
+  // Per-generator upgrades render inline beneath the generator they boost; the
+  // rest (tap line, globals) live in their own section below the list.
+  const upgradesByGen: Record<string, typeof visibleUpgrades> = {};
+  const otherUpgrades = visibleUpgrades.filter((u) => {
+    if (u.effect.kind === 'genMult') {
+      (upgradesByGen[u.effect.genId] ??= []).push(u);
+      return false;
+    }
+    return true;
+  });
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -90,18 +107,44 @@ export function ShopScreen() {
       </View>
 
       {GENERATORS.slice(0, revealedCount).map((def) => (
-        <GeneratorRow key={def.id} def={def} qty={qty} />
+        <React.Fragment key={def.id}>
+          <GeneratorRow def={def} qty={qty} />
+          {(upgradesByGen[def.id] ?? []).map((u) => (
+            <InlineUpgrade
+              key={u.id}
+              name={u.name}
+              description={u.description}
+              accent={colors.gold}
+              affordable={minerals >= u.cost}
+              cost={
+                <Amount
+                  kind="mineral"
+                  value={u.cost}
+                  size={12}
+                  textStyle={[
+                    styles.inlineCost,
+                    minerals < u.cost && styles.inlineCostDisabled,
+                  ]}
+                />
+              }
+              onBuy={() => {
+                buyUpgrade(u.id);
+                playSound('buy');
+              }}
+            />
+          ))}
+        </React.Fragment>
       ))}
       {revealedCount < GENERATORS.length && (
         <Text style={styles.hidden}>Keep mining to discover more technology…</Text>
       )}
 
-      {visibleUpgrades.length > 0 && (
+      {otherUpgrades.length > 0 && (
         <>
           <View style={styles.divider} />
           <Text style={styles.sectionTitle}>Upgrades</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.upgradeRow}>
-            {visibleUpgrades.map((u) => (
+            {otherUpgrades.map((u) => (
               <UpgradeCard key={u.id} def={u} />
             ))}
           </ScrollView>
@@ -188,4 +231,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
+  inlineCost: { color: colors.gold, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  inlineCostDisabled: { color: colors.disabled },
 });
