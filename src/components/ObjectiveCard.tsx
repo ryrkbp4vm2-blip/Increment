@@ -40,6 +40,7 @@ export function ObjectiveCard({ onGo }: Props) {
   const crystalRunUpgrades = useGameStore((s) => s.crystalRunUpgrades);
   const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
   const resonance = useGameStore((s) => s.resonance);
+  const convergenceCount = useGameStore((s) => s.convergenceCount);
 
   const isCrystalMode = transcendCount > 0;
   const objective = isCrystalMode
@@ -49,6 +50,7 @@ export function ObjectiveCard({ onGo }: Props) {
         crystalRunUpgrades,
         lifetimeCrystals,
         resonance,
+        convergenceCount,
       })
     : nextObjective({
         totalTaps,

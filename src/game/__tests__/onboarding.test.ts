@@ -147,6 +147,7 @@ describe('nextCrystalObjective', () => {
     crystalRunUpgrades: {} as Record<string, true>,
     lifetimeCrystals: 0,
     resonance: 0,
+    convergenceCount: 0,
   };
 
   it('teaches tapping the formation before the first generator is affordable', () => {
@@ -214,6 +215,21 @@ describe('nextCrystalObjective', () => {
         crystalRunUpgrades: { c_tap1: true },
         resonance: 3,
         lifetimeCrystals: 1000,
+      }),
+    ).toBeNull();
+  });
+
+  it('does not re-teach after a Convergence (which resets resonance to 0)', () => {
+    // Convergence collapses the crystal layer back to resonance 0, but the
+    // player is a veteran — convergenceCount > 0 must keep the intro suppressed.
+    expect(
+      nextCrystalObjective({
+        ...cbase,
+        crystalGenerators: {},
+        crystalRunUpgrades: {},
+        resonance: 0,
+        convergenceCount: 1,
+        crystals: 2,
       }),
     ).toBeNull();
   });

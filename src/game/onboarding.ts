@@ -176,19 +176,24 @@ type CrystalObjectiveState = {
   crystalRunUpgrades: Record<string, true>;
   lifetimeCrystals: number;
   resonance: number;
+  convergenceCount: number;
 };
 
 /**
  * The one-time crystal intro, mirroring nextObjective for the post-Transcend
  * loop: bootstrap a generator, build the Forge, then reach the first Resonance
- * Cascade. It plays only on the first crystal run — once the player has
- * Cascaded for the first time (`resonance > 0`) the card never reappears, even
- * after later Cascades. The Prestige tab's attention dot then signals when the
- * next Cascade is ready.
+ * Cascade. It plays only on the very first crystal run — once the player has
+ * Cascaded for the first time (`resonance > 0`) the card never reappears.
+ *
+ * Convergence resets `resonance` back to 0, so a player who has Converged at
+ * least once is treated as a veteran too (`convergenceCount > 0`); otherwise the
+ * intro would pop up again on every post-Convergence crystal run. The Prestige
+ * tab's attention dot then signals when the next Cascade is ready.
  */
 export function nextCrystalObjective(state: CrystalObjectiveState): Objective | null {
-  // Intro is over once the first Cascade has happened.
-  if (state.resonance > 0) return null;
+  // Intro is over once the first Cascade has happened, or the player has ever
+  // Converged (which resets resonance but leaves them an experienced player).
+  if (state.resonance > 0 || state.convergenceCount > 0) return null;
 
   const shardCost = CRYSTAL_GENS_BY_ID.shard.baseCost;
   const totalGens = CRYSTAL_GENS.reduce((n, g) => n + (state.crystalGenerators[g.id] ?? 0), 0);
