@@ -149,6 +149,8 @@ export interface PersistedState {
   eonUpgrades: Record<string, number>;
   /** Remembered buy-quantity preference for generator shops (×1 / ×10 / Max). */
   buyQty: BuyQty;
+  /** Whether local reminder notifications are scheduled when backgrounding. */
+  notificationsEnabled: boolean;
 }
 
 export interface GameState extends PersistedState {

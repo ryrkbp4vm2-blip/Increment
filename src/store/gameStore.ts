@@ -117,6 +117,7 @@ export interface GameActions {
   toggleAutoUpgrade(): void;
   toggleAutoCrystalUpgrade(): void;
   setBuyQty(qty: BuyQty): void;
+  setNotificationsEnabled(on: boolean): void;
   buySingularityPerk(id: string): void;
   buyCoreUpgrade(id: string): void;
   buyCrystalUpgrade(id: string): void;
@@ -201,6 +202,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     convergenceCount: 0,
     eonUpgrades: {},
     buyQty: 1,
+    notificationsEnabled: false,
   };
 }
 
@@ -258,6 +260,7 @@ function carryTranscend(state: GameState): Pick<
   | 'convergenceCount'
   | 'eonUpgrades'
   | 'buyQty'
+  | 'notificationsEnabled'
   | 'autoUpgrade'
   | 'autoCrystalUpgrade'
 > {
@@ -276,6 +279,7 @@ function carryTranscend(state: GameState): Pick<
     eonUpgrades: state.eonUpgrades,
     resonance: state.resonance,
     buyQty: state.buyQty,
+    notificationsEnabled: state.notificationsEnabled,
     autoUpgrade: state.autoUpgrade,
     autoCrystalUpgrade: state.autoCrystalUpgrade,
   };
@@ -812,6 +816,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           lastDailyAt: state.lastDailyAt,
           dailyStreak: state.dailyStreak,
           buyQty: state.buyQty,
+          notificationsEnabled: state.notificationsEnabled,
           autoUpgrade: state.autoUpgrade,
           autoCrystalUpgrade: state.autoCrystalUpgrade,
           eons: state.eons,
@@ -873,6 +878,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           autoUpgrade: state.autoUpgrade,
           autoCrystalUpgrade: state.autoCrystalUpgrade,
           buyQty: state.buyQty,
+          notificationsEnabled: state.notificationsEnabled,
           // Convergence layer sits above the Cascade — Eons and tree survive.
           eons: state.eons,
           totalEons: state.totalEons,
@@ -921,6 +927,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           autoUpgrade: state.autoUpgrade,
           autoCrystalUpgrade: state.autoCrystalUpgrade,
           buyQty: state.buyQty,
+          notificationsEnabled: state.notificationsEnabled,
         },
         state.lastTickAt,
       ),
@@ -961,6 +968,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setBuyQty(qty) {
     set({ buyQty: qty });
+  },
+
+  setNotificationsEnabled(on) {
+    set({ notificationsEnabled: on });
   },
 
   buySingularityPerk(id) {

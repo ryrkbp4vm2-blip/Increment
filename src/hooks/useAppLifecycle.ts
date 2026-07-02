@@ -3,7 +3,12 @@ import { AppState } from 'react-native';
 import { offlineEfficiency } from '../game/ascension';
 import { effectivePowers } from '../game/powers';
 import { OFFLINE_MIN_MS } from '../game/balance';
+import { planNotifications } from '../game/notificationPlan';
 import { computeCrystalOfflineEarnings, computeOfflineEarnings } from '../game/offline';
+import {
+  cancelScheduledNotifications,
+  scheduleNotifications,
+} from '../notifications/notifications';
 import { useGameStore } from '../store/gameStore';
 import { writeSave } from '../store/persistence';
 
@@ -27,6 +32,8 @@ export function useAppLifecycle() {
       const nowActive = next === 'active';
       const state = useGameStore.getState();
       if (nowActive) {
+        // The player is back — pending reminders would just be noise now.
+        void cancelScheduledNotifications();
         const elapsedMs = Date.now() - state.lastTickAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
           if (state.transcendCount > 0) {
@@ -52,6 +59,9 @@ export function useAppLifecycle() {
         }
       } else {
         void writeSave(state);
+        if (state.notificationsEnabled) {
+          void scheduleNotifications(planNotifications(state, Date.now()));
+        }
       }
       setActive(nowActive);
     });

@@ -2,6 +2,10 @@ import * as Clipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { isMuted, playSound, setMuted } from '../audio/sound';
+import {
+  cancelScheduledNotifications,
+  ensureNotificationPermission,
+} from '../notifications/notifications';
 import { useGameStore } from '../store/gameStore';
 import { clearSave, exportSave, importSave, writeSave } from '../store/persistence';
 import { colors, spacing } from '../theme';
@@ -20,6 +24,9 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
   const resetGame = useGameStore((s) => s.resetGame);
   const hydrate = useGameStore((s) => s.hydrate);
   const devUnlockCrystals = useGameStore((s) => s.devUnlockCrystals);
+  const notificationsEnabled = useGameStore((s) => s.notificationsEnabled);
+  const setNotificationsEnabled = useGameStore((s) => s.setNotificationsEnabled);
+  const [notifDenied, setNotifDenied] = useState(false);
   const [soundOn, setSoundOn] = useState(!isMuted());
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [view, setView] = useState<View_>('menu');
@@ -41,6 +48,23 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
     setSoundOn(value);
     void setMuted(!value);
     if (value) playSound('buy');
+  };
+
+  const toggleNotifications = async (value: boolean) => {
+    setNotifDenied(false);
+    if (!value) {
+      setNotificationsEnabled(false);
+      void cancelScheduledNotifications();
+      return;
+    }
+    // Ask for OS permission first; only persist the preference if granted so
+    // the toggle honestly reflects whether reminders can actually fire.
+    const granted = await ensureNotificationPermission();
+    if (granted) {
+      setNotificationsEnabled(true);
+    } else {
+      setNotifDenied(true);
+    }
   };
 
   const handleReset = () => {
@@ -108,6 +132,29 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
                   thumbColor={colors.text}
                 />
               </View>
+
+              <View style={styles.row}>
+                <View style={styles.rowLabel}>
+                  <Icon name="gift" size={20} />
+                  <Text style={styles.rowText}>Reminders</Text>
+                </View>
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={(v) => void toggleNotifications(v)}
+                  trackColor={{ true: colors.accent, false: colors.disabled }}
+                  thumbColor={colors.text}
+                />
+              </View>
+              <Text style={styles.rowHint}>
+                Notifies you when an expedition returns, offline earnings fill up, or the daily
+                bonus is ready.
+              </Text>
+              {notifDenied && (
+                <Text style={styles.bad}>
+                  Notifications are blocked for this app — enable them in your device Settings
+                  first.
+                </Text>
+              )}
 
               <Pressable style={styles.row} onPress={() => { close(); onOpenStats(); }}>
                 <View style={styles.rowLabel}>
@@ -228,6 +275,7 @@ const styles = StyleSheet.create({
   },
   rowLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rowText: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  rowHint: { color: colors.textMuted, fontSize: 11, marginBottom: spacing.sm },
   chevron: { color: colors.textMuted, fontSize: 22, fontWeight: '700' },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   resetRow: { paddingVertical: spacing.sm },

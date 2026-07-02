@@ -8,6 +8,7 @@ import { effectivePowers } from './src/game/powers';
 import { cps } from './src/game/math';
 import { computeCrystalOfflineEarnings, computeOfflineEarnings } from './src/game/offline';
 import { OfflineReport } from './src/hooks/useAppLifecycle';
+import { cancelScheduledNotifications } from './src/notifications/notifications';
 import { GameRoot } from './src/screens/GameRoot';
 import { useGameStore } from './src/store/gameStore';
 import { loadSave } from './src/store/persistence';
@@ -20,6 +21,9 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     void initSound();
+    // Cold start: clear any reminders scheduled by the previous session (the
+    // AppState listener only covers background→foreground, not launch).
+    void cancelScheduledNotifications();
     (async () => {
       const save = await loadSave();
       if (cancelled) return;

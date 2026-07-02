@@ -81,6 +81,7 @@ export function toPersisted(state: GameState): PersistedState {
     convergenceCount: state.convergenceCount,
     eonUpgrades: state.eonUpgrades,
     buyQty: state.buyQty,
+    notificationsEnabled: state.notificationsEnabled,
   };
 }
 
@@ -347,6 +348,7 @@ export function migrate(raw: string | null): SaveFile | null {
     eonUpgrades,
     buyQty:
       raw_.buyQty === 10 || raw_.buyQty === 'max' ? raw_.buyQty : 1,
+    notificationsEnabled: raw_.notificationsEnabled === true,
   };
   // Pre-activeChallengeGoal saves (and edited backups) can carry an active
   // challenge with no goal snapshot — re-derive it from the loaded state so
