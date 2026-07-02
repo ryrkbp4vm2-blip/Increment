@@ -31,11 +31,8 @@ export function CrystalForgeScreen() {
   // Shared remembered buy-quantity, persisted in the store (see ShopScreen).
   const qty = useGameStore((s) => s.buyQty) as BuyQty;
   const setQty = useGameStore((s) => s.setBuyQty);
-  const crystals = useGameStore((s) => s.crystals);
-  const crystalGenerators = useGameStore((s) => s.crystalGenerators);
   const crystalUpgrades = useGameStore((s) => s.crystalUpgrades);
   const crystalRunUpgrades = useGameStore((s) => s.crystalRunUpgrades);
-  const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
   const resonance = useGameStore((s) => s.resonance);
   const autoForge = useGameStore((s) => s.autoForge);
   const toggleAutoForge = useGameStore((s) => s.toggleAutoForge);
@@ -54,11 +51,24 @@ export function CrystalForgeScreen() {
     resonanceMult(resonance, RESONANCE_BONUS * resonancePowerMult(crystalUpgrades)) *
     runPowers.globalMult;
 
-  // Upgrades that are unlocked and not yet owned, cheapest first.
-  const availableUpgrades = CRYSTAL_GEN_UPGRADES.filter(
-    (u) =>
-      !crystalRunUpgrades[u.id] &&
-      crystalUpgradeUnlockMet(u, { crystalGenerators, lifetimeCrystals }),
+  // Upgrades that are unlocked and not yet owned, cheapest first. Selected as a
+  // joined-id string so the ticking crystal balance and lifetime totals only
+  // re-render this screen when the *set* of available upgrades changes —
+  // affordability lives in the per-row components below.
+  const availableUpgradeIds = useGameStore((s) =>
+    CRYSTAL_GEN_UPGRADES.filter(
+      (u) =>
+        !s.crystalRunUpgrades[u.id] &&
+        crystalUpgradeUnlockMet(u, {
+          crystalGenerators: s.crystalGenerators,
+          lifetimeCrystals: s.lifetimeCrystals,
+        }),
+    )
+      .map((u) => u.id)
+      .join(','),
+  );
+  const availableUpgrades = CRYSTAL_GEN_UPGRADES.filter((u) =>
+    availableUpgradeIds.split(',').includes(u.id),
   ).sort((a, b) => a.cost - b.cost);
 
   // Per-generator boosts render inline beneath the generator they boost; tap
@@ -141,9 +151,7 @@ export function CrystalForgeScreen() {
         <React.Fragment key={def.id}>
           <CrystalGenRow
             def={def}
-            owned={crystalGenerators[def.id] ?? 0}
             qty={qty}
-            crystals={crystals}
             genMult={runPowers.genMult[def.id] ?? 1}
             globalMult={baseGlobalMult}
             onBuy={() => {
@@ -152,19 +160,9 @@ export function CrystalForgeScreen() {
             }}
           />
           {(upgradesByGen[def.id] ?? []).map((u) => (
-            <InlineUpgrade
+            <CrystalInlineUpgrade
               key={u.id}
-              name={u.name}
-              description={u.description}
-              accent={colors.darkMatter}
-              affordable={crystals >= u.cost}
-              cost={
-                <Text
-                  style={[styles.inlineCost, crystals < u.cost && styles.inlineCostDisabled]}
-                >
-                  {formatNumber(u.cost)} ✦
-                </Text>
-              }
+              def={u}
               onBuy={() => {
                 buyCrystalRunUpgrade(u.id);
                 playSound('buy');
@@ -184,7 +182,6 @@ export function CrystalForgeScreen() {
               <CrystalUpgradeCard
                 key={def.id}
                 def={def}
-                affordable={crystals >= def.cost}
                 onBuy={() => {
                   buyCrystalRunUpgrade(def.id);
                   playSound('buy');
@@ -207,15 +204,12 @@ export function CrystalForgeScreen() {
   );
 }
 
-function CrystalUpgradeCard({
-  def,
-  affordable,
-  onBuy,
-}: {
-  def: CrystalGenUpgradeDef;
-  affordable: boolean;
-  onBuy: () => void;
-}) {
+// The per-row components below subscribe to their own crystals-derived
+// primitives (booleans/numbers), so the balance ticking at 10 Hz re-renders
+// only the rows whose affordability actually changed — not the whole screen.
+
+function CrystalUpgradeCard({ def, onBuy }: { def: CrystalGenUpgradeDef; onBuy: () => void }) {
+  const affordable = useGameStore((s) => s.crystals >= def.cost);
   return (
     <Pressable
       onPress={onBuy}
@@ -231,31 +225,52 @@ function CrystalUpgradeCard({
   );
 }
 
+function CrystalInlineUpgrade({ def, onBuy }: { def: CrystalGenUpgradeDef; onBuy: () => void }) {
+  const affordable = useGameStore((s) => s.crystals >= def.cost);
+  return (
+    <InlineUpgrade
+      name={def.name}
+      description={def.description}
+      accent={colors.darkMatter}
+      affordable={affordable}
+      cost={
+        <Text style={[styles.inlineCost, !affordable && styles.inlineCostDisabled]}>
+          {formatNumber(def.cost)} ✦
+        </Text>
+      }
+      onBuy={onBuy}
+    />
+  );
+}
+
 function CrystalGenRow({
   def,
-  owned,
   qty,
-  crystals,
   genMult,
   globalMult,
   onBuy,
 }: {
   def: CrystalGenDef;
-  owned: number;
   qty: BuyQty;
-  crystals: number;
   genMult: number;
   globalMult: number;
   onBuy: () => void;
 }) {
-  const count = qty === 'max' ? crystalGenMaxAffordable(def, owned, crystals) : qty;
+  const owned = useGameStore((s) => s.crystalGenerators[def.id] ?? 0);
+  const count = useGameStore((s) =>
+    qty === 'max' ? crystalGenMaxAffordable(def, s.crystalGenerators[def.id] ?? 0, s.crystals) : qty,
+  );
   const cost =
     qty === 'max'
       ? count > 0
         ? crystalGenBulkCost(def, owned, count)
         : crystalGenCostOfNext(def, owned)
       : crystalGenBulkCost(def, owned, qty);
-  const affordable = qty === 'max' ? count > 0 : crystals >= cost;
+  const affordable = useGameStore((s) =>
+    qty === 'max'
+      ? crystalGenMaxAffordable(def, s.crystalGenerators[def.id] ?? 0, s.crystals) > 0
+      : s.crystals >= crystalGenBulkCost(def, s.crystalGenerators[def.id] ?? 0, qty),
+  );
   const production = crystalGenProduction(def, owned, globalMult, genMult);
 
   return (

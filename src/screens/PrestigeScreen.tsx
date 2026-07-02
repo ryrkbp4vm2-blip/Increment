@@ -69,7 +69,12 @@ import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
 
 export function PrestigeScreen() {
-  const lifetimeThisRun = useGameStore((s) => s.lifetimeThisRun);
+  // lifetimeThisRun ticks 10×/sec — subscribe only to the slow-changing
+  // values derived from it, so the whole 1,200-line screen doesn't re-render
+  // every tick. The two live displays (mined-this-run row, progress bar) are
+  // small leaf components with their own subscriptions.
+  const pending = useGameStore((s) => pendingDarkMatter(s.lifetimeThisRun));
+  const nextAt = useGameStore((s) => nextDarkMatterAt(s.lifetimeThisRun));
   const darkMatter = useGameStore((s) => s.darkMatter);
   const totalDarkMatter = useGameStore((s) => s.totalDarkMatter);
   const prestigeCount = useGameStore((s) => s.prestigeCount);
@@ -128,10 +133,9 @@ export function PrestigeScreen() {
   const ascendShopsRevealed = singularityCores > 0 || pendingCores >= 1;
 
   const powers = effectivePowers(artifacts, dmUpgrades);
-  const pending = pendingDarkMatter(lifetimeThisRun);
-  const gain = darkMatterGain(lifetimeThisRun, powers.dmGainMult);
-  const nextAt = nextDarkMatterAt(lifetimeThisRun);
-  const progress = Math.min(lifetimeThisRun / PRESTIGE_BASE, 1);
+  const gain = useGameStore((s) =>
+    darkMatterGain(s.lifetimeThisRun, effectivePowers(s.artifacts, s.dmUpgrades).dmGainMult),
+  );
 
   // In crystal mode, show a focused crystal-game prestige screen.
   if (isCrystalMode) {
@@ -176,7 +180,7 @@ export function PrestigeScreen() {
         <StatRow label="Dark Matter to spend" currency="dm" value={darkMatter} />
         <StatRow label="Earned all-time" currency="dm" value={totalDarkMatter} />
         <StatRow label="Collapses so far" value={formatNumber(prestigeCount)} />
-        <StatRow label="Mined this run" currency="mineral" value={lifetimeThisRun} />
+        <MinedThisRunRow />
         <StatRow
           label={pending > 0 ? 'Next Dark Matter at' : 'First Dark Matter at'}
           currency="mineral"
@@ -184,11 +188,7 @@ export function PrestigeScreen() {
         />
       </View>
 
-      {pending < 1 && (
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-        </View>
-      )}
+      {pending < 1 && <CollapseProgressBar />}
 
       {confirming ? (
         <View style={styles.confirmBox}>
@@ -912,6 +912,28 @@ function DarkMatterRow({
           />
         )}
       </Pressable>
+    </View>
+  );
+}
+
+/**
+ * The two displays that genuinely tick with lifetimeThisRun live in their own
+ * leaf components, so the 10 Hz updates re-render a single row / bar instead
+ * of the whole Prestige screen.
+ */
+function MinedThisRunRow() {
+  const mined = useGameStore((s) => s.lifetimeThisRun);
+  return <StatRow label="Mined this run" currency="mineral" value={mined} />;
+}
+
+function CollapseProgressBar() {
+  // Quantized to whole percent so the bar re-renders at most 100 times.
+  const percent = useGameStore((s) =>
+    Math.min(100, Math.floor((s.lifetimeThisRun / PRESTIGE_BASE) * 100)),
+  );
+  return (
+    <View style={styles.progressTrack}>
+      <View style={[styles.progressFill, { width: `${percent}%` }]} />
     </View>
   );
 }

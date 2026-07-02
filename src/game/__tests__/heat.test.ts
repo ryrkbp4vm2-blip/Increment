@@ -10,6 +10,11 @@ describe('decayHeat', () => {
     expect(decayHeat(1, 1000)).toBeCloseTo(Math.exp(-0.5));
     expect(decayHeat(1, 5000)).toBeLessThan(decayHeat(1, 1000));
   });
+
+  it('never grows heat for a negative elapsed time (remount / clock skew)', () => {
+    expect(decayHeat(0.4, -1_000_000)).toBe(0.4);
+    expect(Number.isFinite(decayHeat(0.4, -1e12))).toBe(true);
+  });
 });
 
 describe('heatMultiplier', () => {

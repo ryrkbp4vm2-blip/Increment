@@ -30,7 +30,6 @@ export function FleetScreen() {
   const artifacts = useGameStore((s) => s.artifacts);
   const dmUpgrades = useGameStore((s) => s.dmUpgrades);
   const research = useGameStore((s) => s.research);
-  const minerals = useGameStore((s) => s.minerals);
   const cachedCps = useGameStore((s) => s.cachedCps);
   const launchExpedition = useGameStore((s) => s.launchExpedition);
   const claimExpedition = useGameStore((s) => s.claimExpedition);
@@ -121,7 +120,6 @@ export function FleetScreen() {
             fuel={expeditionFuel(def, cachedCps, powers)}
             loot={expeditionLoot(def, cachedCps, powers)}
             durationMs={expeditionDuration(def, powers)}
-            affordable={minerals >= expeditionFuel(def, cachedCps, powers)}
             onLaunch={() => {
               launchExpedition(def.id, Date.now());
               playSound('buy');
@@ -163,16 +161,17 @@ function ExpeditionCard({
   fuel,
   loot,
   durationMs,
-  affordable,
   onLaunch,
 }: {
   def: ExpeditionDef;
   fuel: number;
   loot: number;
   durationMs: number;
-  affordable: boolean;
   onLaunch: () => void;
 }) {
+  // Affordability is derived here (boolean) so the ticking mineral balance
+  // re-renders only this card, not the whole Fleet screen at 10 Hz.
+  const affordable = useGameStore((s) => s.minerals >= fuel);
   return (
     <View style={styles.card}>
       <View style={styles.cardNameRow}>

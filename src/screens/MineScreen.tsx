@@ -23,8 +23,10 @@ export function MineScreen() {
   const sector = useGameStore((s) => s.sector);
   const tapHeat = useGameStore((s) => s.tapHeat);
   const lastTapAt = useGameStore((s) => s.lastTapAt);
-  // Local clock so the heat bar drains smoothly between taps.
-  const [clock, setClock] = useState(0);
+  // Local clock so the heat bar drains smoothly between taps. Seeded with the
+  // real time — starting at 0 made the first render compute a hugely negative
+  // decay interval and flash a full heat bar on every remount.
+  const [clock, setClock] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setClock(Date.now()), 120);
     return () => clearInterval(id);

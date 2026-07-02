@@ -20,9 +20,13 @@ export function ChallengesSection() {
   const activeChallenge = useGameStore((s) => s.activeChallenge);
   const activeChallengeGoal = useGameStore((s) => s.activeChallengeGoal);
   const challengesCompleted = useGameStore((s) => s.challengesCompleted);
-  const lifetimeThisRun = useGameStore((s) => s.lifetimeThisRun);
   const ascensionCount = useGameStore((s) => s.ascensionCount);
   const permanentPower = useGameStore((s) => permanentPowerMultiplier(s));
+  // Derived boolean: the raw ticking lifetimeThisRun stays inside the
+  // ChallengeProgress leaf so this section doesn't re-render 10×/sec.
+  const canClaim = useGameStore((s) =>
+    challengeComplete(s.activeChallenge, s.lifetimeThisRun, s.activeChallengeGoal),
+  );
   const enterChallenge = useGameStore((s) => s.enterChallenge);
   const abandonChallenge = useGameStore((s) => s.abandonChallenge);
   const completeChallenge = useGameStore((s) => s.completeChallenge);
@@ -33,7 +37,6 @@ export function ChallengesSection() {
   const nextUnlockAt = nextChallengeUnlockAt(ascensionCount);
   const doneCount = Object.keys(challengesCompleted).length;
   const active = activeChallenge ? CHALLENGES_BY_ID[activeChallenge] : null;
-  const canClaim = challengeComplete(activeChallenge, lifetimeThisRun, activeChallengeGoal);
 
   return (
     <View>
@@ -53,18 +56,7 @@ export function ChallengesSection() {
         <View style={styles.activeCard}>
           <Text style={styles.activeName}>⚔ {active.name}</Text>
           <Text style={styles.activeDesc}>{active.description}</Text>
-          <View style={styles.track}>
-            <View
-              style={[
-                styles.fill,
-                { width: `${Math.min((lifetimeThisRun / activeChallengeGoal) * 100, 100)}%` },
-              ]}
-            />
-          </View>
-          <Text style={styles.progress}>
-            {formatNumber(Math.min(lifetimeThisRun, activeChallengeGoal))} /{' '}
-            {formatNumber(activeChallengeGoal)}
-          </Text>
+          <ChallengeProgress goal={activeChallengeGoal} />
           <Text style={styles.rewardLine}>Reward: {active.rewardLabel}</Text>
           <Text style={styles.lockNote}>
             Permanent shops (Dark Matter, Research, Singularity) are locked until you finish or
@@ -162,6 +154,23 @@ export function ChallengesSection() {
         </>
       )}
     </View>
+  );
+}
+
+/** Live progress toward the run goal — its own leaf so the 10 Hz tick stays here. */
+function ChallengeProgress({ goal }: { goal: number }) {
+  const lifetimeThisRun = useGameStore((s) => s.lifetimeThisRun);
+  return (
+    <>
+      <View style={styles.track}>
+        <View
+          style={[styles.fill, { width: `${Math.min((lifetimeThisRun / goal) * 100, 100)}%` }]}
+        />
+      </View>
+      <Text style={styles.progress}>
+        {formatNumber(Math.min(lifetimeThisRun, goal))} / {formatNumber(goal)}
+      </Text>
+    </>
   );
 }
 

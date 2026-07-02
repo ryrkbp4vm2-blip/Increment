@@ -49,8 +49,9 @@ export function CrystalMineScreen() {
   const integrity = Math.max(0, 1 - formationDamage / hp);
   const bonus = crystalFormationBonus(formationIndex);
 
-  // Local clock so the Drill Heat bar drains smoothly between taps.
-  const [clock, setClock] = useState(0);
+  // Local clock so the Drill Heat bar drains smoothly between taps. Seeded
+  // with the real time so a remount doesn't compute a negative decay interval.
+  const [clock, setClock] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setClock(Date.now()), 120);
     return () => clearInterval(id);

@@ -8,7 +8,7 @@ import { Icon } from '../components/art/Icon';
 import { AUTO_UPGRADE_ASCENSIONS } from '../game/ascension';
 import { GENERATORS, REVEAL_FRACTION, UPGRADES } from '../game/balance';
 import { isUnlockMet } from '../game/math';
-import { BuyQty } from '../game/types';
+import { BuyQty, UpgradeDef } from '../game/types';
 import { useGameStore } from '../store/gameStore';
 import { playSound } from '../audio/sound';
 import { colors, spacing } from '../theme';
@@ -40,9 +40,6 @@ export function ShopScreen() {
     }
     return Math.max(count, 1);
   });
-
-  const minerals = useGameStore((s) => s.minerals);
-  const buyUpgrade = useGameStore((s) => s.buyUpgrade);
 
   const visibleUpgradeIds = useGameStore((s) =>
     UPGRADES.filter((u) => !s.upgrades[u.id] && isUnlockMet(u.unlock, s))
@@ -110,28 +107,7 @@ export function ShopScreen() {
         <React.Fragment key={def.id}>
           <GeneratorRow def={def} qty={qty} />
           {(upgradesByGen[def.id] ?? []).map((u) => (
-            <InlineUpgrade
-              key={u.id}
-              name={u.name}
-              description={u.description}
-              accent={colors.gold}
-              affordable={minerals >= u.cost}
-              cost={
-                <Amount
-                  kind="mineral"
-                  value={u.cost}
-                  size={12}
-                  textStyle={[
-                    styles.inlineCost,
-                    minerals < u.cost && styles.inlineCostDisabled,
-                  ]}
-                />
-              }
-              onBuy={() => {
-                buyUpgrade(u.id);
-                playSound('buy');
-              }}
-            />
+            <ShopInlineUpgrade key={u.id} def={u} />
           ))}
         </React.Fragment>
       ))}
@@ -151,6 +127,37 @@ export function ShopScreen() {
         </>
       )}
     </ScrollView>
+  );
+}
+
+/**
+ * Inline upgrade row with its own affordability subscription. Keeping the
+ * minerals-derived boolean here (instead of subscribing to `minerals` in
+ * ShopScreen) means the ticking balance re-renders only these small rows,
+ * not the whole generator list at 10 Hz.
+ */
+function ShopInlineUpgrade({ def }: { def: UpgradeDef }) {
+  const buyUpgrade = useGameStore((s) => s.buyUpgrade);
+  const affordable = useGameStore((s) => s.minerals >= def.cost);
+  return (
+    <InlineUpgrade
+      name={def.name}
+      description={def.description}
+      accent={colors.gold}
+      affordable={affordable}
+      cost={
+        <Amount
+          kind="mineral"
+          value={def.cost}
+          size={12}
+          textStyle={[styles.inlineCost, !affordable && styles.inlineCostDisabled]}
+        />
+      }
+      onBuy={() => {
+        buyUpgrade(def.id);
+        playSound('buy');
+      }}
+    />
   );
 }
 
