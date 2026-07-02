@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { offlineEfficiency } from '../game/ascension';
 import { effectivePowers } from '../game/powers';
-import { OFFLINE_MIN_MS } from '../game/balance';
+import { OFFLINE_CAP_MS, OFFLINE_MIN_MS } from '../game/balance';
 import { planNotifications } from '../game/notificationPlan';
 import { computeCrystalOfflineEarnings, computeOfflineEarnings } from '../game/offline';
 import {
@@ -16,6 +16,10 @@ export interface OfflineReport {
   earned: number;
   elapsedMs: number;
   crystal?: boolean;
+  /** How much of the away time was actually paid (elapsed clamped to the cap). */
+  creditedMs?: number;
+  /** Offline efficiency multiplier (>1 with the Offline Overdrive perk). */
+  efficiency?: number;
 }
 
 /**
@@ -43,18 +47,28 @@ export function useAppLifecycle() {
               state.crystalFormationIndex,
             );
             state.applyOffline(earned, Date.now());
-            if (earned > 0) setOfflineReport({ earned, elapsedMs, crystal: true });
+            if (earned > 0) {
+              setOfflineReport({
+                earned,
+                elapsedMs,
+                crystal: true,
+                creditedMs: Math.min(elapsedMs, OFFLINE_CAP_MS),
+              });
+            }
           } else {
             const capBonus = effectivePowers(state.artifacts, state.dmUpgrades, state.research)
               .offlineCapBonusMs;
-            const earned = computeOfflineEarnings(
-              elapsedMs,
-              state.cachedCps,
-              capBonus,
-              offlineEfficiency(state.singularityPerks),
-            );
+            const efficiency = offlineEfficiency(state.singularityPerks);
+            const earned = computeOfflineEarnings(elapsedMs, state.cachedCps, capBonus, efficiency);
             state.applyOffline(earned, Date.now());
-            if (earned > 0) setOfflineReport({ earned, elapsedMs });
+            if (earned > 0) {
+              setOfflineReport({
+                earned,
+                elapsedMs,
+                creditedMs: Math.min(elapsedMs, OFFLINE_CAP_MS + capBonus),
+                efficiency,
+              });
+            }
           }
         }
       } else {

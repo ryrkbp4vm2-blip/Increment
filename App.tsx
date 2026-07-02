@@ -2,7 +2,8 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
 import { initSound } from './src/audio/sound';
-import { OFFLINE_MIN_MS } from './src/game/balance';
+import { initHaptics } from './src/haptics';
+import { OFFLINE_CAP_MS, OFFLINE_MIN_MS } from './src/game/balance';
 import { offlineEfficiency } from './src/game/ascension';
 import { effectivePowers } from './src/game/powers';
 import { cps } from './src/game/math';
@@ -21,6 +22,7 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     void initSound();
+    void initHaptics();
     // Cold start: clear any reminders scheduled by the previous session (the
     // AppState listener only covers background→foreground, not launch).
     void cancelScheduledNotifications();
@@ -40,18 +42,28 @@ export default function App() {
               store.crystalFormationIndex,
             );
             store.applyOffline(crystalEarned, now);
-            if (crystalEarned > 0) setOfflineReport({ earned: crystalEarned, elapsedMs, crystal: true });
+            if (crystalEarned > 0) {
+              setOfflineReport({
+                earned: crystalEarned,
+                elapsedMs,
+                crystal: true,
+                creditedMs: Math.min(elapsedMs, OFFLINE_CAP_MS),
+              });
+            }
           } else {
             const capBonus = effectivePowers(save.state.artifacts, save.state.dmUpgrades, save.state.research)
               .offlineCapBonusMs;
-            const earned = computeOfflineEarnings(
-              elapsedMs,
-              cps(save.state),
-              capBonus,
-              offlineEfficiency(save.state.singularityPerks),
-            );
+            const efficiency = offlineEfficiency(save.state.singularityPerks);
+            const earned = computeOfflineEarnings(elapsedMs, cps(save.state), capBonus, efficiency);
             useGameStore.getState().applyOffline(earned, now);
-            if (earned > 0) setOfflineReport({ earned, elapsedMs });
+            if (earned > 0) {
+              setOfflineReport({
+                earned,
+                elapsedMs,
+                creditedMs: Math.min(elapsedMs, OFFLINE_CAP_MS + capBonus),
+                efficiency,
+              });
+            }
           }
         }
       }

@@ -13,6 +13,11 @@ interface Props {
 
 export function WelcomeBackModal({ report, onDismiss }: Props) {
   const isCrystal = report?.crystal ?? false;
+  const elapsedMs = report?.elapsedMs ?? 0;
+  const creditedMs = report?.creditedMs ?? elapsedMs;
+  const efficiency = report?.efficiency ?? 1;
+  // Only call out the cap when a meaningful chunk of the away time was lost.
+  const capped = elapsedMs > creditedMs * 1.05;
   return (
     <Modal visible={report !== null} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.backdrop}>
@@ -20,8 +25,8 @@ export function WelcomeBackModal({ report, onDismiss }: Props) {
           <Text style={styles.title}>Welcome back!</Text>
           <Text style={styles.subtitle}>
             {isCrystal
-              ? `The Crystal Realm kept humming for ${formatDuration(report?.elapsedMs ?? 0)}`
-              : `Your empire kept mining for ${formatDuration(report?.elapsedMs ?? 0)}`}
+              ? `The Crystal Realm kept humming for ${formatDuration(elapsedMs)}`
+              : `Your empire kept mining for ${formatDuration(elapsedMs)}`}
           </Text>
           {isCrystal ? (
             <Text style={[styles.earned, styles.earnedRow, styles.crystalEarned]}>
@@ -37,7 +42,16 @@ export function WelcomeBackModal({ report, onDismiss }: Props) {
               style={styles.earnedRow}
             />
           )}
-          <BigButton label="Collect" onPress={onDismiss} />
+          {efficiency > 1 && (
+            <Text style={styles.detail}>Offline Overdrive paid ×{efficiency.toFixed(1)}</Text>
+          )}
+          {capped && (
+            <Text style={styles.detailMuted}>
+              Storage filled after {formatDuration(creditedMs)}
+              {isCrystal ? '' : ' — Temporal Vault extends it'}
+            </Text>
+          )}
+          <BigButton label="Collect" onPress={onDismiss} style={styles.collect} />
         </View>
       </View>
     </Modal>
@@ -83,5 +97,21 @@ const styles = StyleSheet.create({
   },
   crystalEarned: {
     color: '#C084FC',
+  },
+  detail: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
+  },
+  detailMuted: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  collect: {
+    marginTop: spacing.md,
+    alignSelf: 'stretch',
   },
 });

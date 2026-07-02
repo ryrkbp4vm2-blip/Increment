@@ -2,6 +2,7 @@ import * as Clipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { isMuted, playSound, setMuted } from '../audio/sound';
+import { HapticsMode, getHapticsMode, hapticShatter, setHapticsMode } from '../haptics';
 import {
   cancelScheduledNotifications,
   ensureNotificationPermission,
@@ -28,6 +29,7 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
   const setNotificationsEnabled = useGameStore((s) => s.setNotificationsEnabled);
   const [notifDenied, setNotifDenied] = useState(false);
   const [soundOn, setSoundOn] = useState(!isMuted());
+  const [haptics, setHaptics] = useState<HapticsMode>(getHapticsMode());
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [view, setView] = useState<View_>('menu');
   const [exportCode, setExportCode] = useState('');
@@ -48,6 +50,13 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
     setSoundOn(value);
     void setMuted(!value);
     if (value) playSound('buy');
+  };
+
+  const chooseHaptics = (value: HapticsMode) => {
+    setHaptics(value);
+    void setHapticsMode(value);
+    // A sample thump so the choice is felt immediately.
+    if (value !== 'off') hapticShatter(false);
   };
 
   const toggleNotifications = async (value: boolean) => {
@@ -131,6 +140,26 @@ export function SettingsModal({ visible, onClose, onOpenStats }: Props) {
                   trackColor={{ true: colors.accent, false: colors.disabled }}
                   thumbColor={colors.text}
                 />
+              </View>
+
+              <View style={styles.row}>
+                <View style={styles.rowLabel}>
+                  <Icon name="mine" size={20} />
+                  <Text style={styles.rowText}>Haptics</Text>
+                </View>
+                <View style={styles.segmented}>
+                  {(['off', 'light', 'full'] as HapticsMode[]).map((m) => (
+                    <Pressable
+                      key={m}
+                      onPress={() => chooseHaptics(m)}
+                      style={[styles.segment, haptics === m && styles.segmentActive]}
+                    >
+                      <Text style={[styles.segmentText, haptics === m && styles.segmentTextActive]}>
+                        {m === 'off' ? 'Off' : m === 'light' ? 'Light' : 'Full'}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
 
               <View style={styles.row}>
@@ -276,6 +305,17 @@ const styles = StyleSheet.create({
   rowLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rowText: { color: colors.text, fontSize: 15, fontWeight: '600' },
   rowHint: { color: colors.textMuted, fontSize: 11, marginBottom: spacing.sm },
+  segmented: {
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  segment: { paddingVertical: 6, paddingHorizontal: spacing.md, borderRadius: 9 },
+  segmentActive: { backgroundColor: colors.accentDim },
+  segmentText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  segmentTextActive: { color: colors.accent },
   chevron: { color: colors.textMuted, fontSize: 22, fontWeight: '700' },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.md },
   resetRow: { paddingVertical: spacing.sm },

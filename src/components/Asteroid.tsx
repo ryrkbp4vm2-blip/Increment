@@ -1,8 +1,8 @@
-import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
 import { isBoss } from '../game/asteroids';
+import { hapticShatter, hapticTap } from '../haptics';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -58,18 +58,19 @@ export function Asteroid() {
     });
   }, []);
 
-  // Shatter burst when the belt advances to a new asteroid.
+  // Shatter burst when the belt advances to a new asteroid; felling a boss
+  // gets a visibly bigger pop, more debris, and a harder haptic.
   useEffect(() => {
     if (asteroidIndex > prevIndex.current) {
-      scale.setValue(1.5);
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 12, bounciness: 14 }).start();
-      for (let i = 0; i < 6; i++) spawnParticle('burst', '');
-      playSound('shatter');
-      try {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {
-        // Haptics unavailable (e.g. web); ignore.
+      let bossDown = false;
+      for (let i = prevIndex.current; i < asteroidIndex; i++) {
+        if (isBoss(i)) bossDown = true;
       }
+      scale.setValue(bossDown ? 1.8 : 1.5);
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 12, bounciness: 14 }).start();
+      for (let i = 0; i < (bossDown ? 12 : 6); i++) spawnParticle('burst', '');
+      playSound('shatter');
+      hapticShatter(bossDown);
     }
     prevIndex.current = asteroidIndex;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,11 +79,7 @@ export function Asteroid() {
   const handlePress = useCallback(() => {
     const earned = tap();
     playSound('tap');
-    try {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {
-      // Haptics unavailable (e.g. web); ignore.
-    }
+    hapticTap();
     scale.setValue(0.92);
     Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 12 }).start();
     spawnParticle('text', `+${formatNumber(earned)}`);

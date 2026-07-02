@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Asteroid } from '../components/Asteroid';
 import { Comet } from '../components/Comet';
 import { CosmicEvent } from '../components/CosmicEvent';
@@ -9,6 +9,7 @@ import { asteroidHp, asteroidName, asteroidRichness, isBoss } from '../game/aste
 import { CometReward } from '../game/events';
 import { decayHeat, heatMultiplier } from '../game/heat';
 import { sectorName, sectorTrait } from '../game/zones';
+import { useShake } from '../hooks/useShake';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -33,6 +34,7 @@ export function MineScreen() {
   }, []);
   const heat = decayHeat(tapHeat, clock - lastTapAt);
   const collectComet = useGameStore((s) => s.collectComet);
+  const { shakeStyle, shake } = useShake();
   const [banner, setBanner] = useState<Banner | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevIndex = useRef(asteroidIndex);
@@ -45,6 +47,11 @@ export function MineScreen() {
 
   useEffect(() => {
     if (asteroidIndex > prevIndex.current) {
+      let bossDown = false;
+      for (let i = prevIndex.current; i < asteroidIndex; i++) {
+        if (isBoss(i)) bossDown = true;
+      }
+      shake(bossDown ? 14 : 7);
       showBanner({
         kind: 'shatter',
         text: `Asteroid shattered! ${asteroidName(asteroidIndex)} is ×${asteroidRichness(
@@ -53,6 +60,7 @@ export function MineScreen() {
       });
     }
     prevIndex.current = asteroidIndex;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asteroidIndex]);
 
   useEffect(() => {
@@ -78,7 +86,7 @@ export function MineScreen() {
   const trait = sectorTrait(sector);
 
   return (
-    <View style={styles.screen}>
+    <Animated.View style={[styles.screen, shakeStyle]}>
       <Comet onCollect={handleComet} />
       <CosmicEvent />
       {banner && (
@@ -137,7 +145,7 @@ export function MineScreen() {
         </View>
         <Text style={styles.taps}>{formatNumber(totalTaps)} taps all time</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

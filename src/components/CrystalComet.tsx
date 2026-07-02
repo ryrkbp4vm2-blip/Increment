@@ -1,9 +1,9 @@
-import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { COMET_FIRST_SPAWN_MS, COMET_SPAWN_MS, COMET_VISIBLE_MS } from '../game/balance';
 import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
 import { playSound } from '../audio/sound';
+import { hapticEvent } from '../haptics';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 
@@ -75,11 +75,7 @@ export function CrystalComet({ onCollect }: Props) {
     timers.current.length = 0;
     schedule(COMET_SPAWN_MS);
     playSound('comet');
-    try {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      // Haptics unavailable (e.g. web); ignore.
-    }
+    hapticEvent();
     onCollect(rollCometReward(useGameStore.getState().cachedCrystalCps));
   };
 

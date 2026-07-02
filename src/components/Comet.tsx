@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import {
@@ -10,6 +9,7 @@ import { cometsDisabled } from '../game/challenges';
 import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
 import { effectivePowers } from '../game/powers';
 import { playSound } from '../audio/sound';
+import { hapticEvent } from '../haptics';
 import { useGameStore } from '../store/gameStore';
 import { colors } from '../theme';
 import { CometArt } from './art/CometArt';
@@ -87,11 +87,7 @@ export function Comet({ onCollect }: Props) {
     timers.current.length = 0;
     schedule(COMET_SPAWN_MS);
     playSound('comet');
-    try {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      // Haptics unavailable (e.g. web); ignore.
-    }
+    hapticEvent();
     const state = useGameStore.getState();
     const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
     onCollect(

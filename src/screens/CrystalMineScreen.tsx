@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
@@ -11,6 +10,8 @@ import { decayHeat, heatMultiplier } from '../game/heat';
 import { CometReward } from '../game/events';
 import { CrystalComet } from '../components/CrystalComet';
 import { playSound } from '../audio/sound';
+import { hapticShatter, hapticTap } from '../haptics';
+import { useShake } from '../hooks/useShake';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber, formatRate } from '../utils/format';
@@ -59,6 +60,7 @@ export function CrystalMineScreen() {
   const heat = decayHeat(tapHeat, clock - lastTapAt);
 
   const scale = useRef(new Animated.Value(1)).current;
+  const { shakeStyle, shake } = useShake();
   const [lastShatter, setLastShatter] = useState(-1);
   const [floats, setFloats] = useState<FloatId[]>([]);
   const floatSeq = useRef(0);
@@ -73,12 +75,9 @@ export function CrystalMineScreen() {
         Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
       ]).start();
       setBurstKey((k) => k + 1);
+      shake(7);
       playSound('shatter');
-      try {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {
-        // Haptics unavailable (e.g. web); ignore.
-      }
+      hapticShatter(false);
     }
     setLastShatter(formationIndex);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,7 +85,7 @@ export function CrystalMineScreen() {
 
   const handleTap = () => {
     const gained = crystalTap();
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticTap();
     Animated.sequence([
       Animated.timing(scale, { toValue: 0.93, duration: 60, useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1, duration: 80, useNativeDriver: true }),
@@ -99,7 +98,7 @@ export function CrystalMineScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <Animated.View style={[styles.screen, shakeStyle]}>
       <CrystalComet onCollect={handleGeode} />
       {banner && (
         <View style={styles.banner}>
@@ -177,7 +176,7 @@ export function CrystalMineScreen() {
           <Text style={[styles.statValue, styles.crystalBalance]}>{formatNumber(crystals)} ✦</Text>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
