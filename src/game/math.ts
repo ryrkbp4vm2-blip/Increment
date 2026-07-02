@@ -171,9 +171,12 @@ export function tapValue(
     if (effect?.kind === 'tapCpsPercent') cpsPercent += effect.pct;
   }
   // The active-challenge tap modifier throttles the whole tap (Famine ×0.2,
-  // Idle Doctrine ×0).
-  const chTap = challengeModifiers(state.activeChallenge).tapMult;
-  return (tapMult * globalMultiplier(state) + currentCps * cpsPercent) * chTap;
+  // Idle Doctrine ×0). globalMultiplier and currentCps already contain the
+  // challenge's productionMult, so divide it back out first — otherwise a
+  // throttled challenge would punish taps twice (Famine taps at 4%, not 20%).
+  const ch = challengeModifiers(state.activeChallenge);
+  const base = tapMult * (globalMultiplier(state) / ch.productionMult);
+  return (base + (currentCps / ch.productionMult) * cpsPercent) * ch.tapMult;
 }
 
 export function isUnlockMet(cond: UnlockCondition, state: GameState): boolean {

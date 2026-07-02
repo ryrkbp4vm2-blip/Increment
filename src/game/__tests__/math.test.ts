@@ -157,4 +157,16 @@ describe('tapValue', () => {
     const state = { ...baseState, generators: { ...baseState.generators, excavator: 10 } };
     expect(tapValue(state)).toBeCloseTo(1 + 30 * 0.05);
   });
+
+  it('applies a challenge tap penalty exactly once, not compounded with production', () => {
+    // Famine throttles production ×0.2 and taps ×0.2. Taps must pay 20% of
+    // normal — not 0.2 × 0.2 = 4% via the productionMult hiding inside
+    // globalMultiplier and cps.
+    const normal = { ...baseState, generators: { ...baseState.generators, excavator: 10 } };
+    const famine = { ...normal, activeChallenge: 'famine' };
+    expect(tapValue(famine, cps(famine))).toBeCloseTo(tapValue(normal, cps(normal)) * 0.2);
+    // Idle Doctrine (tap ×0) still zeroes the tap entirely.
+    const idle = { ...normal, activeChallenge: 'idle_doctrine' };
+    expect(tapValue(idle, cps(idle))).toBe(0);
+  });
 });

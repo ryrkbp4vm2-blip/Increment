@@ -22,10 +22,12 @@ export function CrystalComet({ onCollect }: Props) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const pulse = useRef(new Animated.Value(0)).current;
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const caught = useRef(false);
 
   const schedule = useCallback(
     (range: [number, number]) => {
       const spawnTimer = setTimeout(() => {
+        caught.current = false;
         setPosition({
           x: 20 + Math.random() * (width - 100),
           y: 80 + Math.random() * (height * 0.5),
@@ -50,10 +52,12 @@ export function CrystalComet({ onCollect }: Props) {
       ]),
     );
     loop.start();
-    const pending = timers.current;
     return () => {
       loop.stop();
-      pending.forEach(clearTimeout);
+      // Read timers.current at cleanup time (not captured at mount) so timers
+      // scheduled after any catch/reschedule are cleared too — otherwise a
+      // pending spawn survives unmount and self-reschedules forever.
+      timers.current.forEach(clearTimeout);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,9 +65,14 @@ export function CrystalComet({ onCollect }: Props) {
   if (!position) return null;
 
   const catchGeode = () => {
+    // Two taps can land before the removal re-render commits; pay out once.
+    if (caught.current) return;
+    caught.current = true;
     setPosition(null);
     timers.current.forEach(clearTimeout);
-    timers.current = [];
+    // Mutate rather than reassign: the unmount cleanup must keep seeing the
+    // same array instance.
+    timers.current.length = 0;
     schedule(COMET_SPAWN_MS);
     playSound('comet');
     try {

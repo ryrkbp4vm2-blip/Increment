@@ -384,7 +384,10 @@ describe('gameStore', () => {
   it('autoTick Auto-Driller mines and Auto-Foreman buys', () => {
     reset({ minerals: 100, singularityPerks: { auto_driller: true, auto_foreman: true } });
     const now = Date.now() + 10_000;
+    // The driller taps 5×/sec = 0.5 per 100ms tick, carried fractionally —
+    // two ticks are guaranteed to land at least one tap.
     useGameStore.getState().autoTick(now);
+    useGameStore.getState().autoTick(now + 100);
     const s = useGameStore.getState();
     expect(s.totalTaps).toBeGreaterThanOrEqual(1); // driller tapped
     expect(s.generators.drone).toBe(1); // foreman bought the cheapest

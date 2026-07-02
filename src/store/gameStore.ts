@@ -333,10 +333,14 @@ function earn(state: GameState, amount: number): Partial<GameState> {
     rp = Math.ceil(rp * rpMult);
     delta.researchPoints = state.researchPoints + rp;
     delta.totalResearch = state.totalResearch + rp;
-    // Felling a boss kicks off a victory production frenzy.
+    // Felling a boss kicks off a victory production frenzy. frenzyMult lingers
+    // after frenzyUntil passes, so only an *active* stronger frenzy is kept —
+    // an expired ×7 comet must not turn every later boss kill into ×7.
     if (bossDown) {
-      delta.frenzyUntil = Date.now() + 30_000;
-      delta.frenzyMult = Math.max(state.frenzyMult, 4);
+      const now = Date.now();
+      const activeMult = state.frenzyUntil > now ? state.frenzyMult : 1;
+      delta.frenzyUntil = now + 30_000;
+      delta.frenzyMult = Math.max(activeMult, 4);
     }
     const next = { ...state, ...delta } as GameState;
     delta.cachedCps = cps(next);
@@ -378,6 +382,8 @@ let lastAutoFleetAt = 0;
 let lastAutoForgeAt = 0;
 let lastAutoUpgradeAt = 0;
 let lastAutoCrystalUpgradeAt = 0;
+// Fractional Auto-Driller taps carried between ticks (5/sec = 0.5 per tick).
+let autoTapCarry = 0;
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
@@ -989,18 +995,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
   autoTick(nowMs) {
     const state = get();
     const perks = state.singularityPerks;
-    // Auto-Driller: mine a share of taps each 100ms tick.
+    // Auto-Driller: mine a share of taps each 100ms tick. The rate is
+    // fractional per tick (5/sec = 0.5/tick), so carry the remainder instead
+    // of rounding up — rounding gave 1 tap every tick, double the perk's rate.
     if (perks.auto_driller) {
-      const taps = Math.max(1, Math.round(AUTO_TAPS_PER_SEC / 10));
-      let acc: Partial<GameState> = {};
-      let base: GameState = state;
-      for (let i = 0; i < taps; i++) {
-        const earned = base.cachedTapValue * frenzyFactor(base, nowMs);
-        acc = earn(base, earned);
-        acc.totalTaps = base.totalTaps + 1;
-        base = { ...base, ...acc } as GameState;
+      autoTapCarry += AUTO_TAPS_PER_SEC / 10;
+      const taps = Math.floor(autoTapCarry);
+      autoTapCarry -= taps;
+      if (taps > 0) {
+        // Merge every iteration's delta: a shatter mid-loop writes fields
+        // (research points, caches) the final iteration may not touch.
+        let merged: Partial<GameState> = {};
+        let base: GameState = state;
+        for (let i = 0; i < taps; i++) {
+          const earned = base.cachedTapValue * frenzyFactor(base, nowMs);
+          const delta = earn(base, earned);
+          delta.totalTaps = base.totalTaps + 1;
+          merged = { ...merged, ...delta };
+          base = { ...base, ...delta } as GameState;
+        }
+        set(merged);
       }
-      set(acc);
     }
     // Auto-Foreman: buy the single cheapest affordable generator (~1/sec).
     if (perks.auto_foreman && nowMs - lastAutoBuyAt > 1000) {
