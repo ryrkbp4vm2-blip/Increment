@@ -595,6 +595,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = get();
     const def = CHALLENGES_BY_ID[id];
     if (state.activeChallenge || !def) return;
+    // The ascension gate is enforced here too, not just hidden in the UI.
+    if (state.ascensionCount < def.unlockAscensions) return;
     const goal = scaledChallengeGoal(def, permanentPowerMultiplier(state));
     set(withCaches({ ...state, ...challengeRunReset(state, id, goal) }, state.lastTickAt));
   },
@@ -621,9 +623,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
   applyEventOutcome(outcome, nowMs) {
     const state = get();
     switch (outcome.kind) {
-      case 'frenzy':
-        set({ frenzyUntil: nowMs + outcome.durationMs, frenzyMult: outcome.mult });
+      case 'frenzy': {
+        // Don't let a weaker event frenzy (×3) overwrite an active stronger
+        // one (×7 comet): the stronger frenzy keeps its multiplier AND expiry.
+        const activeMult = state.frenzyUntil > nowMs ? state.frenzyMult : 1;
+        if (outcome.mult >= activeMult) {
+          set({ frenzyUntil: nowMs + outcome.durationMs, frenzyMult: outcome.mult });
+        }
         break;
+      }
       case 'windfall':
         set(earn(state, outcome.amount));
         break;

@@ -531,7 +531,7 @@ export function PrestigeScreen() {
                   {maxed ? (
                     <Text style={styles.dmMaxedText}>MAX</Text>
                   ) : (
-                    <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ✦</Text>
+                    <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{formatNumber(cost)} ✦</Text>
                   )}
                 </Pressable>
               </View>
@@ -748,7 +748,7 @@ function CrystalPrestigeScreen({
                 {maxed ? (
                   <Text style={styles.dmMaxedText}>MAX</Text>
                 ) : (
-                  <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ◈</Text>
+                  <Text style={[styles.dmBuyText, !affordable && styles.dmBuyTextDisabled]}>{formatNumber(cost)} ◈</Text>
                 )}
               </Pressable>
             )}
@@ -853,7 +853,7 @@ function CrystalPrestigeScreen({
                   {maxed ? (
                     <Text style={styles.dmMaxedText}>MAX</Text>
                   ) : (
-                    <Text style={[styles.eonBuyText, !affordable && styles.dmBuyTextDisabled]}>{cost} ∞</Text>
+                    <Text style={[styles.eonBuyText, !affordable && styles.dmBuyTextDisabled]}>{formatNumber(cost)} ∞</Text>
                   )}
                 </Pressable>
               </View>

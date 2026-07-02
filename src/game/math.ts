@@ -123,6 +123,9 @@ export function globalFactors(state: MultState): { label: string; value: number 
     { label: 'Singularity upgrades', value: corePowers(state.coreUpgrades).globalMult },
     { label: 'Artifacts · shop · research', value: powers.globalMult },
     { label: 'Mineral upgrades', value: upgradeMult },
+    // Challenge factors — included so the list multiplies out to the real total.
+    { label: 'Challenge rewards', value: challengeRewardMult(state.challengesCompleted).globalMult },
+    { label: 'Active challenge', value: challengeModifiers(state.activeChallenge).productionMult },
   ];
 }
 

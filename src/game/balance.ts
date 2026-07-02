@@ -1,7 +1,11 @@
 import { GeneratorDef, GeneratorId, UpgradeDef } from './types';
 
 export const TICK_MS = 100;
-/** Single-tick deltas longer than this flow through the offline-earnings path. */
+/**
+ * A single tick credits at most this much elapsed time. In-app stalls between
+ * this and OFFLINE_MIN_MS (5s) are deliberately forfeited; suspensions longer
+ * than OFFLINE_MIN_MS are paid by the offline-earnings path on resume.
+ */
 export const MAX_TICK_DELTA_MS = 2_000;
 export const OFFLINE_CAP_MS = 8 * 60 * 60 * 1000;
 export const OFFLINE_EFFICIENCY = 1.0;

@@ -397,6 +397,7 @@ describe('gameStore', () => {
     reset({
       minerals: 1e6,
       darkMatter: 50,
+      ascensionCount: 1, // famine unlocks at 1 ascension
       research: { ex1: true },
       achievements: { t_100: true },
       generators: { ...initialPersistedState().generators, drone: 30 },
@@ -481,10 +482,18 @@ describe('gameStore', () => {
     expect(useGameStore.getState().expedition).toBeNull();
   });
 
+  it('enterChallenge enforces the ascension unlock gate in the store', () => {
+    reset({ ascensionCount: 0 });
+    useGameStore.getState().enterChallenge('famine'); // needs 1 ascension
+    expect(useGameStore.getState().activeChallenge).toBeNull();
+    useGameStore.getState().enterChallenge('asceticism'); // unlocked from 0
+    expect(useGameStore.getState().activeChallenge).toBe('asceticism');
+  });
+
   it('enterChallenge snapshots a goal scaled by permanent power', () => {
     // A heavily-ascended player carries a large permanent multiplier, so the
     // challenge goal must scale up to stay a real fight (not insta-cleared).
-    reset({ totalSingularityCores: 10 });
+    reset({ totalSingularityCores: 10, ascensionCount: 1 });
     const power = singularityMult(10);
     useGameStore.getState().enterChallenge('famine');
     const s = useGameStore.getState();

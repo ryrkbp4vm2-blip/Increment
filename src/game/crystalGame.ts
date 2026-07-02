@@ -453,7 +453,10 @@ export function applyCrystalFormationDamage(
   let bonus = 0;
   let rem = damage;
 
-  for (let guard = 0; guard < 20 && rem > 0; guard++) {
+  // Formation HP grows geometrically, so this terminates in O(log damage)
+  // steps; the guard only exists as an infinite-loop backstop. A small cap
+  // (formerly 20) silently discarded the tail of large offline hauls.
+  for (let guard = 0; guard < 10_000 && rem > 0; guard++) {
     const hp = crystalFormationHp(idx);
     const toShatter = hp - dmg;
     if (rem >= toShatter) {
