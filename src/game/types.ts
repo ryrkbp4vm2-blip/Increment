@@ -157,6 +157,19 @@ export interface PersistedState {
   buyQty: BuyQty;
   /** Whether local reminder notifications are scheduled when backgrounding. */
   notificationsEnabled: boolean;
+  // ── All-time records (survive every reset; wiped only by a full game reset) ──
+  /** Shortest run-start → Collapse ever, in ms (0 = never collapsed). */
+  fastestCollapseMs: number;
+  /** Deepest asteroid index ever reached. */
+  deepestAsteroid: number;
+  /** Deepest crystal formation index ever reached. */
+  deepestFormation: number;
+  /** Highest sustained minerals/sec ever (cache snapshots; excludes frenzies). */
+  peakCps: number;
+  /** Highest sustained crystals/sec ever. */
+  peakCrystalCps: number;
+  /** Total foreground playtime in ms (offline stretches don't count). */
+  totalPlayMs: number;
 }
 
 export interface GameState extends PersistedState {

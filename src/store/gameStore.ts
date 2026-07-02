@@ -217,6 +217,12 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     eonUpgrades: {},
     buyQty: 1,
     notificationsEnabled: false,
+    fastestCollapseMs: 0,
+    deepestAsteroid: 0,
+    deepestFormation: 0,
+    peakCps: 0,
+    peakCrystalCps: 0,
+    totalPlayMs: 0,
   };
 }
 
@@ -242,23 +248,28 @@ function withCaches(
   // run's constraint (throttle / disabled generators).
   const ccReward = crystalChallengeRewardMult(persisted.crystalChallengesCompleted);
   const ccMods = crystalChallengeModifiers(persisted.activeCrystalChallenge);
+  const cachedCrystalCps = ccMods.disableGenerators
+    ? 0
+    : crystalTotalCps(
+        persisted.crystalGenerators,
+        cPowers.globalMult * rMult * runP.globalMult * eMult
+          * achievementBonus(persisted.achievements)
+          * ccReward.globalMult * ccMods.productionMult,
+        runP.genMult,
+      );
   return {
     ...persisted,
     lastTickAt,
     cachedCps,
     cachedTapValue: tapValue(persisted, cachedCps),
-    cachedCrystalCps: ccMods.disableGenerators
-      ? 0
-      : crystalTotalCps(
-          persisted.crystalGenerators,
-          cPowers.globalMult * rMult * runP.globalMult * eMult
-            * achievementBonus(persisted.achievements)
-            * ccReward.globalMult * ccMods.productionMult,
-          runP.genMult,
-        ),
+    cachedCrystalCps,
     cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult * eMult
       * achievementBonus(persisted.achievements)
       * ccReward.tapMult * ccMods.tapMult,
+    // Production records: caches change exactly when production changes, so
+    // this is the one place peaks need tracking.
+    peakCps: Math.max(persisted.peakCps, cachedCps),
+    peakCrystalCps: Math.max(persisted.peakCrystalCps, cachedCrystalCps),
   };
 }
 
@@ -287,6 +298,12 @@ function carryTranscend(state: GameState): Pick<
   | 'autoUpgrade'
   | 'autoCrystalUpgrade'
   | 'crystalChallengesCompleted'
+  | 'fastestCollapseMs'
+  | 'deepestAsteroid'
+  | 'deepestFormation'
+  | 'peakCps'
+  | 'peakCrystalCps'
+  | 'totalPlayMs'
 > {
   return {
     crystals: state.crystals,
@@ -307,6 +324,12 @@ function carryTranscend(state: GameState): Pick<
     autoUpgrade: state.autoUpgrade,
     autoCrystalUpgrade: state.autoCrystalUpgrade,
     crystalChallengesCompleted: state.crystalChallengesCompleted,
+    fastestCollapseMs: state.fastestCollapseMs,
+    deepestAsteroid: state.deepestAsteroid,
+    deepestFormation: state.deepestFormation,
+    peakCps: state.peakCps,
+    peakCrystalCps: state.peakCrystalCps,
+    totalPlayMs: state.totalPlayMs,
   };
 }
 
@@ -374,6 +397,7 @@ function earn(state: GameState, amount: number): Partial<GameState> {
   };
   if (result.shattered > 0) {
     delta.asteroidsShattered = state.asteroidsShattered + result.shattered;
+    delta.deepestAsteroid = Math.max(state.deepestAsteroid, result.asteroidIndex);
     // Research Points are minted by each asteroid we break, scaled by depth.
     const rpMult = effectivePowers(state.artifacts, state.dmUpgrades, state.research).rpGainMult;
     let rp = 0;
@@ -424,6 +448,7 @@ function earnCrystals(state: GameState, amount: number): Partial<GameState> {
   };
   if (shattered > 0) {
     delta.crystalFormationsShattered = state.crystalFormationsShattered + shattered;
+    delta.deepestFormation = Math.max(state.deepestFormation, result.formationIndex);
   }
   return delta;
 }
@@ -534,6 +559,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   applyTick(nowMs) {
     const state = get();
     const deltaMs = Math.min(Math.max(nowMs - state.lastTickAt, 0), MAX_TICK_DELTA_MS);
+    // Foreground playtime record (offline stretches skip this path entirely).
+    const totalPlayMs = state.totalPlayMs + deltaMs;
     if (state.transcendCount > 0) {
       // Crystal mode: passive generators earn crystals, boosted by the active
       // formation depth, any Resonant Geode frenzy, and achievementBonus.
@@ -543,9 +570,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           formationDepthBonus(state.crystalFormationIndex) *
           (deltaMs / 1000) *
           frenzyFactor(state, nowMs);
-        set({ ...earnCrystals(state, earned), lastTickAt: nowMs });
+        set({ ...earnCrystals(state, earned), lastTickAt: nowMs, totalPlayMs });
       } else {
-        set({ lastTickAt: nowMs });
+        set({ lastTickAt: nowMs, totalPlayMs });
       }
       // Auto-Resonate: fire the cascade automatically when the gate is met.
       // Auto-Cascade pauses during a crystal challenge — a Cascade would
@@ -556,7 +583,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     } else {
       const earned = state.cachedCps * (deltaMs / 1000) * frenzyFactor(state, nowMs);
-      set({ ...earn(state, earned), lastTickAt: nowMs });
+      set({ ...earn(state, earned), lastTickAt: nowMs, totalPlayMs });
     }
   },
 
@@ -750,11 +777,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (pendingDarkMatter(state.lifetimeThisRun) < 1) return;
     const powers = effectivePowers(state.artifacts, state.dmUpgrades);
     const gained = darkMatterGain(state.lifetimeThisRun, powers.dmGainMult);
+    const runMs = Date.now() - state.startedAt;
     set(
       withCaches(
         {
           ...initialPersistedState(Date.now()),
           ...carryTranscend(state),
+          // Speedrun record: shortest run-start → Collapse ever.
+          fastestCollapseMs:
+            state.fastestCollapseMs > 0 ? Math.min(state.fastestCollapseMs, runMs) : runMs,
           // Carry the permanent meta-progression across the collapse.
           lifetimeAllTime: state.lifetimeAllTime,
           totalTaps: state.totalTaps,
@@ -917,6 +948,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalEons: state.totalEons,
           convergenceCount: state.convergenceCount,
           eonUpgrades: state.eonUpgrades,
+          // All-time records ride through into crystal mode.
+          fastestCollapseMs: state.fastestCollapseMs,
+          deepestAsteroid: state.deepestAsteroid,
+          deepestFormation: state.deepestFormation,
+          peakCps: state.peakCps,
+          peakCrystalCps: state.peakCrystalCps,
+          totalPlayMs: state.totalPlayMs,
         },
         state.lastTickAt,
       ),
@@ -984,6 +1022,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // Crystal challenge rewards are permanent; the active attempt (if
           // any) is a run and dies with the Cascade.
           crystalChallengesCompleted: state.crystalChallengesCompleted,
+          fastestCollapseMs: state.fastestCollapseMs,
+          deepestAsteroid: state.deepestAsteroid,
+          deepestFormation: state.deepestFormation,
+          peakCps: state.peakCps,
+          peakCrystalCps: state.peakCrystalCps,
+          totalPlayMs: state.totalPlayMs,
         },
         state.lastTickAt,
       ),
@@ -1030,6 +1074,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
           notificationsEnabled: state.notificationsEnabled,
           // Crystal challenge rewards are permanent records too.
           crystalChallengesCompleted: state.crystalChallengesCompleted,
+          fastestCollapseMs: state.fastestCollapseMs,
+          deepestAsteroid: state.deepestAsteroid,
+          deepestFormation: state.deepestFormation,
+          peakCps: state.peakCps,
+          peakCrystalCps: state.peakCrystalCps,
+          totalPlayMs: state.totalPlayMs,
         },
         state.lastTickAt,
       ),

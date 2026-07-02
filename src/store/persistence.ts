@@ -90,6 +90,12 @@ export function toPersisted(state: GameState): PersistedState {
     eonUpgrades: state.eonUpgrades,
     buyQty: state.buyQty,
     notificationsEnabled: state.notificationsEnabled,
+    fastestCollapseMs: state.fastestCollapseMs,
+    deepestAsteroid: state.deepestAsteroid,
+    deepestFormation: state.deepestFormation,
+    peakCps: state.peakCps,
+    peakCrystalCps: state.peakCrystalCps,
+    totalPlayMs: state.totalPlayMs,
   };
 }
 
@@ -371,6 +377,19 @@ export function migrate(raw: string | null): SaveFile | null {
     buyQty:
       raw_.buyQty === 10 || raw_.buyQty === 'max' ? raw_.buyQty : 1,
     notificationsEnabled: raw_.notificationsEnabled === true,
+    fastestCollapseMs: Math.max(0, finiteNumber(raw_.fastestCollapseMs, 0)),
+    // Old saves predate the depth records; seed them from the live positions.
+    deepestAsteroid: Math.max(
+      Math.max(0, Math.floor(finiteNumber(raw_.asteroidIndex, 0))),
+      Math.floor(finiteNumber(raw_.deepestAsteroid, 0)),
+    ),
+    deepestFormation: Math.max(
+      Math.max(0, Math.floor(finiteNumber(raw_.crystalFormationIndex, 0))),
+      Math.floor(finiteNumber(raw_.deepestFormation, 0)),
+    ),
+    peakCps: Math.max(0, finiteNumber(raw_.peakCps, 0)),
+    peakCrystalCps: Math.max(0, finiteNumber(raw_.peakCrystalCps, 0)),
+    totalPlayMs: Math.max(0, finiteNumber(raw_.totalPlayMs, 0)),
   };
   // Pre-activeChallengeGoal saves (and edited backups) can carry an active
   // challenge with no goal snapshot — re-derive it from the loaded state so

@@ -3,10 +3,13 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { ACHIEVEMENTS } from '../game/achievements';
 import { ARTIFACTS } from '../game/artifacts';
 import { RESEARCH_NODES } from '../game/research';
+import { asteroidName } from '../game/asteroids';
+import { crystalFormationName } from '../game/crystalGame';
+import { crystalGlobalFactors } from '../game/crystalStats';
 import { globalFactors } from '../game/math';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
-import { formatNumber, formatRate } from '../utils/format';
+import { formatDuration, formatNumber, formatRate } from '../utils/format';
 import { Amount } from './art/Amount';
 import { Icon } from './art/Icon';
 
@@ -54,6 +57,10 @@ export function StatsModal({ visible, onClose }: Props) {
                 <Text style={styles.section}>Crystal Empire</Text>
                 <Row label="Crystals / sec" value={formatRate(s.cachedCrystalCps)} />
                 <Row label="Per tap" value={formatNumber(s.cachedCrystalTapValue)} />
+                <Text style={styles.section}>Crystal multiplier breakdown</Text>
+                {crystalGlobalFactors(s).map((f) => (
+                  <Row key={f.label} label={f.label} value={`×${f.value.toFixed(2)}`} muted />
+                ))}
                 <Row label="Resonance level" value={formatNumber(s.resonance)} />
                 <Row label="Attunement" value={`${formatNumber(s.attunement)} ◈`} />
                 <Row label="Attunement all-time" value={`${formatNumber(s.totalAttunement)} ◈`} />
@@ -69,6 +76,28 @@ export function StatsModal({ visible, onClose }: Props) {
                 )}
               </>
             )}
+
+            <Text style={styles.section}>Records</Text>
+            {s.fastestCollapseMs > 0 && (
+              <Row label="Fastest Collapse" value={formatDuration(s.fastestCollapseMs)} />
+            )}
+            {s.deepestAsteroid > 0 && (
+              <Row
+                label="Deepest asteroid"
+                value={`#${s.deepestAsteroid + 1} · ${asteroidName(s.deepestAsteroid)}`}
+              />
+            )}
+            {s.deepestFormation > 0 && (
+              <Row
+                label="Deepest formation"
+                value={`#${s.deepestFormation + 1} · ${crystalFormationName(s.deepestFormation)}`}
+              />
+            )}
+            <Row label="Peak minerals / sec" value={formatRate(s.peakCps)} />
+            {s.peakCrystalCps > 0 && (
+              <Row label="Peak crystals / sec" value={formatRate(s.peakCrystalCps)} />
+            )}
+            <Row label="Total playtime" value={formatDuration(s.totalPlayMs)} />
 
             <Text style={styles.section}>Collections</Text>
             <Row label="Artifacts" value={`${Object.keys(s.artifacts).length} / ${ARTIFACTS.length}`} />

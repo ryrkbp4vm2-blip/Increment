@@ -696,6 +696,53 @@ describe('gameStore', () => {
     expect(useGameStore.getState().crystalChallengesCompleted).toEqual({});
   });
 
+  it('tracks all-time records: peaks, depths, playtime and fastest collapse', () => {
+    reset({ minerals: 1e6, startedAt: 1000 });
+    // Peak CPS snapshots when caches rebuild (i.e. on purchases).
+    useGameStore.getState().buyGenerator('drone', 10);
+    const peak = useGameStore.getState().peakCps;
+    expect(peak).toBeGreaterThan(0);
+    // Playtime accumulates with ticks (clamped like production).
+    useGameStore.getState().applyTick(2000);
+    expect(useGameStore.getState().totalPlayMs).toBe(1000);
+    // Depth records update on shatter.
+    reset({ minerals: 0, lifetimeThisRun: 0, generators: initialPersistedState().generators });
+    useGameStore.setState({ cachedTapValue: 1e9 });
+    useGameStore.getState().tap();
+    expect(useGameStore.getState().deepestAsteroid).toBeGreaterThan(0);
+    // Fastest collapse records the shortest run ever and survives the reset.
+    reset({ lifetimeThisRun: 1e12, startedAt: Date.now() - 60_000, fastestCollapseMs: 120_000 });
+    useGameStore.getState().doPrestige();
+    const fastest = useGameStore.getState().fastestCollapseMs;
+    expect(fastest).toBeGreaterThan(0);
+    expect(fastest).toBeLessThanOrEqual(61_000); // ~60s run beat the 120s record
+  });
+
+  it('records survive prestige and Cascade resets', () => {
+    reset({
+      lifetimeThisRun: 1e12,
+      deepestAsteroid: 42,
+      peakCps: 9999,
+      totalPlayMs: 555,
+    });
+    useGameStore.getState().doPrestige();
+    let s = useGameStore.getState();
+    expect(s.deepestAsteroid).toBe(42);
+    expect(s.peakCps).toBeGreaterThanOrEqual(9999);
+    expect(s.totalPlayMs).toBe(555);
+    reset({
+      transcendCount: 1,
+      resonance: 1,
+      lifetimeCrystals: 1e12,
+      deepestFormation: 17,
+      totalPlayMs: 777,
+    });
+    useGameStore.getState().doResonate();
+    s = useGameStore.getState();
+    expect(s.deepestFormation).toBe(17);
+    expect(s.totalPlayMs).toBe(777);
+  });
+
   it('crystal challenge rewards survive a Cascade and a Convergence', () => {
     reset({
       transcendCount: 1,
