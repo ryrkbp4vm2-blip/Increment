@@ -55,7 +55,26 @@ export function useAppLifecycle() {
       }
       setActive(nowActive);
     });
-    return () => subscription.remove();
+    // Prestige-layer transitions and challenge completions are the moments a
+    // player must never lose to a crash — save them immediately instead of
+    // waiting out the loop's 10s throttle.
+    const unsubscribe = useGameStore.subscribe((state, prev) => {
+      if (
+        state.prestigeCount !== prev.prestigeCount ||
+        state.ascensionCount !== prev.ascensionCount ||
+        state.sector !== prev.sector ||
+        state.transcendCount !== prev.transcendCount ||
+        state.resonance !== prev.resonance ||
+        state.convergenceCount !== prev.convergenceCount ||
+        state.challengesCompleted !== prev.challengesCompleted
+      ) {
+        void writeSave(state);
+      }
+    });
+    return () => {
+      subscription.remove();
+      unsubscribe();
+    };
   }, []);
 
   return {

@@ -124,6 +124,19 @@ describe('migrate hardening', () => {
     expect(save.state.dmUpgrades).toEqual({ stellar_density: 20 }); // clamped to maxLevel; negative & unknown dropped
   });
 
+  it('re-snapshots a missing challenge goal, scaled by permanent power', () => {
+    // Pre-activeChallengeGoal saves carry an active challenge with no goal;
+    // a zero snapshot meant a NaN progress bar and a trivial unscaled gate.
+    const legacy = migrate(
+      '{"version":1,"savedAt":50,"state":{"activeChallenge":"famine","totalSingularityCores":10}}',
+    )!;
+    // famine base goal is 1e8; ten cores give a big permanent multiplier.
+    expect(legacy.state.activeChallengeGoal).toBeGreaterThan(1e8);
+    // With no active challenge the goal stays untouched at 0.
+    const idle = migrate('{"version":1,"savedAt":50,"state":{"minerals":5}}')!;
+    expect(idle.state.activeChallengeGoal).toBe(0);
+  });
+
   it('seeds totalDarkMatter from the balance for old saves', () => {
     const save = migrate('{"version":1,"savedAt":50,"state":{"darkMatter":8}}')!;
     expect(save.state.totalDarkMatter).toBe(8);

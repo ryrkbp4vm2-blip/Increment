@@ -9,7 +9,8 @@ import { CORE_UPGRADES_BY_ID, SINGULARITY_PERKS_BY_ID } from '../game/ascension'
 import { CRYSTAL_UPGRADES_BY_ID } from '../game/transcend';
 import { EON_UPGRADES_BY_ID } from '../game/convergence';
 import { CRYSTAL_GENS_BY_ID, CRYSTAL_GEN_UPGRADES_BY_ID } from '../game/crystalGame';
-import { CHALLENGES_BY_ID } from '../game/challenges';
+import { CHALLENGES_BY_ID, scaledChallengeGoal } from '../game/challenges';
+import { permanentPowerMultiplier } from '../game/math';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
 
@@ -347,6 +348,15 @@ export function migrate(raw: string | null): SaveFile | null {
     buyQty:
       raw_.buyQty === 10 || raw_.buyQty === 'max' ? raw_.buyQty : 1,
   };
+  // Pre-activeChallengeGoal saves (and edited backups) can carry an active
+  // challenge with no goal snapshot — re-derive it from the loaded state so
+  // the progress bar isn't NaN and the goal isn't the trivial unscaled base.
+  if (state.activeChallenge && state.activeChallengeGoal <= 0) {
+    state.activeChallengeGoal = scaledChallengeGoal(
+      CHALLENGES_BY_ID[state.activeChallenge],
+      permanentPowerMultiplier(state),
+    );
+  }
   return {
     version: SAVE_VERSION,
     savedAt: finiteNumber(save.savedAt, Date.now()),
@@ -373,9 +383,17 @@ export async function clearSave(): Promise<void> {
 
 let saveInFlight = false;
 let lastSaveAt = 0;
+/** The newest state requested while a write was in flight; flushed after it. */
+let pendingSave: { state: GameState; nowMs: number } | null = null;
 
 export async function writeSave(state: GameState, nowMs: number = Date.now()): Promise<void> {
-  if (saveInFlight) return;
+  if (saveInFlight) {
+    // Never drop a save — the callers that collide with the throttled loop
+    // write (save-on-background, post-restore) are exactly the ones that must
+    // not be lost. Queue the newest state and flush it when the write ends.
+    pendingSave = { state, nowMs };
+    return;
+  }
   saveInFlight = true;
   try {
     await AsyncStorage.setItem(SAVE_KEY, serialize(state, nowMs));
@@ -384,11 +402,20 @@ export async function writeSave(state: GameState, nowMs: number = Date.now()): P
     console.warn('Failed to write save', error);
   } finally {
     saveInFlight = false;
+    if (pendingSave) {
+      const next = pendingSave;
+      pendingSave = null;
+      void writeSave(next.state, next.nowMs);
+    }
   }
 }
 
 /** Called from the game loop; only writes every SAVE_INTERVAL_MS. */
 export function saveThrottled(state: GameState, nowMs: number = Date.now()): void {
+  // If the clock moved backward (correction, timezone change), lastSaveAt sits
+  // in the future and the interval check would suppress saving until wall time
+  // catches up — clamp it so autosave keeps its normal cadence.
+  if (nowMs < lastSaveAt) lastSaveAt = nowMs;
   if (nowMs - lastSaveAt < SAVE_INTERVAL_MS) return;
   void writeSave(state, nowMs);
 }
