@@ -66,6 +66,10 @@ export function ChallengesSection() {
             {formatNumber(activeChallengeGoal)}
           </Text>
           <Text style={styles.rewardLine}>Reward: {active.rewardLabel}</Text>
+          <Text style={styles.lockNote}>
+            Permanent shops (Dark Matter, Research, Singularity) are locked until you finish or
+            abandon the challenge.
+          </Text>
           {canClaim ? (
             <BigButton
               label="Claim Victory!"
@@ -185,6 +189,7 @@ const styles = StyleSheet.create({
   fill: { height: '100%', backgroundColor: colors.danger },
   progress: { color: colors.textMuted, fontSize: 12, marginTop: 4, fontVariant: ['tabular-nums'] },
   rewardLine: { color: colors.gold, fontSize: 13, fontWeight: '700', marginVertical: spacing.sm },
+  lockNote: { color: colors.textMuted, fontSize: 11, marginBottom: spacing.sm },
   abandon: { alignItems: 'center', paddingVertical: spacing.sm },
   abandonText: { color: colors.danger, fontSize: 14, fontWeight: '700' },
   row: {

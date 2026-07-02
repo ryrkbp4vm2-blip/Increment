@@ -560,6 +560,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyDarkMatterUpgrade(id) {
     const state = get();
+    // Permanent-power purchases are locked during a challenge: the goal was
+    // snapshotted against entry power, so buying power mid-run would dodge it.
+    if (state.activeChallenge) return;
     const def = DM_UPGRADES_BY_ID[id];
     if (!def) return;
     const level = state.dmUpgrades[id] ?? 0;
@@ -572,6 +575,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyResearch(id) {
     const state = get();
+    // Locked during a challenge — see buyDarkMatterUpgrade.
+    if (state.activeChallenge) return;
     const node = RESEARCH_BY_ID[id];
     if (!node || state.research[id]) return;
     if (state.researchPoints < node.cost || !isResearchUnlocked(node, state.research)) return;
@@ -661,7 +666,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           dmUpgrades: state.dmUpgrades,
           prestigeCount: state.prestigeCount + 1,
           artifacts: state.artifacts,
-          expedition: state.expedition,
+          // The in-flight expedition dies with the run (matching ascend/warp):
+          // its loot was snapshotted from pre-collapse CPS, so claiming it into
+          // a fresh run would largely re-fund the next prestige.
+          expedition: null,
           achievements: state.achievements,
           asteroidsShattered: state.asteroidsShattered,
           cometsCaught: state.cometsCaught,
@@ -942,6 +950,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buySingularityPerk(id) {
     const state = get();
+    // Locked during a challenge — see buyDarkMatterUpgrade.
+    if (state.activeChallenge) return;
     const def = SINGULARITY_PERKS_BY_ID[id];
     if (!def || state.singularityPerks[id]) return;
     if (state.singularityCores < def.cost) return;
@@ -956,6 +966,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyCoreUpgrade(id) {
     const state = get();
+    // Locked during a challenge — see buyDarkMatterUpgrade.
+    if (state.activeChallenge) return;
     const def = CORE_UPGRADES_BY_ID[id];
     if (!def) return;
     const level = state.coreUpgrades[id] ?? 0;

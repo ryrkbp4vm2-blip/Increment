@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { offlineEfficiency } from '../game/ascension';
 import { effectivePowers } from '../game/powers';
 import { OFFLINE_MIN_MS } from '../game/balance';
-import { computeOfflineEarnings } from '../game/offline';
+import { computeCrystalOfflineEarnings, computeOfflineEarnings } from '../game/offline';
 import { useGameStore } from '../store/gameStore';
 import { writeSave } from '../store/persistence';
 
@@ -30,9 +30,10 @@ export function useAppLifecycle() {
         const elapsedMs = Date.now() - state.lastTickAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
           if (state.transcendCount > 0) {
-            const earned = Math.min(
-              state.cachedCrystalCps * (elapsedMs / 1000),
-              state.cachedCrystalCps * 8 * 3600,
+            const earned = computeCrystalOfflineEarnings(
+              elapsedMs,
+              state.cachedCrystalCps,
+              state.crystalFormationIndex,
             );
             state.applyOffline(earned, Date.now());
             if (earned > 0) setOfflineReport({ earned, elapsedMs, crystal: true });

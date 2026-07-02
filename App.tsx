@@ -6,7 +6,7 @@ import { OFFLINE_MIN_MS } from './src/game/balance';
 import { offlineEfficiency } from './src/game/ascension';
 import { effectivePowers } from './src/game/powers';
 import { cps } from './src/game/math';
-import { computeOfflineEarnings } from './src/game/offline';
+import { computeCrystalOfflineEarnings, computeOfflineEarnings } from './src/game/offline';
 import { OfflineReport } from './src/hooks/useAppLifecycle';
 import { GameRoot } from './src/screens/GameRoot';
 import { useGameStore } from './src/store/gameStore';
@@ -29,11 +29,11 @@ export default function App() {
         const elapsedMs = now - save.savedAt;
         if (elapsedMs > OFFLINE_MIN_MS) {
           if (save.state.transcendCount > 0) {
-            // Crystal mode: offline earnings are crystal CPS × elapsed (8h cap).
             const store = useGameStore.getState();
-            const crystalEarned = Math.min(
-              store.cachedCrystalCps * (elapsedMs / 1000),
-              store.cachedCrystalCps * 8 * 3600,
+            const crystalEarned = computeCrystalOfflineEarnings(
+              elapsedMs,
+              store.cachedCrystalCps,
+              store.crystalFormationIndex,
             );
             store.applyOffline(crystalEarned, now);
             if (crystalEarned > 0) setOfflineReport({ earned: crystalEarned, elapsedMs, crystal: true });

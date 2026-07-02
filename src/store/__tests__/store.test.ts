@@ -448,6 +448,39 @@ describe('gameStore', () => {
     expect(useGameStore.getState().challengesCompleted.famine).toBeUndefined();
   });
 
+  it('locks permanent-power purchases while a challenge is active', () => {
+    // Spending banked meta-currency mid-challenge would multiply production
+    // past the goal snapshotted at entry, trivializing the run.
+    reset({
+      activeChallenge: 'famine',
+      darkMatter: 1e6,
+      researchPoints: 1e6,
+      singularityCores: 100,
+    });
+    useGameStore.getState().buyDarkMatterUpgrade('stellar_density');
+    useGameStore.getState().buyResearch('ex1');
+    useGameStore.getState().buyCoreUpgrade('core_overcharge');
+    useGameStore.getState().buySingularityPerk('auto_driller');
+    const s = useGameStore.getState();
+    expect(s.dmUpgrades).toEqual({});
+    expect(s.research).toEqual({});
+    expect(s.coreUpgrades).toEqual({});
+    expect(s.singularityPerks).toEqual({});
+    // ...and all of them work again once the challenge is abandoned.
+    useGameStore.getState().abandonChallenge();
+    useGameStore.getState().buyDarkMatterUpgrade('stellar_density');
+    expect(useGameStore.getState().dmUpgrades.stellar_density).toBe(1);
+  });
+
+  it('doPrestige cancels an in-flight expedition (loot was priced at old CPS)', () => {
+    reset({
+      lifetimeThisRun: 1e12,
+      expedition: { defId: 'scout', startedAt: 0, endsAt: 10, loot: 1e9 },
+    });
+    useGameStore.getState().doPrestige();
+    expect(useGameStore.getState().expedition).toBeNull();
+  });
+
   it('enterChallenge snapshots a goal scaled by permanent power', () => {
     // A heavily-ascended player carries a large permanent multiplier, so the
     // challenge goal must scale up to stay a real fight (not insta-cleared).

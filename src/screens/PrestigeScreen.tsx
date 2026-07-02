@@ -74,6 +74,7 @@ export function PrestigeScreen() {
   const totalDarkMatter = useGameStore((s) => s.totalDarkMatter);
   const prestigeCount = useGameStore((s) => s.prestigeCount);
   const activeChallenge = useGameStore((s) => s.activeChallenge);
+  const expeditionInFlight = useGameStore((s) => s.expedition !== null);
   const dmUpgrades = useGameStore((s) => s.dmUpgrades);
   const artifacts = useGameStore((s) => s.artifacts);
   const doPrestige = useGameStore((s) => s.doPrestige);
@@ -194,6 +195,7 @@ export function PrestigeScreen() {
           <Text style={styles.confirmText}>
             Collapse for +{formatNumber(gain)} Dark Matter? This resets your minerals,
             generators and upgrades.
+            {expeditionInFlight ? ' Your fleet expedition in flight will be lost.' : ''}
           </Text>
           <View style={styles.confirmButtons}>
             <BigButton
