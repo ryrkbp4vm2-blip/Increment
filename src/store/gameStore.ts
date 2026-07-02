@@ -252,6 +252,7 @@ function carryTranscend(state: GameState): Pick<
   | 'resonance'
   | 'attunement'
   | 'totalAttunement'
+  | 'attunementSinceConverge'
   | 'eons'
   | 'totalEons'
   | 'convergenceCount'
@@ -268,6 +269,7 @@ function carryTranscend(state: GameState): Pick<
     crystalUpgrades: state.crystalUpgrades,
     attunement: state.attunement,
     totalAttunement: state.totalAttunement,
+    attunementSinceConverge: state.attunementSinceConverge,
     eons: state.eons,
     totalEons: state.totalEons,
     convergenceCount: state.convergenceCount,
@@ -770,6 +772,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   doTranscend() {
     const state = get();
+    // Transcendence is one-way by design: crystal mode replaces the mineral
+    // game permanently, so a second Transcend is impossible (minerals and
+    // ascensions can no longer be earned) — and would wipe Resonance and
+    // Attunement if it ever fired. Guard it explicitly.
+    if (state.transcendCount > 0) return;
     if (!canTranscend(state.ascensionsSinceTranscend)) return;
     const gained = crystalGain(state.ascensionsSinceTranscend, state.crystalUpgrades);
     if (gained < 1) return;

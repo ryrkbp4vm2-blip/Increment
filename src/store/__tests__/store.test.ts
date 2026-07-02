@@ -627,6 +627,24 @@ describe('gameStore', () => {
     expect(s.ascensionCount).toBe(8); // lifetime count keeps the layer unlocked
   });
 
+  it('doTranscend is one-way: it refuses to fire a second time', () => {
+    // Crystal mode replaces the mineral game permanently; a second Transcend
+    // would wipe Resonance and Attunement, so it must be impossible.
+    reset({
+      transcendCount: 1,
+      ascensionsSinceTranscend: TRANSCEND_ASCENSIONS + 3,
+      resonance: 5,
+      attunement: 100,
+      crystals: 10,
+    });
+    useGameStore.getState().doTranscend();
+    const s = useGameStore.getState();
+    expect(s.transcendCount).toBe(1);
+    expect(s.resonance).toBe(5);
+    expect(s.attunement).toBe(100);
+    expect(s.crystals).toBe(10);
+  });
+
   it('doTranscend does nothing before the ascension gate is met', () => {
     reset({ ascensionsSinceTranscend: TRANSCEND_ASCENSIONS - 1, crystals: 0 });
     useGameStore.getState().doTranscend();
