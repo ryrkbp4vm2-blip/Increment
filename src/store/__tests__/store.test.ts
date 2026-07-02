@@ -636,6 +636,80 @@ describe('gameStore', () => {
     expect(s.ascensionCount).toBe(8); // lifetime count keeps the layer unlocked
   });
 
+  it('crystal challenge: enter resets the run, constrains it, and pays a permanent reward', () => {
+    reset({
+      transcendCount: 1,
+      resonance: 2,
+      crystals: 5000,
+      lifetimeCrystals: 9000,
+      crystalGenerators: { shard: 20 },
+      crystalRunUpgrades: { c_tap1: true },
+    });
+    // Bare Hands (resonance 2): generators disabled, tap-only.
+    useGameStore.getState().enterCrystalChallenge('cc_bare_hands');
+    let s = useGameStore.getState();
+    expect(s.activeCrystalChallenge).toBe('cc_bare_hands');
+    expect(s.activeCrystalChallengeGoal).toBeGreaterThan(0);
+    expect(s.crystals).toBe(0); // run reset
+    expect(s.crystalGenerators).toEqual({});
+    expect(s.cachedCrystalCps).toBe(0); // generators disabled
+    expect(s.resonance).toBe(2); // permanent layers untouched
+    // Generator purchases are refused during the run.
+    useGameStore.setState({ crystals: 1e9 });
+    useGameStore.getState().buyCrystalGenerator('shard', 1);
+    expect(useGameStore.getState().crystalGenerators).toEqual({});
+    // Cascading mid-challenge is blocked (it would destroy the attempt).
+    useGameStore.setState({ lifetimeCrystals: 1e12 });
+    useGameStore.getState().doResonate();
+    expect(useGameStore.getState().activeCrystalChallenge).toBe('cc_bare_hands');
+    // Reaching the snapshot goal completes it: permanent tap ×4, run resets.
+    useGameStore.getState().completeCrystalChallenge();
+    s = useGameStore.getState();
+    expect(s.activeCrystalChallenge).toBeNull();
+    expect(s.crystalChallengesCompleted.cc_bare_hands).toBe(true);
+    expect(s.lifetimeCrystals).toBe(0);
+    const rewardedTap = s.cachedCrystalTapValue;
+    useGameStore.setState({ crystalChallengesCompleted: {} });
+    useGameStore.getState().buyCrystalRunUpgrade('nope'); // no-op, refreshes nothing
+    // Compare tap value with and without the reward via a cache rebuild.
+    reset({ transcendCount: 1, resonance: 2 });
+    expect(rewardedTap).toBeCloseTo(useGameStore.getState().cachedCrystalTapValue * 4);
+  });
+
+  it('crystal challenge: gates on resonance and blocks permanent purchases mid-run', () => {
+    reset({ transcendCount: 1, resonance: 1, attunement: 1e9, eons: 1e9 });
+    useGameStore.getState().enterCrystalChallenge('cc_bare_hands'); // needs resonance 2
+    expect(useGameStore.getState().activeCrystalChallenge).toBeNull();
+    useGameStore.getState().enterCrystalChallenge('cc_silent_forge'); // unlocked at 1
+    expect(useGameStore.getState().activeCrystalChallenge).toBe('cc_silent_forge');
+    // Forge upgrades sealed by this challenge; Matrix + Eon trees locked mid-run.
+    useGameStore.setState({ crystals: 1e9, crystalGenerators: { shard: 10 } });
+    useGameStore.getState().buyCrystalRunUpgrade('c_tap1');
+    expect(useGameStore.getState().crystalRunUpgrades).toEqual({});
+    useGameStore.getState().buyCrystalUpgrade('crystal_resonance');
+    expect(useGameStore.getState().crystalUpgrades).toEqual({});
+    useGameStore.getState().buyEonUpgrade('eon_flux');
+    expect(useGameStore.getState().eonUpgrades).toEqual({});
+    // Abandoning restores normal play with no reward.
+    useGameStore.getState().abandonCrystalChallenge();
+    expect(useGameStore.getState().activeCrystalChallenge).toBeNull();
+    expect(useGameStore.getState().crystalChallengesCompleted).toEqual({});
+  });
+
+  it('crystal challenge rewards survive a Cascade and a Convergence', () => {
+    reset({
+      transcendCount: 1,
+      resonance: 3,
+      lifetimeCrystals: 1e12,
+      crystalChallengesCompleted: { cc_silent_forge: true },
+      attunementSinceConverge: CONVERGENCE_ATTUNEMENT,
+    });
+    useGameStore.getState().doResonate();
+    expect(useGameStore.getState().crystalChallengesCompleted.cc_silent_forge).toBe(true);
+    useGameStore.getState().doConverge();
+    expect(useGameStore.getState().crystalChallengesCompleted.cc_silent_forge).toBe(true);
+  });
+
   it('doTranscend is one-way: it refuses to fire a second time', () => {
     // Crystal mode replaces the mineral game permanently; a second Transcend
     // would wipe Resonance and Attunement, so it must be impossible.

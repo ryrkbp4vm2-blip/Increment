@@ -96,6 +96,12 @@ export interface PersistedState {
   activeChallenge: string | null;
   /** Run goal snapshot for the active challenge (scaled by permanent power at entry). */
   activeChallengeGoal: number;
+  /** Crystal challenge currently being attempted, if any (crystal mode). */
+  activeCrystalChallenge: string | null;
+  /** Run goal snapshot for the active crystal challenge. */
+  activeCrystalChallengeGoal: number;
+  /** Completed crystal challenge ids (permanent rewards, survive everything). */
+  crystalChallengesCompleted: Record<string, true>;
   /** Completed challenge ids (permanent rewards, survive everything). */
   challengesCompleted: Record<string, true>;
   /** Daily bonus: last claim time (ms epoch) and consecutive-day streak. */

@@ -16,6 +16,14 @@ import {
   challengeModifiers,
   scaledChallengeGoal,
 } from '../game/challenges';
+import {
+  CRYSTAL_CHALLENGES_BY_ID,
+  crystalChallengeComplete,
+  crystalChallengeModifiers,
+  crystalChallengeRewardMult,
+  permanentCrystalPowerMultiplier,
+  scaledCrystalChallengeGoal,
+} from '../game/crystalChallenges';
 import { dailyAvailable, dailyReward, dailyStreakAfter } from '../game/daily';
 import { HEAT_PER_TAP, decayHeat, heatMultiplier } from '../game/heat';
 import { canWarp } from '../game/zones';
@@ -124,6 +132,9 @@ export interface GameActions {
   enterChallenge(id: string): void;
   abandonChallenge(): void;
   completeChallenge(): void;
+  enterCrystalChallenge(id: string): void;
+  abandonCrystalChallenge(): void;
+  completeCrystalChallenge(): void;
   autoTick(nowMs: number): void;
   claimDaily(nowMs: number): { reward: number; streak: number } | null;
   tickAchievements(): void;
@@ -174,6 +185,9 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     activeChallenge: null,
     activeChallengeGoal: 0,
     challengesCompleted: {},
+    activeCrystalChallenge: null,
+    activeCrystalChallengeGoal: 0,
+    crystalChallengesCompleted: {},
     lastDailyAt: 0,
     dailyStreak: 0,
     sector: 0,
@@ -224,18 +238,27 @@ function withCaches(
   // Convergence layer: a permanent crystal-production boost that survives every
   // Convergence (eonMult per Eon ever earned, plus the Stellar Flux tree).
   const eMult = eonMult(persisted.totalEons) * eonCrystalMult(persisted.eonUpgrades);
+  // Crystal challenges: permanent rewards from completed runs, plus the active
+  // run's constraint (throttle / disabled generators).
+  const ccReward = crystalChallengeRewardMult(persisted.crystalChallengesCompleted);
+  const ccMods = crystalChallengeModifiers(persisted.activeCrystalChallenge);
   return {
     ...persisted,
     lastTickAt,
     cachedCps,
     cachedTapValue: tapValue(persisted, cachedCps),
-    cachedCrystalCps: crystalTotalCps(
-      persisted.crystalGenerators,
-      cPowers.globalMult * rMult * runP.globalMult * eMult * achievementBonus(persisted.achievements),
-      runP.genMult,
-    ),
+    cachedCrystalCps: ccMods.disableGenerators
+      ? 0
+      : crystalTotalCps(
+          persisted.crystalGenerators,
+          cPowers.globalMult * rMult * runP.globalMult * eMult
+            * achievementBonus(persisted.achievements)
+            * ccReward.globalMult * ccMods.productionMult,
+          runP.genMult,
+        ),
     cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult * eMult
-      * achievementBonus(persisted.achievements),
+      * achievementBonus(persisted.achievements)
+      * ccReward.tapMult * ccMods.tapMult,
   };
 }
 
@@ -263,6 +286,7 @@ function carryTranscend(state: GameState): Pick<
   | 'notificationsEnabled'
   | 'autoUpgrade'
   | 'autoCrystalUpgrade'
+  | 'crystalChallengesCompleted'
 > {
   return {
     crystals: state.crystals,
@@ -282,6 +306,7 @@ function carryTranscend(state: GameState): Pick<
     notificationsEnabled: state.notificationsEnabled,
     autoUpgrade: state.autoUpgrade,
     autoCrystalUpgrade: state.autoCrystalUpgrade,
+    crystalChallengesCompleted: state.crystalChallengesCompleted,
   };
 }
 
@@ -308,6 +333,27 @@ function challengeRunReset(
     expedition: null,
     activeChallenge,
     activeChallengeGoal,
+  };
+}
+
+/**
+ * Run-scoped crystal fields for starting (or leaving) a crystal challenge —
+ * the same wipe a Cascade performs, with no Resonance payout. Everything
+ * permanent (Matrix, Resonance, Eons, records) is untouched by omission.
+ */
+function crystalChallengeRunReset(
+  activeCrystalChallenge: string | null,
+  activeCrystalChallengeGoal: number,
+): Partial<PersistedState> {
+  return {
+    crystals: 0,
+    lifetimeCrystals: 0,
+    crystalGenerators: {},
+    crystalRunUpgrades: {},
+    crystalFormationIndex: 0,
+    crystalFormationDamage: 0,
+    activeCrystalChallenge,
+    activeCrystalChallengeGoal,
   };
 }
 
@@ -461,6 +507,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyCrystalGenerator(id, qty) {
     const state = get();
+    // Some crystal challenges forbid generators (also gates Auto-Forge).
+    if (crystalChallengeModifiers(state.activeCrystalChallenge).disableGenerators) return;
     const def = CRYSTAL_GENS_BY_ID[id];
     if (!def) return;
     const owned = state.crystalGenerators[id] ?? 0;
@@ -474,6 +522,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyCrystalRunUpgrade(id) {
     const state = get();
+    // Some crystal challenges seal the Forge (also gates Auto-Buy Upgrades).
+    if (crystalChallengeModifiers(state.activeCrystalChallenge).disableForgeUpgrades) return;
     const def = CRYSTAL_GEN_UPGRADES_BY_ID[id];
     if (!def || state.crystalRunUpgrades[id]) return;
     if (state.crystals < def.cost || !crystalUpgradeUnlockMet(def, state)) return;
@@ -498,7 +548,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         set({ lastTickAt: nowMs });
       }
       // Auto-Resonate: fire the cascade automatically when the gate is met.
-      if (state.autoResonate) {
+      // Auto-Cascade pauses during a crystal challenge — a Cascade would
+      // silently cancel the attempt mid-run.
+      if (state.autoResonate && !state.activeCrystalChallenge) {
         const s = get();
         if (canResonate(s.lifetimeCrystals, s.resonance)) get().doResonate();
       }
@@ -619,6 +671,48 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set(
       withCaches(
         { ...state, challengesCompleted, ...challengeRunReset(state, null) },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  enterCrystalChallenge(id) {
+    const state = get();
+    const def = CRYSTAL_CHALLENGES_BY_ID[id];
+    if (state.activeCrystalChallenge || !def || state.transcendCount === 0) return;
+    if (state.crystalChallengesCompleted[id]) return;
+    if (state.resonance < def.unlockResonance) return;
+    const goal = scaledCrystalChallengeGoal(def, permanentCrystalPowerMultiplier(state));
+    set(
+      withCaches(
+        { ...state, ...crystalChallengeRunReset(id, goal) },
+        state.lastTickAt,
+      ),
+    );
+  },
+
+  abandonCrystalChallenge() {
+    const state = get();
+    if (!state.activeCrystalChallenge) return;
+    set(withCaches({ ...state, ...crystalChallengeRunReset(null, 0) }, state.lastTickAt));
+  },
+
+  completeCrystalChallenge() {
+    const state = get();
+    const active = state.activeCrystalChallenge;
+    if (
+      !active ||
+      !crystalChallengeComplete(active, state.lifetimeCrystals, state.activeCrystalChallengeGoal)
+    ) {
+      return;
+    }
+    const crystalChallengesCompleted = {
+      ...state.crystalChallengesCompleted,
+      [active]: true as const,
+    };
+    set(
+      withCaches(
+        { ...state, crystalChallengesCompleted, ...crystalChallengeRunReset(null, 0) },
         state.lastTickAt,
       ),
     );
@@ -831,6 +925,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   doResonate() {
     const state = get();
+    // No Cascading mid-challenge: it would silently destroy the attempt.
+    // Finish or abandon the challenge first.
+    if (state.activeCrystalChallenge) return;
     if (!canResonate(state.lifetimeCrystals, state.resonance)) return;
     // The Convergence tree boosts both Cascade payouts (Resonant Echo, Deep Attunement).
     const gained = Math.floor(
@@ -884,6 +981,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           totalEons: state.totalEons,
           convergenceCount: state.convergenceCount,
           eonUpgrades: state.eonUpgrades,
+          // Crystal challenge rewards are permanent; the active attempt (if
+          // any) is a run and dies with the Cascade.
+          crystalChallengesCompleted: state.crystalChallengesCompleted,
         },
         state.lastTickAt,
       ),
@@ -928,6 +1028,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           autoCrystalUpgrade: state.autoCrystalUpgrade,
           buyQty: state.buyQty,
           notificationsEnabled: state.notificationsEnabled,
+          // Crystal challenge rewards are permanent records too.
+          crystalChallengesCompleted: state.crystalChallengesCompleted,
         },
         state.lastTickAt,
       ),
@@ -936,6 +1038,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyEonUpgrade(id) {
     const state = get();
+    // Locked during a crystal challenge — Eons multiply crystal production,
+    // and the goal was snapshotted against entry power.
+    if (state.activeCrystalChallenge) return;
     const def = EON_UPGRADES_BY_ID[id];
     if (!def) return;
     const level = state.eonUpgrades[id] ?? 0;
@@ -1011,6 +1116,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buyCrystalUpgrade(id) {
     const state = get();
+    // Locked during a crystal challenge — the Matrix multiplies crystal
+    // production, and the goal was snapshotted against entry power.
+    if (state.activeCrystalChallenge) return;
     const def = CRYSTAL_UPGRADES_BY_ID[id];
     if (!def) return;
     // Deep-tier upgrades stay locked until Resonance reaches their gate.

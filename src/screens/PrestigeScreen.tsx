@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { BigButton } from '../components/BigButton';
 import { ChallengesSection } from '../components/ChallengesSection';
+import { CrystalChallengesSection } from '../components/CrystalChallengesSection';
 import { Amount } from '../components/art/Amount';
 import { Icon, IconName } from '../components/art/Icon';
 import {
@@ -861,6 +862,8 @@ function CrystalPrestigeScreen({
           })}
         </View>
       )}
+
+      <CrystalChallengesSection />
     </ScrollView>
   );
 }

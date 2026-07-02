@@ -10,6 +10,11 @@ import { CRYSTAL_UPGRADES_BY_ID } from '../game/transcend';
 import { EON_UPGRADES_BY_ID } from '../game/convergence';
 import { CRYSTAL_GENS_BY_ID, CRYSTAL_GEN_UPGRADES_BY_ID } from '../game/crystalGame';
 import { CHALLENGES_BY_ID, scaledChallengeGoal } from '../game/challenges';
+import {
+  CRYSTAL_CHALLENGES_BY_ID,
+  permanentCrystalPowerMultiplier,
+  scaledCrystalChallengeGoal,
+} from '../game/crystalChallenges';
 import { permanentPowerMultiplier } from '../game/math';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
@@ -53,6 +58,9 @@ export function toPersisted(state: GameState): PersistedState {
     activeChallenge: state.activeChallenge,
     activeChallengeGoal: state.activeChallengeGoal,
     challengesCompleted: state.challengesCompleted,
+    activeCrystalChallenge: state.activeCrystalChallenge,
+    activeCrystalChallengeGoal: state.activeCrystalChallengeGoal,
+    crystalChallengesCompleted: state.crystalChallengesCompleted,
     lastDailyAt: state.lastDailyAt,
     dailyStreak: state.dailyStreak,
     sector: state.sector,
@@ -214,6 +222,17 @@ export function migrate(raw: string | null): SaveFile | null {
     typeof raw_.activeChallenge === 'string' && CHALLENGES_BY_ID[raw_.activeChallenge]
       ? raw_.activeChallenge
       : null;
+  const crystalChallengesCompleted: Record<string, true> = {};
+  if (typeof raw_.crystalChallengesCompleted === 'object' && raw_.crystalChallengesCompleted !== null) {
+    for (const id of Object.keys(raw_.crystalChallengesCompleted)) {
+      if (CRYSTAL_CHALLENGES_BY_ID[id]) crystalChallengesCompleted[id] = true;
+    }
+  }
+  const activeCrystalChallenge =
+    typeof raw_.activeCrystalChallenge === 'string' &&
+    CRYSTAL_CHALLENGES_BY_ID[raw_.activeCrystalChallenge]
+      ? raw_.activeCrystalChallenge
+      : null;
   const coreUpgrades: Record<string, number> = {};
   if (typeof raw_.coreUpgrades === 'object' && raw_.coreUpgrades !== null) {
     for (const id of Object.keys(raw_.coreUpgrades)) {
@@ -318,6 +337,9 @@ export function migrate(raw: string | null): SaveFile | null {
     activeChallenge,
     activeChallengeGoal: Math.max(0, finiteNumber(raw_.activeChallengeGoal, 0)),
     challengesCompleted,
+    activeCrystalChallenge,
+    activeCrystalChallengeGoal: Math.max(0, finiteNumber(raw_.activeCrystalChallengeGoal, 0)),
+    crystalChallengesCompleted,
     lastDailyAt: Math.max(0, finiteNumber(raw_.lastDailyAt, 0)),
     dailyStreak: Math.max(0, Math.floor(finiteNumber(raw_.dailyStreak, 0))),
     sector: Math.max(0, Math.floor(finiteNumber(raw_.sector, 0))),
@@ -357,6 +379,12 @@ export function migrate(raw: string | null): SaveFile | null {
     state.activeChallengeGoal = scaledChallengeGoal(
       CHALLENGES_BY_ID[state.activeChallenge],
       permanentPowerMultiplier(state),
+    );
+  }
+  if (state.activeCrystalChallenge && state.activeCrystalChallengeGoal <= 0) {
+    state.activeCrystalChallengeGoal = scaledCrystalChallengeGoal(
+      CRYSTAL_CHALLENGES_BY_ID[state.activeCrystalChallenge],
+      permanentCrystalPowerMultiplier(state),
     );
   }
   return {

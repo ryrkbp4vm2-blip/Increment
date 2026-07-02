@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { COMET_FIRST_SPAWN_MS, COMET_SPAWN_MS, COMET_VISIBLE_MS } from '../game/balance';
+import { geodesDisabled } from '../game/crystalChallenges';
 import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
 import { playSound } from '../audio/sound';
 import { hapticEvent } from '../haptics';
@@ -27,6 +28,11 @@ export function CrystalComet({ onCollect }: Props) {
   const schedule = useCallback(
     (range: [number, number]) => {
       const spawnTimer = setTimeout(() => {
+        // Some crystal challenges forbid geodes — silently reschedule instead.
+        if (geodesDisabled(useGameStore.getState().activeCrystalChallenge)) {
+          schedule(COMET_SPAWN_MS);
+          return;
+        }
         caught.current = false;
         setPosition({
           x: 20 + Math.random() * (width - 100),
