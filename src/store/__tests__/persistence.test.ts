@@ -13,6 +13,12 @@ function makeState(overrides: Partial<GameState> = {}): GameState {
     newAchievements: [],
     tapHeat: 0,
     lastTapAt: 0,
+    lastAutoBuyAt: 0,
+    lastAutoFleetAt: 0,
+    lastAutoForgeAt: 0,
+    lastAutoUpgradeAt: 0,
+    lastAutoCrystalUpgradeAt: 0,
+    autoTapCarry: 0,
     ...overrides,
   };
 }

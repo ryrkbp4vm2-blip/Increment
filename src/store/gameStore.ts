@@ -227,12 +227,23 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
 }
 
 // Returns everything except transient fields (newAchievements queue, Drill
-// Heat), which are preserved across these partial updates by zustand's shallow
-// merge.
+// Heat, automation throttles), which are preserved across these partial
+// updates by zustand's shallow merge.
+type TransientField =
+  | 'newAchievements'
+  | 'tapHeat'
+  | 'lastTapAt'
+  | 'lastAutoBuyAt'
+  | 'lastAutoFleetAt'
+  | 'lastAutoForgeAt'
+  | 'lastAutoUpgradeAt'
+  | 'lastAutoCrystalUpgradeAt'
+  | 'autoTapCarry';
+
 function withCaches(
   persisted: PersistedState,
   lastTickAt: number,
-): Omit<GameState, 'newAchievements' | 'tapHeat' | 'lastTapAt'> {
+): Omit<GameState, TransientField> {
   const cachedCps = cps(persisted);
   const cPowers = crystalPowers(persisted.crystalUpgrades);
   // The Resonance Amplifier raises the per-level production bonus each Resonance grants.
@@ -453,20 +464,22 @@ function earnCrystals(state: GameState, amount: number): Partial<GameState> {
   return delta;
 }
 
-// Throttles for automation perks (module-level; not part of saved state).
-let lastAutoBuyAt = 0;
-let lastAutoFleetAt = 0;
-let lastAutoForgeAt = 0;
-let lastAutoUpgradeAt = 0;
-let lastAutoCrystalUpgradeAt = 0;
-// Fractional Auto-Driller taps carried between ticks (5/sec = 0.5 per tick).
-let autoTapCarry = 0;
+/** Zeroed transient fields, used at store creation and on every hydrate. */
+const initialTransients = {
+  newAchievements: [] as string[],
+  tapHeat: 0,
+  lastTapAt: 0,
+  lastAutoBuyAt: 0,
+  lastAutoFleetAt: 0,
+  lastAutoForgeAt: 0,
+  lastAutoUpgradeAt: 0,
+  lastAutoCrystalUpgradeAt: 0,
+  autoTapCarry: 0,
+};
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...withCaches(initialPersistedState(), Date.now()),
-  newAchievements: [],
-  tapHeat: 0,
-  lastTapAt: 0,
+  ...initialTransients,
 
   hydrate(persisted, nowMs) {
     // Silently grant any achievements an existing save already qualifies for,
@@ -475,7 +488,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     for (const id of newlyCompleted(persisted.achievements, computeMetrics(persisted))) {
       achievements[id] = true;
     }
-    set({ ...withCaches({ ...persisted, achievements }, nowMs), newAchievements: [], tapHeat: 0, lastTapAt: 0 });
+    set({ ...withCaches({ ...persisted, achievements }, nowMs), ...initialTransients });
   },
 
   tap() {
@@ -1195,13 +1208,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // fractional per tick (5/sec = 0.5/tick), so carry the remainder instead
     // of rounding up — rounding gave 1 tap every tick, double the perk's rate.
     if (perks.auto_driller) {
-      autoTapCarry += AUTO_TAPS_PER_SEC / 10;
-      const taps = Math.floor(autoTapCarry);
-      autoTapCarry -= taps;
+      const carry = state.autoTapCarry + AUTO_TAPS_PER_SEC / 10;
+      const taps = Math.floor(carry);
       if (taps > 0) {
         // Merge every iteration's delta: a shatter mid-loop writes fields
         // (research points, caches) the final iteration may not touch.
-        let merged: Partial<GameState> = {};
+        let merged: Partial<GameState> = { autoTapCarry: carry - taps };
         let base: GameState = state;
         for (let i = 0; i < taps; i++) {
           const earned = base.cachedTapValue * frenzyFactor(base, nowMs);
@@ -1211,11 +1223,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
           base = { ...base, ...delta } as GameState;
         }
         set(merged);
+      } else {
+        set({ autoTapCarry: carry });
       }
     }
     // Auto-Foreman: buy the single cheapest affordable generator (~1/sec).
-    if (perks.auto_foreman && nowMs - lastAutoBuyAt > 1000) {
-      lastAutoBuyAt = nowMs;
+    if (perks.auto_foreman && nowMs - state.lastAutoBuyAt > 1000) {
+      set({ lastAutoBuyAt: nowMs });
       const s = get();
       let bestId: GeneratorId | null = null;
       let bestCost = Infinity;
@@ -1229,8 +1243,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (bestId) get().buyGenerator(bestId, 1);
     }
     // Fleet AI: launch the most expensive affordable expedition when idle.
-    if (perks.fleet_ai && nowMs - lastAutoFleetAt > 2000) {
-      lastAutoFleetAt = nowMs;
+    if (perks.fleet_ai && nowMs - state.lastAutoFleetAt > 2000) {
+      set({ lastAutoFleetAt: nowMs });
       const s = get();
       if (!s.expedition) {
         const powers = effectivePowers(s.artifacts, s.dmUpgrades, s.research);
@@ -1247,9 +1261,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state.autoForge &&
       state.transcendCount > 0 &&
       state.resonance >= AUTO_FORGE_RESONANCE &&
-      nowMs - lastAutoForgeAt > 500
+      nowMs - state.lastAutoForgeAt > 500
     ) {
-      lastAutoForgeAt = nowMs;
+      set({ lastAutoForgeAt: nowMs });
       const s = get();
       const genMult = crystalRunPowers(s.crystalRunUpgrades).genMult;
       let bestId: string | null = null;
@@ -1273,9 +1287,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state.autoUpgrade &&
       state.transcendCount === 0 &&
       state.ascensionCount >= AUTO_UPGRADE_ASCENSIONS &&
-      nowMs - lastAutoUpgradeAt > 500
+      nowMs - state.lastAutoUpgradeAt > 500
     ) {
-      lastAutoUpgradeAt = nowMs;
+      set({ lastAutoUpgradeAt: nowMs });
       const s = get();
       let bestId: string | null = null;
       let bestCost = Infinity;
@@ -1293,9 +1307,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state.autoCrystalUpgrade &&
       state.transcendCount > 0 &&
       state.resonance >= AUTO_UPGRADE_RESONANCE &&
-      nowMs - lastAutoCrystalUpgradeAt > 500
+      nowMs - state.lastAutoCrystalUpgradeAt > 500
     ) {
-      lastAutoCrystalUpgradeAt = nowMs;
+      set({ lastAutoCrystalUpgradeAt: nowMs });
       const s = get();
       let bestId: string | null = null;
       let bestCost = Infinity;

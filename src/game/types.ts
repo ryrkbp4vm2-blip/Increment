@@ -184,6 +184,14 @@ export interface GameState extends PersistedState {
   /** Transient Drill Heat combo (0..1) and when it last changed. Not saved. */
   tapHeat: number;
   lastTapAt: number;
+  /** Transient automation throttles (not saved; reset on hydrate). */
+  lastAutoBuyAt: number;
+  lastAutoFleetAt: number;
+  lastAutoForgeAt: number;
+  lastAutoUpgradeAt: number;
+  lastAutoCrystalUpgradeAt: number;
+  /** Fractional Auto-Driller taps carried between ticks (5/sec = 0.5/tick). */
+  autoTapCarry: number;
 }
 
 export interface SaveFile {
