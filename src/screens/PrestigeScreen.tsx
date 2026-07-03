@@ -97,8 +97,12 @@ export function PrestigeScreen() {
   const sector = useGameStore((s) => s.sector);
   const ascensionsSinceWarp = useGameStore((s) => s.ascensionsSinceWarp);
   const doWarp = useGameStore((s) => s.doWarp);
-  const crystals = useGameStore((s) => s.crystals);
-  const totalCrystals = useGameStore((s) => s.totalCrystals);
+  // Crystal balances tick 10×/sec in crystal mode, where this component only
+  // renders CrystalPrestigeScreen (which derives its own values) — pin them to
+  // 0 there so the whole screen doesn't re-render every tick. In mineral mode
+  // they're static (crystal currency doesn't exist before Transcendence).
+  const crystals = useGameStore((s) => (s.transcendCount > 0 ? 0 : s.crystals));
+  const totalCrystals = useGameStore((s) => (s.transcendCount > 0 ? 0 : s.totalCrystals));
   const transcendCount = useGameStore((s) => s.transcendCount);
   const ascensionsSinceTranscend = useGameStore((s) => s.ascensionsSinceTranscend);
   const crystalUpgrades = useGameStore((s) => s.crystalUpgrades);
@@ -106,7 +110,6 @@ export function PrestigeScreen() {
   const buyCrystalUpgrade = useGameStore((s) => s.buyCrystalUpgrade);
   const resonance = useGameStore((s) => s.resonance);
   const attunement = useGameStore((s) => s.attunement);
-  const lifetimeCrystals = useGameStore((s) => s.lifetimeCrystals);
   const doResonate = useGameStore((s) => s.doResonate);
   const autoResonate = useGameStore((s) => s.autoResonate);
   const toggleAutoResonate = useGameStore((s) => s.toggleAutoResonate);
@@ -142,11 +145,8 @@ export function PrestigeScreen() {
   if (isCrystalMode) {
     return (
       <CrystalPrestigeScreen
-        crystals={crystals}
-        totalCrystals={totalCrystals}
         attunement={attunement}
         resonance={resonance}
-        lifetimeCrystals={lifetimeCrystals}
         crystalUpgrades={crystalUpgrades}
         buyCrystalUpgrade={buyCrystalUpgrade}
         doResonate={doResonate}
@@ -562,11 +562,8 @@ export function PrestigeScreen() {
 }
 
 function CrystalPrestigeScreen({
-  crystals,
-  totalCrystals,
   attunement,
   resonance,
-  lifetimeCrystals,
   crystalUpgrades,
   buyCrystalUpgrade,
   doResonate,
@@ -582,11 +579,8 @@ function CrystalPrestigeScreen({
   doConverge,
   buyEonUpgrade,
 }: {
-  crystals: number;
-  totalCrystals: number;
   attunement: number;
   resonance: number;
-  lifetimeCrystals: number;
   crystalUpgrades: Record<string, number>;
   buyCrystalUpgrade: (id: string) => void;
   doResonate: () => void;
@@ -608,11 +602,14 @@ function CrystalPrestigeScreen({
   // Reveal the Convergence layer as the player channels toward the gate.
   const convergeRevealed =
     totalEons > 0 || convergenceCount > 0 || attunementSinceConverge >= CONVERGENCE_ATTUNEMENT * 0.25;
-  const pending = resonanceGain(lifetimeCrystals, crystalUpgrades, resonance);
-  const pendingAttune = attunementGain(lifetimeCrystals);
-  const ready = canResonate(lifetimeCrystals, resonance);
+  // lifetimeCrystals ticks 10×/sec — subscribe only to slow-changing values
+  // derived from it (integers/booleans); the live displays are leaf components.
+  const pending = useGameStore((s) =>
+    Math.floor(resonanceGain(s.lifetimeCrystals, s.crystalUpgrades, s.resonance)),
+  );
+  const pendingAttune = useGameStore((s) => Math.floor(attunementGain(s.lifetimeCrystals)));
+  const ready = useGameStore((s) => canResonate(s.lifetimeCrystals, s.resonance));
   const nextAt = nextResonanceAt(resonance);
-  const progress = Math.min(lifetimeCrystals / nextAt, 1);
   // Per-Resonance-level production bonus, raised by the Resonance Amplifier.
   const perLevelBonus = RESONANCE_BONUS * resonancePowerMult(crystalUpgrades);
 
@@ -633,8 +630,8 @@ function CrystalPrestigeScreen({
         <StatRow label="Attunement to spend" value={`${formatNumber(attunement)} ◈`} />
         <StatRow label="Resonance" value={`Lv ${formatNumber(resonance)}`} />
         <StatRow label="Production bonus" value={`×${formatNumber(resonanceMult(resonance, perLevelBonus))}`} />
-        <StatRow label="Crystals this run" value={`${formatNumber(crystals)} ✦`} />
-        <StatRow label="Total Crystals earned" value={`${formatNumber(totalCrystals)} ✦`} />
+        <CrystalBalanceRow />
+        <TotalCrystalsRow />
         <StatRow
           label={ready ? 'Next Resonance at' : 'First Resonance at'}
           value={`${formatNumber(nextAt)} ✦ this run`}
@@ -679,14 +676,7 @@ function CrystalPrestigeScreen({
         )
       ) : (
         <>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${progress * 100}%`, backgroundColor: colors.darkMatter },
-              ]}
-            />
-          </View>
+          <CascadeProgressBar nextAt={nextAt} />
           <Text style={styles.transcendHint}>
             Mine {formatNumber(RESONANCE_BASE)} crystals this run to earn your first Resonance.
           </Text>
@@ -927,6 +917,33 @@ function DarkMatterRow({
 function MinedThisRunRow() {
   const mined = useGameStore((s) => s.lifetimeThisRun);
   return <StatRow label="Mined this run" currency="mineral" value={mined} />;
+}
+
+function CrystalBalanceRow() {
+  const crystals = useGameStore((s) => s.crystals);
+  return <StatRow label="Crystals this run" value={`${formatNumber(crystals)} ✦`} />;
+}
+
+function TotalCrystalsRow() {
+  const totalCrystals = useGameStore((s) => s.totalCrystals);
+  return <StatRow label="Total Crystals earned" value={`${formatNumber(totalCrystals)} ✦`} />;
+}
+
+function CascadeProgressBar({ nextAt }: { nextAt: number }) {
+  // Quantized to whole percent so the bar re-renders at most 100 times.
+  const percent = useGameStore((s) =>
+    Math.min(100, Math.floor((s.lifetimeCrystals / nextAt) * 100)),
+  );
+  return (
+    <View style={styles.progressTrack}>
+      <View
+        style={[
+          styles.progressFill,
+          { width: `${percent}%`, backgroundColor: colors.darkMatter },
+        ]}
+      />
+    </View>
+  );
 }
 
 function CollapseProgressBar() {
