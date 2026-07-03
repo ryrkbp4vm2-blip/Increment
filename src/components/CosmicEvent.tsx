@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
 import { cometsDisabled } from '../game/challenges';
+import { geodesDisabled } from '../game/crystalChallenges';
+import { pickCrystalEvent } from '../game/crystalEvents';
 import { rollSpawnDelay } from '../game/events';
 import {
   CosmicEvent as EventInstance,
@@ -15,8 +17,14 @@ import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { BigButton } from './BigButton';
 
-export function CosmicEvent() {
+interface Props {
+  /** 'crystal' spawns Resonant Echoes (crystal rewards, purple accent). */
+  mode?: 'mineral' | 'crystal';
+}
+
+export function CosmicEvent({ mode = 'mineral' }: Props) {
   const applyEventOutcome = useGameStore((s) => s.applyEventOutcome);
+  const accent = mode === 'crystal' ? colors.darkMatter : colors.accent;
   const [event, setEvent] = useState<EventInstance | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [remaining, setRemaining] = useState(EVENT_VISIBLE_MS);
@@ -33,11 +41,19 @@ export function CosmicEvent() {
   const schedule = useCallback((range: [number, number]) => {
     const t = setTimeout(() => {
       const s = useGameStore.getState();
-      if (cometsDisabled(s.activeChallenge)) {
+      // Challenges that ban comets/geodes ban their events too.
+      const banned =
+        mode === 'crystal'
+          ? geodesDisabled(s.activeCrystalChallenge)
+          : cometsDisabled(s.activeChallenge);
+      if (banned) {
         schedule(EVENT_SPAWN_MS);
         return;
       }
-      const ev = pickEvent({ cps: s.cachedCps, minerals: s.minerals, totalResearch: s.totalResearch });
+      const ev =
+        mode === 'crystal'
+          ? pickCrystalEvent({ crystalCps: s.cachedCrystalCps, crystals: s.crystals })
+          : pickEvent({ cps: s.cachedCps, minerals: s.minerals, totalResearch: s.totalResearch });
       eventRef.current = ev;
       setEvent(ev);
       setRemaining(EVENT_VISIBLE_MS);
@@ -50,7 +66,8 @@ export function CosmicEvent() {
       timers.current.push(expire);
     }, rollSpawnDelay(range));
     timers.current.push(t);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const finish = (text: string, positive: boolean) => {
     clearTimers();
@@ -88,14 +105,14 @@ export function CosmicEvent() {
   return (
     <>
       {result && (
-        <View style={styles.resultBanner} pointerEvents="none">
-          <Text style={styles.resultText}>{result}</Text>
+        <View style={[styles.resultBanner, { borderColor: accent }]} pointerEvents="none">
+          <Text style={[styles.resultText, { color: accent }]}>{result}</Text>
         </View>
       )}
       <Modal visible={event !== null} transparent animationType="fade">
         <View style={styles.backdrop}>
-          <View style={styles.card}>
-            <Text style={styles.title}>{event?.title}</Text>
+          <View style={[styles.card, { borderColor: accent }]}>
+            <Text style={[styles.title, { color: accent }]}>{event?.title}</Text>
             <Text style={styles.message}>{event?.message}</Text>
             <View style={styles.timerTrack}>
               <View style={[styles.timerFill, { width: `${(remaining / EVENT_VISIBLE_MS) * 100}%` }]} />
@@ -105,7 +122,7 @@ export function CosmicEvent() {
                 <BigButton
                   key={opt.label}
                   label={opt.label}
-                  color={colors.accent}
+                  color={accent}
                   onPress={() => choose(opt)}
                   style={styles.option}
                 />

@@ -56,6 +56,9 @@ import {
   crystalTotalCps,
   crystalUpgradeUnlockMet,
   formationDepthBonus,
+  isPrimeFormation,
+  PRIME_FRENZY_DURATION_MS,
+  PRIME_FRENZY_MULT,
   resonanceGain,
   resonanceMult,
 } from '../game/crystalGame';
@@ -70,6 +73,7 @@ import {
   eonYieldMult,
   pendingEons,
 } from '../game/convergence';
+import { relicPowers, relicsCrossed, relicsForDepth } from '../game/relics';
 import { RESEARCH_BY_ID, isResearchUnlocked } from '../game/research';
 import { GENERATORS, GENERATORS_BY_ID, MAX_TICK_DELTA_MS, UPGRADES, UPGRADES_BY_ID } from '../game/balance';
 import { DM_UPGRADES_BY_ID, darkMatterUpgradeCost } from '../game/darkmatter';
@@ -188,6 +192,7 @@ export function initialPersistedState(nowMs: number = Date.now()): PersistedStat
     activeCrystalChallenge: null,
     activeCrystalChallengeGoal: 0,
     crystalChallengesCompleted: {},
+    crystalRelics: {},
     lastDailyAt: 0,
     dailyStreak: 0,
     sector: 0,
@@ -259,13 +264,15 @@ function withCaches(
   // run's constraint (throttle / disabled generators).
   const ccReward = crystalChallengeRewardMult(persisted.crystalChallengesCompleted);
   const ccMods = crystalChallengeModifiers(persisted.activeCrystalChallenge);
+  // Harmonic Relics: permanent multipliers from first-time Prime kills.
+  const relics = relicPowers(persisted.crystalRelics);
   const cachedCrystalCps = ccMods.disableGenerators
     ? 0
     : crystalTotalCps(
         persisted.crystalGenerators,
         cPowers.globalMult * rMult * runP.globalMult * eMult
           * achievementBonus(persisted.achievements)
-          * ccReward.globalMult * ccMods.productionMult,
+          * ccReward.globalMult * ccMods.productionMult * relics.globalMult,
         runP.genMult,
       );
   return {
@@ -276,7 +283,7 @@ function withCaches(
     cachedCrystalCps,
     cachedCrystalTapValue: CRYSTAL_TAP_BASE * cPowers.tapMult * rMult * runP.tapMult * eMult
       * achievementBonus(persisted.achievements)
-      * ccReward.tapMult * ccMods.tapMult,
+      * ccReward.tapMult * ccMods.tapMult * relics.tapMult,
     // Production records: caches change exactly when production changes, so
     // this is the one place peaks need tracking.
     peakCps: Math.max(persisted.peakCps, cachedCps),
@@ -309,6 +316,7 @@ function carryTranscend(state: GameState): Pick<
   | 'autoUpgrade'
   | 'autoCrystalUpgrade'
   | 'crystalChallengesCompleted'
+  | 'crystalRelics'
   | 'fastestCollapseMs'
   | 'deepestAsteroid'
   | 'deepestFormation'
@@ -335,6 +343,7 @@ function carryTranscend(state: GameState): Pick<
     autoUpgrade: state.autoUpgrade,
     autoCrystalUpgrade: state.autoCrystalUpgrade,
     crystalChallengesCompleted: state.crystalChallengesCompleted,
+    crystalRelics: state.crystalRelics,
     fastestCollapseMs: state.fastestCollapseMs,
     deepestAsteroid: state.deepestAsteroid,
     deepestFormation: state.deepestFormation,
@@ -460,6 +469,29 @@ function earnCrystals(state: GameState, amount: number): Partial<GameState> {
   if (shattered > 0) {
     delta.crystalFormationsShattered = state.crystalFormationsShattered + shattered;
     delta.deepestFormation = Math.max(state.deepestFormation, result.formationIndex);
+    let primeDown = false;
+    for (let i = state.crystalFormationIndex; i < result.formationIndex; i++) {
+      if (isPrimeFormation(i)) primeDown = true;
+    }
+    // Breaking a Prime kicks off a victory frenzy (mirrors belt bosses); an
+    // active stronger geode frenzy is kept, an expired one is not resurrected.
+    if (primeDown) {
+      const now = Date.now();
+      const activeMult = state.frenzyUntil > now ? state.frenzyMult : 1;
+      delta.frenzyUntil = now + PRIME_FRENZY_DURATION_MS;
+      delta.frenzyMult = Math.max(activeMult, PRIME_FRENZY_MULT);
+    }
+    // First-time Prime kills award permanent Harmonic Relics; their
+    // multipliers change production, so refresh the crystal caches.
+    const dropped = relicsCrossed(state.crystalFormationIndex, result.formationIndex).filter(
+      (r) => !state.crystalRelics[r.id],
+    );
+    if (dropped.length > 0) {
+      const crystalRelics = { ...state.crystalRelics };
+      for (const r of dropped) crystalRelics[r.id] = true;
+      delta.crystalRelics = crystalRelics;
+      Object.assign(delta, withCaches({ ...state, ...delta } as GameState, state.lastTickAt));
+    }
   }
   return delta;
 }
@@ -488,7 +520,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     for (const id of newlyCompleted(persisted.achievements, computeMetrics(persisted))) {
       achievements[id] = true;
     }
-    set({ ...withCaches({ ...persisted, achievements }, nowMs), ...initialTransients });
+    // Same for Harmonic Relics: saves that pushed past a Prime formation
+    // before relics existed get theirs retroactively (deepestFormation record).
+    const crystalRelics = { ...persisted.crystalRelics };
+    for (const relic of relicsForDepth(persisted.deepestFormation)) {
+      crystalRelics[relic.id] = true;
+    }
+    set({ ...withCaches({ ...persisted, achievements, crystalRelics }, nowMs), ...initialTransients });
   },
 
   tap() {
@@ -771,7 +809,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         break;
       }
       case 'windfall':
-        set(earn(state, outcome.amount));
+        // In crystal mode (Resonant Echo events) windfalls pay Crystals.
+        if (state.transcendCount > 0) set(earnCrystals(state, outcome.amount));
+        else set(earn(state, outcome.amount));
         break;
       case 'rp':
         set({
@@ -780,7 +820,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
         break;
       case 'loseMineralsPct':
-        set({ minerals: state.minerals * (1 - outcome.pct) });
+        // "Lose a slice of your spendable currency" — crystals in crystal mode.
+        if (state.transcendCount > 0) set({ crystals: state.crystals * (1 - outcome.pct) });
+        else set({ minerals: state.minerals * (1 - outcome.pct) });
         break;
     }
   },
@@ -980,14 +1022,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Finish or abandon the challenge first.
     if (state.activeCrystalChallenge) return;
     if (!canResonate(state.lifetimeCrystals, state.resonance)) return;
-    // The Convergence tree boosts both Cascade payouts (Resonant Echo, Deep Attunement).
+    // The Convergence tree and Harmonic Relics both boost Cascade payouts.
+    const rp = relicPowers(state.crystalRelics);
     const gained = Math.floor(
       resonanceGain(state.lifetimeCrystals, state.crystalUpgrades, state.resonance) *
-        eonResonanceMult(state.eonUpgrades),
+        eonResonanceMult(state.eonUpgrades) *
+        rp.resonanceGainMult,
     );
     if (gained < 1) return;
     // A Cascade also pays out Attunement — the permanent Crystal-Matrix currency.
-    const attune = Math.floor(attunementGain(state.lifetimeCrystals) * eonAttuneMult(state.eonUpgrades));
+    const attune = Math.floor(
+      attunementGain(state.lifetimeCrystals) * eonAttuneMult(state.eonUpgrades) * rp.attunementGainMult,
+    );
     set(
       withCaches(
         {
@@ -1035,6 +1081,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           // Crystal challenge rewards are permanent; the active attempt (if
           // any) is a run and dies with the Cascade.
           crystalChallengesCompleted: state.crystalChallengesCompleted,
+          crystalRelics: state.crystalRelics,
           fastestCollapseMs: state.fastestCollapseMs,
           deepestAsteroid: state.deepestAsteroid,
           deepestFormation: state.deepestFormation,
@@ -1087,6 +1134,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           notificationsEnabled: state.notificationsEnabled,
           // Crystal challenge rewards are permanent records too.
           crystalChallengesCompleted: state.crystalChallengesCompleted,
+          crystalRelics: state.crystalRelics,
           fastestCollapseMs: state.fastestCollapseMs,
           deepestAsteroid: state.deepestAsteroid,
           deepestFormation: state.deepestFormation,

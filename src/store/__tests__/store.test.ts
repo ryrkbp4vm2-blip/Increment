@@ -758,6 +758,60 @@ describe('gameStore', () => {
     expect(s.totalPlayMs).toBe(777);
   });
 
+  it('shattering a Prime formation grants a frenzy and its relic, boosting production', () => {
+    // Formation 9 is the first Prime; put the player right at its edge.
+    reset({
+      transcendCount: 1,
+      crystalFormationIndex: 9,
+      crystalGenerators: { shard: 10 },
+    });
+    const baseCps = useGameStore.getState().cachedCrystalCps;
+    expect(baseCps).toBeGreaterThan(0);
+    // Deal enough damage to break the Prime via a windfall.
+    const hp = 6 * Math.ceil(50 * 1.8 ** 9); // PRIME_HP_MULT × base
+    useGameStore.getState().collectComet({ kind: 'windfall', amount: hp + 1 }, 1000);
+    const s = useGameStore.getState();
+    expect(s.crystalFormationIndex).toBe(10);
+    // Victory frenzy fired...
+    expect(s.frenzyMult).toBeGreaterThanOrEqual(4);
+    expect(s.frenzyUntil).toBeGreaterThan(Date.now());
+    // ...the Echo Prism relic dropped and its ×1.25 landed in the cache.
+    expect(s.crystalRelics.echo_prism).toBe(true);
+    expect(s.cachedCrystalCps).toBeCloseTo(baseCps * 1.25);
+  });
+
+  it('relics survive Cascade and Convergence, and retro-grant from deep saves', () => {
+    reset({
+      transcendCount: 1,
+      resonance: 3,
+      lifetimeCrystals: 1e12,
+      crystalRelics: { echo_prism: true },
+      attunementSinceConverge: CONVERGENCE_ATTUNEMENT,
+    });
+    useGameStore.getState().doResonate();
+    expect(useGameStore.getState().crystalRelics.echo_prism).toBe(true);
+    useGameStore.getState().doConverge();
+    expect(useGameStore.getState().crystalRelics.echo_prism).toBe(true);
+    // A save that pushed past two Primes before relics existed gets both on load.
+    reset({ transcendCount: 1, deepestFormation: 20 });
+    const relics = useGameStore.getState().crystalRelics;
+    expect(relics.echo_prism).toBe(true);
+    expect(relics.deep_tuning_fork).toBe(true);
+  });
+
+  it('crystal-mode events pay and take crystals, not minerals', () => {
+    reset({ transcendCount: 1, crystals: 1000, minerals: 500 });
+    useGameStore.getState().applyEventOutcome({ kind: 'windfall', amount: 100 }, 1000);
+    expect(useGameStore.getState().crystals).toBeGreaterThanOrEqual(1100);
+    expect(useGameStore.getState().minerals).toBe(500);
+    useGameStore.getState().applyEventOutcome({ kind: 'loseMineralsPct', pct: 0.5 }, 1000);
+    expect(useGameStore.getState().crystals).toBeCloseTo(
+      (1000 + 100 + 6 /* formation shatter bonuses */) / 2,
+      -1,
+    );
+    expect(useGameStore.getState().minerals).toBe(500);
+  });
+
   it('crystal challenge rewards survive a Cascade and a Convergence', () => {
     reset({
       transcendCount: 1,

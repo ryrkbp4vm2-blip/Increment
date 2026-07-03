@@ -9,6 +9,8 @@ import {
   isMet,
   metricValue,
 } from '../game/achievements';
+import { crystalFormationName } from '../game/crystalGame';
+import { RELICS } from '../game/relics';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -31,6 +33,8 @@ export function GoalsScreen() {
   const crystalFormationsShattered = useGameStore((s) => s.crystalFormationsShattered);
   const convergenceCount = useGameStore((s) => s.convergenceCount);
   const totalEons = useGameStore((s) => s.totalEons);
+  const transcendCount = useGameStore((s) => s.transcendCount);
+  const crystalRelics = useGameStore((s) => s.crystalRelics);
 
   const metrics = computeMetrics({
     lifetimeAllTime,
@@ -77,6 +81,47 @@ export function GoalsScreen() {
         <Text style={styles.summaryBonus}>+{bonusPct}% production</Text>
       </View>
       <Text style={styles.hint}>Each goal grants a permanent production bonus.</Text>
+
+      {transcendCount > 0 && (
+        <>
+          <View style={styles.relicHeader}>
+            <Text style={styles.relicTitle}>Harmonic Relics</Text>
+            <Text style={styles.relicCount}>
+              {Object.keys(crystalRelics).length}/{RELICS.length}
+            </Text>
+          </View>
+          <Text style={styles.hint}>
+            Shatter a Prime formation (every 10th) for the first time to claim its relic —
+            permanent boosts that survive every Cascade and Convergence.
+          </Text>
+          {RELICS.map((relic) => {
+            const owned = !!crystalRelics[relic.id];
+            return (
+              <View key={relic.id} style={[styles.row, owned && styles.relicOwned]}>
+                <View style={[styles.badge, owned && styles.relicBadge]}>
+                  <Text style={[styles.relicGlyph, owned && styles.relicGlyphOwned]}>
+                    {owned ? relic.glyph : '?'}
+                  </Text>
+                </View>
+                <View style={styles.info}>
+                  <View style={styles.nameRow}>
+                    <Text style={[styles.name, owned && styles.relicNameOwned]}>
+                      {owned ? relic.name : 'Unknown Relic'}
+                    </Text>
+                  </View>
+                  <Text style={styles.desc}>
+                    {owned
+                      ? relic.description
+                      : `Sealed inside ${crystalFormationName(relic.formationIndex)} — formation #${
+                          relic.formationIndex + 1
+                        }`}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </>
+      )}
 
       {sorted.map((def) => (
         <GoalRow key={def.id} def={def} done={!!completed[def.id]} metrics={metrics} />
@@ -188,4 +233,17 @@ const styles = StyleSheet.create({
   },
   fill: { height: '100%', backgroundColor: colors.accent },
   progressText: { color: colors.textMuted, fontSize: 11, marginTop: 3, fontVariant: ['tabular-nums'] },
+  relicHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  relicTitle: { color: colors.darkMatter, fontSize: 17, fontWeight: '800' },
+  relicCount: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
+  relicOwned: { borderColor: colors.darkMatter },
+  relicBadge: { backgroundColor: '#C084FC22' },
+  relicGlyph: { color: colors.textMuted, fontSize: 18, fontWeight: '800' },
+  relicGlyphOwned: { color: colors.darkMatter },
+  relicNameOwned: { color: colors.darkMatter },
 });

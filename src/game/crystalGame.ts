@@ -429,14 +429,32 @@ export function crystalFormationName(index: number): string {
   return cycle === 0 ? name : `${name} ${toRoman(cycle + 1)}`;
 }
 
+/**
+ * Every Nth formation is a tougher "Prime" — the crystal analogue of the
+ * belt's boss asteroids: far more HP, a far bigger shatter payout, and a
+ * victory frenzy when it breaks. First-time Prime kills also award Harmonic
+ * Relics (see relics.ts).
+ */
+export const PRIME_EVERY = 10;
+export const PRIME_HP_MULT = 6;
+export const PRIME_REWARD_MULT = 8;
+export const PRIME_FRENZY_MULT = 4;
+export const PRIME_FRENZY_DURATION_MS = 30_000;
+
+export function isPrimeFormation(index: number): boolean {
+  return (index + 1) % PRIME_EVERY === 0;
+}
+
 /** HP of a crystal formation at the given index. */
 export function crystalFormationHp(index: number): number {
-  return Math.ceil(50 * Math.pow(1.8, index));
+  const base = Math.ceil(50 * Math.pow(1.8, index));
+  return isPrimeFormation(index) ? base * PRIME_HP_MULT : base;
 }
 
 /** Bonus crystals awarded when a formation is shattered. */
 export function crystalFormationBonus(index: number): number {
-  return Math.floor(2 + index * 0.5);
+  const base = Math.floor(2 + index * 0.5);
+  return isPrimeFormation(index) ? base * PRIME_REWARD_MULT : base;
 }
 
 /**

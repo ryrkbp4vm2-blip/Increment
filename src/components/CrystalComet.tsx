@@ -3,6 +3,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions } fr
 import { COMET_FIRST_SPAWN_MS, COMET_SPAWN_MS, COMET_VISIBLE_MS } from '../game/balance';
 import { geodesDisabled } from '../game/crystalChallenges';
 import { CometReward, rollCometReward, rollSpawnDelay } from '../game/events';
+import { relicPowers } from '../game/relics';
 import { playSound } from '../audio/sound';
 import { hapticEvent } from '../haptics';
 import { useGameStore } from '../store/gameStore';
@@ -83,7 +84,13 @@ export function CrystalComet({ onCollect }: Props) {
     schedule(COMET_SPAWN_MS);
     playSound('comet');
     hapticEvent();
-    onCollect(rollCometReward(useGameStore.getState().cachedCrystalCps));
+    const state = useGameStore.getState();
+    // The Geode Heart relic fattens geode windfalls.
+    onCollect(
+      rollCometReward(state.cachedCrystalCps, {
+        cometMult: relicPowers(state.crystalRelics).geodeMult,
+      }),
+    );
   };
 
   return (

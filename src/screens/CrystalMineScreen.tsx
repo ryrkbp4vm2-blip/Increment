@@ -5,9 +5,11 @@ import {
   crystalFormationHp,
   crystalFormationName,
   formationDepthBonus,
+  isPrimeFormation,
 } from '../game/crystalGame';
 import { decayHeat, heatMultiplier } from '../game/heat';
 import { CometReward } from '../game/events';
+import { CosmicEvent } from '../components/CosmicEvent';
 import { CrystalComet } from '../components/CrystalComet';
 import { playSound } from '../audio/sound';
 import { hapticShatter, hapticTap } from '../haptics';
@@ -49,6 +51,7 @@ export function CrystalMineScreen() {
   const hp = crystalFormationHp(formationIndex);
   const integrity = Math.max(0, 1 - formationDamage / hp);
   const bonus = crystalFormationBonus(formationIndex);
+  const prime = isPrimeFormation(formationIndex);
 
   // Local clock so the Drill Heat bar drains smoothly between taps. Seeded
   // with the real time so a remount doesn't compute a negative decay interval.
@@ -69,17 +72,21 @@ export function CrystalMineScreen() {
   // Bumps on each shatter so the burst remounts and replays.
   const [burstKey, setBurstKey] = useState(0);
 
-  // Detect shatter (formation index increased).
+  // Detect shatter (formation index increased). Breaking a Prime hits harder.
   useEffect(() => {
     if (formationIndex > lastShatter && lastShatter >= 0) {
+      let primeDown = false;
+      for (let i = lastShatter; i < formationIndex; i++) {
+        if (isPrimeFormation(i)) primeDown = true;
+      }
       Animated.sequence([
-        Animated.timing(scale, { toValue: 1.2, duration: 80, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: primeDown ? 1.35 : 1.2, duration: 80, useNativeDriver: true }),
         Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
       ]).start();
       setBurstKey((k) => k + 1);
-      shake(7);
+      shake(primeDown ? 14 : 7);
       playSound('shatter');
-      hapticShatter(false);
+      hapticShatter(primeDown);
     }
     setLastShatter(formationIndex);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,6 +113,7 @@ export function CrystalMineScreen() {
   return (
     <Animated.View style={[styles.screen, shakeStyle]}>
       <CrystalComet onCollect={handleGeode} />
+      <CosmicEvent mode="crystal" />
       {banner && (
         <View style={styles.banner}>
           <Text style={styles.bannerGlyph}>✦</Text>
@@ -113,10 +121,19 @@ export function CrystalMineScreen() {
         </View>
       )}
       <View style={styles.formationInfo}>
-        <Text style={styles.formationName}>{crystalFormationName(formationIndex)}</Text>
+        {prime && (
+          <View style={styles.primeTag}>
+            <Text style={styles.primeTagText}>PRIME</Text>
+          </View>
+        )}
+        <Text style={[styles.formationName, prime && styles.primeName]}>
+          {crystalFormationName(formationIndex)}
+        </Text>
         <Text style={styles.formationSub}>Shatter for +{formatNumber(bonus)} ✦ bonus</Text>
         <View style={styles.hpTrack}>
-          <View style={[styles.hpFill, { width: `${integrity * 100}%` }]} />
+          <View
+            style={[styles.hpFill, prime && styles.hpFillPrime, { width: `${integrity * 100}%` }]}
+          />
         </View>
         <Text style={styles.hpLabel}>
           {formatNumber(Math.max(0, hp - formationDamage))} / {formatNumber(hp)}
@@ -322,6 +339,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  primeName: {
+    color: colors.gold,
+  },
+  primeTag: {
+    alignSelf: 'center',
+    backgroundColor: '#FACC1522',
+    borderColor: colors.gold,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 1,
+    marginBottom: 4,
+  },
+  primeTagText: {
+    color: colors.gold,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+  },
   formationSub: {
     color: colors.textMuted,
     fontSize: 12,
@@ -340,6 +376,9 @@ const styles = StyleSheet.create({
   hpFill: {
     height: '100%',
     backgroundColor: colors.darkMatter,
+  },
+  hpFillPrime: {
+    backgroundColor: colors.gold,
   },
   hpLabel: {
     color: colors.textMuted,

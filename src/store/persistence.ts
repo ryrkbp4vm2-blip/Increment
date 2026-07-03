@@ -16,6 +16,7 @@ import {
   scaledCrystalChallengeGoal,
 } from '../game/crystalChallenges';
 import { challengeGoalPower } from '../game/math';
+import { RELICS_BY_ID } from '../game/relics';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
 
@@ -61,6 +62,7 @@ export function toPersisted(state: GameState): PersistedState {
     activeCrystalChallenge: state.activeCrystalChallenge,
     activeCrystalChallengeGoal: state.activeCrystalChallengeGoal,
     crystalChallengesCompleted: state.crystalChallengesCompleted,
+    crystalRelics: state.crystalRelics,
     lastDailyAt: state.lastDailyAt,
     dailyStreak: state.dailyStreak,
     sector: state.sector,
@@ -234,6 +236,12 @@ export function migrate(raw: string | null): SaveFile | null {
       if (CRYSTAL_CHALLENGES_BY_ID[id]) crystalChallengesCompleted[id] = true;
     }
   }
+  const crystalRelics: Record<string, true> = {};
+  if (typeof raw_.crystalRelics === 'object' && raw_.crystalRelics !== null) {
+    for (const id of Object.keys(raw_.crystalRelics)) {
+      if (RELICS_BY_ID[id]) crystalRelics[id] = true;
+    }
+  }
   const activeCrystalChallenge =
     typeof raw_.activeCrystalChallenge === 'string' &&
     CRYSTAL_CHALLENGES_BY_ID[raw_.activeCrystalChallenge]
@@ -346,6 +354,7 @@ export function migrate(raw: string | null): SaveFile | null {
     activeCrystalChallenge,
     activeCrystalChallengeGoal: Math.max(0, finiteNumber(raw_.activeCrystalChallengeGoal, 0)),
     crystalChallengesCompleted,
+    crystalRelics,
     lastDailyAt: Math.max(0, finiteNumber(raw_.lastDailyAt, 0)),
     dailyStreak: Math.max(0, Math.floor(finiteNumber(raw_.dailyStreak, 0))),
     sector: Math.max(0, Math.floor(finiteNumber(raw_.sector, 0))),

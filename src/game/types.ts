@@ -102,6 +102,8 @@ export interface PersistedState {
   activeCrystalChallengeGoal: number;
   /** Completed crystal challenge ids (permanent rewards, survive everything). */
   crystalChallengesCompleted: Record<string, true>;
+  /** Harmonic Relics from first-time Prime formation kills (survive everything). */
+  crystalRelics: Record<string, true>;
   /** Completed challenge ids (permanent rewards, survive everything). */
   challengesCompleted: Record<string, true>;
   /** Daily bonus: last claim time (ms epoch) and consecutive-day streak. */
