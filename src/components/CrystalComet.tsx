@@ -24,30 +24,31 @@ export function CrystalComet({ onCollect }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const caught = useRef(false);
+  // Read at spawn time, not schedule time — a rotation between the two would
+  // otherwise place the geode off-screen.
+  const dims = useRef({ width, height });
+  dims.current = { width, height };
 
-  const schedule = useCallback(
-    (range: [number, number]) => {
-      const spawnTimer = setTimeout(() => {
-        // Some crystal challenges forbid geodes — silently reschedule instead.
-        if (geodesDisabled(useGameStore.getState().activeCrystalChallenge)) {
-          schedule(COMET_SPAWN_MS);
-          return;
-        }
-        caught.current = false;
-        setPosition({
-          x: 20 + Math.random() * (width - 100),
-          y: 80 + Math.random() * (height * 0.5),
-        });
-        const despawnTimer = setTimeout(() => {
-          setPosition(null);
-          schedule(COMET_SPAWN_MS);
-        }, COMET_VISIBLE_MS);
-        timers.current.push(despawnTimer);
-      }, rollSpawnDelay(range));
-      timers.current.push(spawnTimer);
-    },
-    [width, height],
-  );
+  const schedule = useCallback((range: [number, number]) => {
+    const spawnTimer = setTimeout(() => {
+      // Some crystal challenges forbid geodes — silently reschedule instead.
+      if (geodesDisabled(useGameStore.getState().activeCrystalChallenge)) {
+        schedule(COMET_SPAWN_MS);
+        return;
+      }
+      caught.current = false;
+      setPosition({
+        x: 20 + Math.random() * (dims.current.width - 100),
+        y: 80 + Math.random() * (dims.current.height * 0.5),
+      });
+      const despawnTimer = setTimeout(() => {
+        setPosition(null);
+        schedule(COMET_SPAWN_MS);
+      }, COMET_VISIBLE_MS);
+      timers.current.push(despawnTimer);
+    }, rollSpawnDelay(range));
+    timers.current.push(spawnTimer);
+  }, []);
 
   useEffect(() => {
     schedule(COMET_FIRST_SPAWN_MS);

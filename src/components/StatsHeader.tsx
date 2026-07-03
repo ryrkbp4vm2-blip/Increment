@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { playSound } from '../audio/sound';
 import { dailyAvailable } from '../game/daily';
@@ -29,19 +29,36 @@ export function StatsHeader({ onOpenSettings }: Props) {
 
   const isCrystalMode = transcendCount > 0;
 
-  // The header re-renders every tick (minerals/crystals change), so reading
-  // the clock during render keeps the frenzy countdown fresh.
+  // The header usually re-renders every tick (minerals/crystals change), which
+  // keeps the countdown fresh — but with zero production (e.g. a frenzy caught
+  // right after a collapse) nothing changes, so drive a 1s clock while a
+  // frenzy is active to keep the "×N · Ns" tag from freezing.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (frenzyUntil <= Date.now()) return;
+    const id = setInterval(() => {
+      forceTick((t) => t + 1);
+      if (Date.now() >= frenzyUntil) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [frenzyUntil]);
   const now = Date.now();
   const frenzy = frenzyFactor({ frenzyUntil, frenzyMult }, now);
   const frenzySecondsLeft = Math.ceil((frenzyUntil - now) / 1000);
   const dailyReady = dailyAvailable(lastDailyAt, now);
+
+  const dailyMsgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (dailyMsgTimer.current) clearTimeout(dailyMsgTimer.current);
+  }, []);
 
   const onClaimDaily = () => {
     const result = claimDaily(Date.now());
     if (!result) return;
     playSound('prestige');
     setDailyMsg(`+${formatNumber(result.reward)} · day ${result.streak} streak`);
-    setTimeout(() => setDailyMsg(null), 3500);
+    if (dailyMsgTimer.current) clearTimeout(dailyMsgTimer.current);
+    dailyMsgTimer.current = setTimeout(() => setDailyMsg(null), 3500);
   };
 
   if (isCrystalMode) {

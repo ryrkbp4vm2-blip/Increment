@@ -64,6 +64,8 @@ export function CrystalMineScreen() {
   const [lastShatter, setLastShatter] = useState(-1);
   const [floats, setFloats] = useState<FloatId[]>([]);
   const floatSeq = useRef(0);
+  const floatTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => floatTimers.current.forEach(clearTimeout), []);
   // Bumps on each shatter so the burst remounts and replays.
   const [burstKey, setBurstKey] = useState(0);
 
@@ -94,7 +96,11 @@ export function CrystalMineScreen() {
     const id = floatSeq.current++;
     const x = (Math.random() - 0.5) * 80;
     setFloats((f) => [...f.slice(-6), { id, text: `+${formatNumber(gained)}`, x }]);
-    setTimeout(() => setFloats((f) => f.filter((fl) => fl.id !== id)), 900);
+    // Bounded (max 7 floats live at once), cleared on unmount.
+    floatTimers.current = floatTimers.current.slice(-7);
+    floatTimers.current.push(
+      setTimeout(() => setFloats((f) => f.filter((fl) => fl.id !== id)), 900),
+    );
   };
 
   return (
