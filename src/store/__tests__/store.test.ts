@@ -490,6 +490,21 @@ describe('gameStore', () => {
     expect(useGameStore.getState().activeChallenge).toBe('asceticism');
   });
 
+  it('tap-only challenge goals scale with tap power too', () => {
+    // Core Capacitor (+50%/level tap) makes taps 6× stronger at level 10;
+    // Asceticism's goal must grow with it, Famine's must not. Comparing the
+    // two goals as a ratio cancels the shared production-side factors
+    // (e.g. the achievement bonus granted for having ascended).
+    reset({ ascensionCount: 1, coreUpgrades: { core_capacitor: 10 } });
+    useGameStore.getState().enterChallenge('asceticism');
+    const ascGoal = useGameStore.getState().activeChallengeGoal;
+    useGameStore.getState().abandonChallenge();
+    useGameStore.getState().enterChallenge('famine');
+    const famGoal = useGameStore.getState().activeChallengeGoal;
+    // Asceticism base 1e6 gains the ×6 tap factor; Famine base 1e8 does not.
+    expect(ascGoal / famGoal).toBeCloseTo((1e6 * 6) / 1e8, 5);
+  });
+
   it('enterChallenge snapshots a goal scaled by permanent power', () => {
     // A heavily-ascended player carries a large permanent multiplier, so the
     // challenge goal must scale up to stay a real fight (not insta-cleared).

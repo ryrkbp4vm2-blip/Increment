@@ -165,15 +165,30 @@ export function challengeRewardMult(completed: Record<string, true>): {
   return { globalMult, tapMult };
 }
 
+/** The powers a fresh run starts with, computed by math.ts's challengeGoalPower. */
+export interface ChallengeGoalPower {
+  production: number;
+  tap: number;
+}
+
 /**
  * The run goal scaled by the player's permanent power, so the constraint stays
  * meaningful no matter how strong they've become. A fixed goal trivialises:
  * once permanent multipliers are large a fresh constrained run blows past 1e8
- * in seconds. Scaling by the same power that boosts production keeps the run a
- * real fight at every unlock point.
+ * in seconds.
+ *
+ * Tap-only challenges (generators disabled) earn through taps, whose income
+ * scales by production power × tap power — so their goals scale by both.
+ * Everything else scales by production power alone. Accepts a plain number as
+ * production-only power for convenience in tests.
  */
-export function scaledChallengeGoal(def: ChallengeDef, permanentPower: number): number {
-  return Math.ceil(def.goal * Math.max(1, permanentPower));
+export function scaledChallengeGoal(
+  def: ChallengeDef,
+  power: number | ChallengeGoalPower,
+): number {
+  const p = typeof power === 'number' ? { production: power, tap: 1 } : power;
+  const scale = def.disableGenerators ? p.production * p.tap : p.production;
+  return Math.ceil(def.goal * Math.max(1, scale));
 }
 
 /**

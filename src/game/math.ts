@@ -1,6 +1,6 @@
 import { achievementBonus } from './achievements';
 import { singularityMult } from './ascension';
-import { corePowers } from './ascension';
+import { corePowers, perkStartAsteroid } from './ascension';
 import { asteroidRichness } from './asteroids';
 import { challengeModifiers, challengeRewardMult } from './challenges';
 import { sectorMult, sectorTrait } from './zones';
@@ -102,6 +102,37 @@ export function permanentPowerMultiplier(state: MultState): number {
     crystalPowers(state.crystalUpgrades).globalMult *
     challengeRewardMult(state.challengesCompleted).globalMult
   );
+}
+
+/**
+ * The permanent TAP-side multipliers (Kinetic Amplifier, Core Capacitor,
+ * sector trait, crystal tap powers, tap-flavored artifacts and challenge
+ * rewards). Tap-only challenge goals must scale by these too — a tap-heavy
+ * meta makes Asceticism trivial if the goal only tracks production power.
+ */
+export function permanentTapPowerMultiplier(state: MultState): number {
+  return (
+    effectivePowers(state.artifacts, state.dmUpgrades, state.research).tapMult *
+    corePowers(state.coreUpgrades).tapMult *
+    challengeRewardMult(state.challengesCompleted).tapMult *
+    sectorTrait(state.sector).tapMult *
+    crystalPowers(state.crystalUpgrades).tapMult
+  );
+}
+
+/**
+ * The full power a fresh challenge run starts with, used to scale its goal:
+ * permanent production power INCLUDING the belt richness of the starting
+ * asteroid (Belt Memory / head-start upgrades skip straight to richer rocks),
+ * plus the tap-side power for tap-driven challenges.
+ */
+export function challengeGoalPower(state: MultState): { production: number; tap: number } {
+  const powers = effectivePowers(state.artifacts, state.dmUpgrades, state.research);
+  const startIndex = Math.max(powers.startAsteroidIndex, perkStartAsteroid(state.singularityPerks));
+  return {
+    production: permanentPowerMultiplier(state) * asteroidRichness(startIndex),
+    tap: permanentTapPowerMultiplier(state),
+  };
 }
 
 /** Labelled global-multiplier factors for the statistics screen. */

@@ -15,7 +15,7 @@ import {
   permanentCrystalPowerMultiplier,
   scaledCrystalChallengeGoal,
 } from '../game/crystalChallenges';
-import { permanentPowerMultiplier } from '../game/math';
+import { challengeGoalPower } from '../game/math';
 import { GameState, GeneratorId, PersistedState, SaveFile } from '../game/types';
 import { emptyGenerators, initialPersistedState } from './gameStore';
 
@@ -397,7 +397,7 @@ export function migrate(raw: string | null): SaveFile | null {
   if (state.activeChallenge && state.activeChallengeGoal <= 0) {
     state.activeChallengeGoal = scaledChallengeGoal(
       CHALLENGES_BY_ID[state.activeChallenge],
-      permanentPowerMultiplier(state),
+      challengeGoalPower(state),
     );
   }
   if (state.activeCrystalChallenge && state.activeCrystalChallengeGoal <= 0) {

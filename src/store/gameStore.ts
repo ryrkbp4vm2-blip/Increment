@@ -86,11 +86,11 @@ import {
 } from '../game/expeditions';
 import {
   bulkCost,
+  challengeGoalPower,
   costOfNext,
   cps,
   isUnlockMet,
   maxAffordable,
-  permanentPowerMultiplier,
   tapValue,
 } from '../game/math';
 import { effectivePowers } from '../game/powers';
@@ -680,7 +680,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (state.activeChallenge || !def) return;
     // The ascension gate is enforced here too, not just hidden in the UI.
     if (state.ascensionCount < def.unlockAscensions) return;
-    const goal = scaledChallengeGoal(def, permanentPowerMultiplier(state));
+    const goal = scaledChallengeGoal(def, challengeGoalPower(state));
     set(withCaches({ ...state, ...challengeRunReset(state, id, goal) }, state.lastTickAt));
   },
 

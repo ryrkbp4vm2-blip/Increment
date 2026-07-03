@@ -65,6 +65,7 @@ describe('challengeComplete', () => {
 
 describe('scaledChallengeGoal', () => {
   const ascet = CHALLENGES_BY_ID.asceticism;
+  const famine = CHALLENGES_BY_ID.famine;
 
   it('never scales below the base goal', () => {
     expect(scaledChallengeGoal(ascet, 1)).toBe(ascet.goal);
@@ -73,6 +74,14 @@ describe('scaledChallengeGoal', () => {
 
   it('scales the goal up with permanent power', () => {
     expect(scaledChallengeGoal(ascet, 25)).toBe(ascet.goal * 25);
+  });
+
+  it('tap-only challenges scale by production × tap power; others ignore tap', () => {
+    const power = { production: 10, tap: 8 };
+    // Asceticism (generators disabled) earns through taps → both powers count.
+    expect(scaledChallengeGoal(ascet, power)).toBe(ascet.goal * 80);
+    // Famine earns through generators → tap power must not inflate the goal.
+    expect(scaledChallengeGoal(famine, power)).toBe(famine.goal * 10);
   });
 });
 

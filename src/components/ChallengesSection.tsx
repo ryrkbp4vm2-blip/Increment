@@ -9,7 +9,7 @@ import {
   scaledChallengeGoal,
   unlockedChallenges,
 } from '../game/challenges';
-import { permanentPowerMultiplier } from '../game/math';
+import { challengeGoalPower } from '../game/math';
 import { useGameStore } from '../store/gameStore';
 import { colors, spacing } from '../theme';
 import { formatNumber } from '../utils/format';
@@ -21,7 +21,10 @@ export function ChallengesSection() {
   const activeChallengeGoal = useGameStore((s) => s.activeChallengeGoal);
   const challengesCompleted = useGameStore((s) => s.challengesCompleted);
   const ascensionCount = useGameStore((s) => s.ascensionCount);
-  const permanentPower = useGameStore((s) => permanentPowerMultiplier(s));
+  // Selected as two primitives (a selector must not build a fresh object).
+  const goalProduction = useGameStore((s) => challengeGoalPower(s).production);
+  const goalTap = useGameStore((s) => challengeGoalPower(s).tap);
+  const goalPower = { production: goalProduction, tap: goalTap };
   // Derived boolean: the raw ticking lifetimeThisRun stays inside the
   // ChallengeProgress leaf so this section doesn't re-render 10×/sec.
   const canClaim = useGameStore((s) =>
@@ -106,7 +109,7 @@ export function ChallengesSection() {
                   <Text style={[styles.name, done && styles.nameDone]}>{c.name}</Text>
                   <Text style={styles.desc}>{c.description}</Text>
                   <Text style={styles.meta}>
-                    Goal {formatNumber(scaledChallengeGoal(c, permanentPower))} · {c.rewardLabel}
+                    Goal {formatNumber(scaledChallengeGoal(c, goalPower))} · {c.rewardLabel}
                   </Text>
                   {confirming && (
                     <View style={styles.confirmRow}>
