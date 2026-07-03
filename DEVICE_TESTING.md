@@ -107,23 +107,44 @@ tablet. Tap a box as you confirm it.
 - [ ] Settings → Backup & restore: copy the code, reset progress, paste it back
   → state is fully restored.
 
-### Audio
+### Audio & haptics
 - [ ] Sounds play (tap, buy, shatter, comet, prestige, achievement).
 - [ ] Settings → Sound effects toggle mutes/unmutes and the choice survives a
   relaunch.
 - [ ] Audio respects the silent switch / doesn't hijack background music
   unexpectedly.
+- [ ] Settings → Haptics: Full buzzes on taps and thumps on shatters (bosses hit
+  harder), Light keeps only event haptics, Off is silent; the sample thump fires
+  on change and the choice survives a relaunch.
+
+### Feel (the juice pass)
+- [ ] Shattering an asteroid/formation shakes the screen; boss/Prime kills shake
+  harder, pop bigger, and throw more debris.
+- [ ] The welcome-back modal explains its payout (Overdrive multiplier, "storage
+  filled after Xh" when capped).
 
 ### Progression (use the dev jump to reach crystal mode fast)
 - [ ] First Collapse → Dark Matter shop appears and the bonus applies.
+- [ ] Challenges unlock in waves as you ascend; entering locks the permanent
+  shops; goals look sane (scaled to your power, not trivially small).
 - [ ] Ascension, Sector Warp, and Transcendence each trigger and reset the
   expected things.
 - [ ] Crystal mode: tapping the formation, shattering, the Forge, Resonance
   Cascade, and the Crystal Matrix all work; the prestige attention dot lights
   when a Cascade is ready.
+- [ ] Every 10th formation shows the gold PRIME tag, is visibly tougher, and its
+  kill grants a frenzy — and, first time, a Harmonic Relic (check the Goals tab
+  collection and the production bump in Stats).
+- [ ] Resonant Echo pop-ups appear on the Crystal Mine (purple-accented) and pay
+  crystals; letting a Dissonant Swarm expire costs 5% of crystals.
+- [ ] Crystal Challenges on the crystal Prestige tab: entering resets the run,
+  Cascade/Matrix lock during it, claiming pays the permanent reward.
 - [ ] Convergence card shows the "Attunement channelled / 200,000" progress and
-  the Converge button enables at the gate; Eons apply a permanent boost.
+  the Converge button enables at the gate; Eons apply a permanent boost; relics
+  and challenge rewards survive the Convergence.
 - [ ] Comets / Resonant Geodes spawn, are tappable, and grant the right reward.
+- [ ] Stats modal: Records section fills in (fastest collapse, deepest pushes,
+  peaks, playtime) and the crystal multiplier breakdown multiplies out.
 
 ### Stability
 - [ ] Leave the app running for several minutes in each mode — no crash, no

@@ -32,13 +32,35 @@ it all into **Dark Matter** for permanent production bonuses.
   production multiplier and a fresh, visually distinct belt. The run, Dark Matter and
   spendable cores reset; collections, research, perks and the singularity bonus carry over.
 - **Challenges** — six constrained runs (no generators, no upgrades, throttled production…)
-  that grant permanent rewards.
+  that unlock progressively across ascensions and grant permanent rewards. Goals scale with
+  your permanent power, so they stay challenging forever.
 - **Goals** — 41 achievements, each a permanent production bonus.
+
+**Transcendence — the crystal endgame**
+- After enough ascensions, **Transcend**: permanently trade the entire mineral empire for
+  **Crystals** and a brand-new game — mine Crystal Formations, build crystal generators in
+  the **Forge**, and catch **Resonant Geodes**.
+- **Prime formations** — every 10th formation is a boss: far tougher, a huge payout, and a
+  victory frenzy when it breaks.
+- **Harmonic Relics** — 8 permanent perks, each sealed inside a specific Prime formation and
+  claimed on its first-ever kill. Relics survive everything.
+- **Resonant Echoes** — risk/reward event pop-ups (harmonic surges, geode caches, dissonant
+  swarms that eat your reserves if ignored).
+- **Resonance Cascade** — the in-crystal prestige: reset the crystal run for permanent
+  **Resonance** (production multiplier) and **Attunement**, spent on the permanent
+  **Crystal Matrix**.
+- **Crystal Challenges** — five constrained Cascade runs with permanent crystal rewards,
+  unlocking as Resonance grows.
+- **Convergence** — the deepest layer: channel enough Attunement, then collapse the whole
+  crystal cosmos into **Eons** and the Convergence tree.
 
 **Quality of life**
 - **Offline earnings** while away (capped, extendable), a **daily bonus** with streaks,
-  **sound** + **settings**, a **Statistics** breakdown of every multiplier, and
-  **save backup/restore** via portable codes. Auto-saves locally; no account or network.
+  optional **reminder notifications** (expedition returned, offline storage full, daily
+  bonus ready), **sound** + **haptics** (off/light/full), a **Statistics** panel with full
+  multiplier breakdowns and all-time **records** (fastest collapse, deepest push, peak
+  rates, playtime), and **save backup/restore** via portable codes. Auto-saves locally;
+  no account or network.
 
 ## Running the game
 
